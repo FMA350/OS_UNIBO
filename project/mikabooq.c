@@ -1,0 +1,185 @@
+#include "mikabooq.h"
+#include "const.h"
+#include "listx.h"
+
+/* Space allocated for processes */
+struct pcb_t process[MAXPROC];
+
+/* Space alloccated for threads */
+struct tcb_t thread[MAXTHREADS];
+
+struct pcb_t *proc_init(void){
+
+    /* process[0] is the root process */
+    process[0].p_parent = NULL;
+    INIT_LIST_HEAD(&process[0].p_threads);
+    INIT_LIST_HEAD(&process[0].p_children);
+    INIT_LIST_HEAD(&process[0].p_siblings);
+
+    /* We do not initialize any field here */
+    for (size_t i = 1; i < MAXPROC; i++)
+        /* the sentinel of the free list is process[0].p_siblings */
+        list_add_tail(&process[i].p_siblings, &(process[0].p_siblings));
+
+    return process;
+}
+
+inline struct pcb_t *proc_alloc(struct pcb_t *p_parent){
+    /* We extract the space from the free list */
+    struct list_head *new_space = list_next(&(process[0].p_siblings));
+    if (new_space == NULL) {
+        /* Out of memory */;
+    }
+    /* Deleting the element from the free list */
+    list_del(new_space);
+
+    struct pcb_t *new_proc = container_of(new_space, struct pcb_t, p_siblings);
+
+    new_proc->p_parent = p_parent;
+    INIT_LIST_HEAD(&new_proc->p_threads);
+
+    /* first_child is the first child of p_parent if p_parent has a child.
+       It is NULL or one of the ancestrors if not */
+    struct pcb_t *first_child = proc_firstchild(p_parent);
+
+    if (first_child) {
+        /* if p_parent has at least one child (first_child is the elder child) */
+        list_add_tail(&(new_proc->p_siblings), &(first_child->p_siblings));
+        INIT_LIST_HEAD(&new_proc->p_children);
+    } else {
+        /* if p_parent doesn't have any child */
+        list_add(&(new_proc->p_children), &(p_parent->p_children));
+        INIT_LIST_HEAD(&new_proc->p_siblings);
+    }
+
+    return new_proc;
+}
+
+/* delete a process (properly updating the process tree links) */
+/* this function must fail if the process has threads or children. */
+/* return value: 0 in case of success, -1 otherwise */
+/*
+ * DOESN'T WORK WITH ROOT PROCESS (SEGMENTATION FAULT)
+ * IS THAT A PROBLEM???????????????????????
+ */
+
+inline int proc_delete(struct pcb_t *oldproc){
+    if (oldproc->p_parent == NULL) {
+        /* Trying to delete root or a non-allocated process */
+        return -1;
+    }
+
+    if (proc_firstchild(oldproc) == NULL && proc_firstthread(oldproc) == NULL) {
+        /* the process can be deleted */
+
+        /* Parent of oldproc */
+        struct pcb_t *oldproc_parent = oldproc->p_parent;
+
+        oldproc->p_parent = NULL;
+
+        if (proc_firstchild(oldproc_parent) == oldproc) {
+            /* oldproc is the first child */
+            list_del(&(oldproc->p_children));
+            struct line_head *next_sibling = list_next(&(oldproc->p_siblings));
+
+            if (next_sibling) {
+                /* if oldproc isn't the only child */
+                list_del(&(oldproc->p_siblings));
+                list_add(&(container_of(next_sibling, struct pcb_t, p_siblings)->p_children), &(oldproc_parent->p_children));
+            }
+
+            /* add oldproc tho the free list */
+            list_add_tail(&(oldproc->p_siblings), &(process[0].p_siblings));
+
+        } else {
+            /* oldproc isn't the first child */
+            list_del(&(oldproc->p_siblings));
+            /* add oldproc tho the free list */
+            list_add_tail(&(oldproc->p_siblings), &(process[0].p_siblings));
+        }
+
+        return 0;
+    } else
+        /* the process has got children or threads */
+        return -1;
+}
+
+/* return the pointer to the first child (NULL if the process has no children) */
+inline struct pcb_t *proc_firstchild(struct pcb_t *proc){
+    struct list_head *first_child = list_next(&(proc->p_children));
+    if (first_child == NULL || proc != (container_of(first_child, struct pcb_t, p_children)->p_parent))
+        /* if p_parent doesn't have any child */
+        return NULL;
+    else
+        /* if p_parent has at least one child (first_child is the elder child) */
+        return container_of(first_child, struct pcb_t, p_children);
+}
+
+inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
+    struct list_head *first_thread = list_next(&(proc->p_threads));
+
+    if (first_thread)
+        /* the process has at least one thread */
+        return container_of(first_thread, struct tcb_t, t_next);
+    else
+        return NULL;
+}
+//TODO / comment : inline is only for optimization purpouses
+
+/****************************************** THREAD ALLOCATION ****************/
+//FMA350
+void thread_init(void){
+  thread[0].t_pcb = NULL;   //it holds the link to the process it belongs to
+  thread[0].t_status = T_STATUS_NONE;
+  thread[0].t_wait4sender = NULL;
+  INIT_LIST_HEAD(&thread[0].t_next);
+  INIT_LIST_HEAD(&thread[0].t_sched);
+  INIT_LIST_HEAD(&thread[0].t_msgq);
+  for (size_t i = 1; i < MAXTHREADS; i++){
+      thread[i].t_pcb = NULL;
+      thread[i].t_status = T_STATUS_NONE;
+      thread[i].t_wait4sender = NULL;
+      list_add_tail(&thread[i].t_next, &(threads[0].t_next));
+      INIT_LIST_HEAD(&thread[i].t_sched);
+      INIT_LIST_HEAD(&thread[i].t_msgq);
+    }
+  return thread;
+}
+
+struct tcb_t *thread_alloc(struct pcb_t *process){
+  if(process == NULL){
+    //ERROR! the given process pointer is null
+    return null;
+  }
+  struct list_head *new_head = list_next(&(thread[0].t_next));
+  if(new_head == NULL){
+    return NULL; //out of threads memory
+  }
+  struct tcb_t *new_thread = container_of(new_head, tcb_t, t_next);
+    //initializing the new thread
+    new_thread->t_pcb = process;
+    /*adds the thread to the control thread list of the process*/
+    list_add_tail(new_thread->t_next,%process->p_threads);
+    new_thread->t_status = T_STATUS_READY; //ready to be scheduled
+    return new_thread;
+}
+
+int thread_free(struct tcb_t *oldthread){
+  //if success returns 0 else -1
+  //check that no messages are left in the queue.
+  if(!list_empty(oldthread->t_msgq)){
+    return -1; //there are messsages left in the queue.
+  }
+  //remove the thread from the process queue.
+  list_del(oldthread->next);
+  oldthread->pcb = null;
+  oldthread->t_status = T_STATUS_NONE;
+  oldthread->wait4sender = NULL;
+
+  INIT_LIST_HEAD(oldthread->t_next);
+  INIT_LIST_HEAD(oldthread->t_sched);
+  //t_msgq is already empty.
+  /*adding oldthread to the free list*/
+  list_add_tail(oldthread->t_next, &(threads[0].t_next));
+  return 0;
+}
