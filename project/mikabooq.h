@@ -72,7 +72,7 @@ struct tcb_t *thread_alloc(struct pcb_t *process);
 	 its process) */
 /* it fails if the message queue is not empty (returning -1) */
 int thread_free(struct tcb_t *oldthread);
-#if 0
+
 /*************************** THREAD QUEUE ************************/
 
 /* add a tcb to the scheduling queue */
@@ -93,7 +93,7 @@ static inline void thread_outqueue(struct tcb_t *this) {
 
 #define for_each_thread_in_q(pos, queue) \
 	list_for_each_entry(pos, queue, t_sched)
-
+#if 0
 /*************************** MSG QUEUE ************************/
 
 /* initialize the data structure */

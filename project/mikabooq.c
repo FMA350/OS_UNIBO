@@ -183,3 +183,40 @@ int thread_free(struct tcb_t *oldthread){
   list_add_tail(oldthread->t_next, &(threads[0].t_next));
   return 0;
 }
+
+/*************************** THREAD QUEUE ************************/
+//fma350
+
+
+/* add a tcb to the scheduling queue */
+void thread_enqueue(struct tcb_t *new, struct list_head *queue){
+  list_add_tail(new->t_next, queue);
+}
+
+/* return the head element of a scheduling queue.
+	 (this function does not dequeues the element)
+	 return NULL if the list is empty */
+struct tcb_t *thread_qhead(struct list_head *queue){
+    new list_head *new_head = list_next(queue);
+    if(new_head == NULL){
+      return NULL;
+    }
+    else{
+      return container_of(new_head, tcb_t, t_next);
+    }
+}
+
+
+/* get the first element of a scheduling queue.
+	 return NULL if the list is empty */
+struct tcb_t *thread_dequeue(struct list_head *queue){
+  new list_head *new_head = list_next(queue);
+  if(new_head == NULL){
+    return NULL;
+  }
+  else{
+    list_del(new_head);
+    return container_of(new_head, tcb_t, t_next);
+  }
+
+}
