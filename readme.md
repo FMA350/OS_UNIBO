@@ -1,1 +1,2 @@
-Welcome to the OS Course repo
+# Welcome to the OS Course repository
+> Keep hacking
