@@ -7,6 +7,10 @@ struct pcb_t process[MAXPROC];
 
 /* Space alloccated for threads */
 struct tcb_t thread[MAXTHREADS];
+struct list_head thread_h;
+/*  Space allocated for messages */
+struct msg_t message[MAXMSG];
+struct list_head message_h;
 
 struct pcb_t *proc_init(void){
 
@@ -129,17 +133,12 @@ inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
 /****************************************** THREAD ALLOCATION ****************/
 //FMA350
 void thread_init(void){
-  thread[0].t_pcb = NULL;   //it holds the link to the process it belongs to
-  thread[0].t_status = T_STATUS_NONE;
-  thread[0].t_wait4sender = NULL;
-  INIT_LIST_HEAD(&thread[0].t_next);
-  INIT_LIST_HEAD(&thread[0].t_sched);
-  INIT_LIST_HEAD(&thread[0].t_msgq);
-  for (size_t i = 1; i < MAXTHREADS; i++){
+  INIT_LIST_HEAD(thread_h);
+  for (size_t i = 0; i < MAXTHREADS; i++){
       thread[i].t_pcb = NULL;
       thread[i].t_status = T_STATUS_NONE;
       thread[i].t_wait4sender = NULL;
-      list_add_tail(&thread[i].t_next, &(threads[0].t_next));
+      list_add_tail(&thread[i].t_next, &(thread_h));
       INIT_LIST_HEAD(&thread[i].t_sched);
       INIT_LIST_HEAD(&thread[i].t_msgq);
     }
@@ -151,7 +150,7 @@ struct tcb_t *thread_alloc(struct pcb_t *process){
     //ERROR! the given process pointer is null
     return null;
   }
-  struct list_head *new_head = list_next(&(thread[0].t_next));
+  struct list_head *new_head = list_next(&(thread_h));
   if(new_head == NULL){
     return NULL; //out of threads memory
   }
@@ -217,6 +216,27 @@ struct tcb_t *thread_dequeue(struct list_head *queue){
   else{
     list_del(new_head);
     return container_of(new_head, tcb_t, t_next);
+  }
+
+}
+
+/*************************** MSG QUEUE ************************/
+//fma350
+
+void msgq_init(void){
+  INIT_LIST_HEAD(message_h);
+  for(int i = 0; i < MAXMSG; i++){
+    list_add_(message[i].m_next, message_h);
+    message[i].m_sender = NULL;
+    message[i].m_value  = NULL;
+  }
+  return;
+}
+
+int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value){
+  if(list_empty(message_h)||sender == NULL || destination == NULL){
+    //free list is empty
+    return -1;
   }
 
 }
