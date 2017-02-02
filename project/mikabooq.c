@@ -6,11 +6,17 @@
 struct pcb_t process[MAXPROC];
 
 /* Space alloccated for threads */
-struct tcb_t thread[MAXTHREADS];
-struct list_head thread_h;
+struct tcb_t thread[MAXTHREAD];
+struct list_head *thread_h;
+
+#if 0
 /*  Space allocated for messages */
 struct msg_t message[MAXMSG];
-struct list_head message_h;
+struct list_head *message_h;
+#endif
+
+
+//mnalli
 
 struct pcb_t *proc_init(void){
 
@@ -28,7 +34,7 @@ struct pcb_t *proc_init(void){
     return process;
 }
 
-inline struct pcb_t *proc_alloc(struct pcb_t *p_parent){
+struct pcb_t *proc_alloc(struct pcb_t *p_parent){
     /* We extract the space from the free list */
     struct list_head *new_space = list_next(&(process[0].p_siblings));
     if (new_space == NULL) {
@@ -67,7 +73,7 @@ inline struct pcb_t *proc_alloc(struct pcb_t *p_parent){
  * IS THAT A PROBLEM???????????????????????
  */
 
-inline int proc_delete(struct pcb_t *oldproc){
+int proc_delete(struct pcb_t *oldproc){
     if (oldproc->p_parent == NULL) {
         /* Trying to delete root or a non-allocated process */
         return -1;
@@ -109,7 +115,7 @@ inline int proc_delete(struct pcb_t *oldproc){
 }
 
 /* return the pointer to the first child (NULL if the process has no children) */
-inline struct pcb_t *proc_firstchild(struct pcb_t *proc){
+struct pcb_t *proc_firstchild(struct pcb_t *proc) {
     struct list_head *first_child = list_next(&(proc->p_children));
     if (first_child == NULL || proc != (container_of(first_child, struct pcb_t, p_children)->p_parent))
         /* if p_parent doesn't have any child */
@@ -119,7 +125,7 @@ inline struct pcb_t *proc_firstchild(struct pcb_t *proc){
         return container_of(first_child, struct pcb_t, p_children);
 }
 
-inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
+struct tcb_t *proc_firstthread(struct pcb_t *proc){
     struct list_head *first_thread = list_next(&(proc->p_threads));
 
     if (first_thread)
@@ -128,17 +134,19 @@ inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
     else
         return NULL;
 }
-//TODO / comment : inline is only for optimization purpouses
+
 
 /****************************************** THREAD ALLOCATION ****************/
+
+
 //FMA350
 void thread_init(void){
   INIT_LIST_HEAD(thread_h);
-  for (size_t i = 0; i < MAXTHREADS; i++){
+  for (size_t i = 0; i < MAXTHREAD; i++){
       thread[i].t_pcb = NULL;
       thread[i].t_status = T_STATUS_NONE;
       thread[i].t_wait4sender = NULL;
-      list_add_tail(&thread[i].t_next, &(thread_h));
+      list_add_tail(&thread[i].t_next, thread_h);
       INIT_LIST_HEAD(&thread[i].t_sched);
       INIT_LIST_HEAD(&thread[i].t_msgq);
     }
@@ -147,39 +155,39 @@ void thread_init(void){
 
 struct tcb_t *thread_alloc(struct pcb_t *process){
   if(process == NULL){
-    //ERROR! the given process pointer is null
-    return null;
+    //ERROR! the given process pointer is NULL
+    return NULL;
   }
-  struct list_head *new_head = list_next(&(thread_h));
+  struct list_head *new_head = list_next(thread_h);
   if(new_head == NULL){
+      //if success returns 0 else -1
     return NULL; //out of threads memory
   }
-  struct tcb_t *new_thread = container_of(new_head, tcb_t, t_next);
+  struct tcb_t *new_thread = container_of(new_head, struct tcb_t, t_next);
     //initializing the new thread
     new_thread->t_pcb = process;
     /*adds the thread to the control thread list of the process*/
-    list_add_tail(new_thread->t_next,%process->p_threads);
+    list_add_tail(&new_thread->t_next, &process->p_threads);
     new_thread->t_status = T_STATUS_READY; //ready to be scheduled
     return new_thread;
 }
 
 int thread_free(struct tcb_t *oldthread){
-  //if success returns 0 else -1
   //check that no messages are left in the queue.
-  if(!list_empty(oldthread->t_msgq)){
+  if(!list_empty(&oldthread->t_msgq)){
     return -1; //there are messsages left in the queue.
   }
   //remove the thread from the process queue.
-  list_del(oldthread->next);
-  oldthread->pcb = null;
+  list_del(&oldthread->t_next);
+  oldthread->t_pcb = NULL;
   oldthread->t_status = T_STATUS_NONE;
-  oldthread->wait4sender = NULL;
+  oldthread->t_wait4sender = NULL;
 
-  INIT_LIST_HEAD(oldthread->t_next);
-  INIT_LIST_HEAD(oldthread->t_sched);
+  INIT_LIST_HEAD(&oldthread->t_next);
+  INIT_LIST_HEAD(&oldthread->t_sched);
   //t_msgq is already empty.
   /*adding oldthread to the free list*/
-  list_add_tail(oldthread->t_next, &(threads[0].t_next));
+  list_add_tail(&oldthread->t_next, &(thread[0].t_next));
   return 0;
 }
 
@@ -189,19 +197,19 @@ int thread_free(struct tcb_t *oldthread){
 
 /* add a tcb to the scheduling queue */
 void thread_enqueue(struct tcb_t *new, struct list_head *queue){
-  list_add_tail(new->t_next, queue);
+  list_add_tail(&new->t_next, queue);
 }
 
 /* return the head element of a scheduling queue.
 	 (this function does not dequeues the element)
 	 return NULL if the list is empty */
 struct tcb_t *thread_qhead(struct list_head *queue){
-    new list_head *new_head = list_next(queue);
+    struct list_head *new_head = list_next(queue);
     if(new_head == NULL){
       return NULL;
     }
     else{
-      return container_of(new_head, tcb_t, t_next);
+      return container_of(new_head, struct tcb_t, t_next);
     }
 }
 
@@ -209,20 +217,20 @@ struct tcb_t *thread_qhead(struct list_head *queue){
 /* get the first element of a scheduling queue.
 	 return NULL if the list is empty */
 struct tcb_t *thread_dequeue(struct list_head *queue){
-  new list_head *new_head = list_next(queue);
+  struct list_head *new_head = list_next(queue);
   if(new_head == NULL){
     return NULL;
   }
   else{
     list_del(new_head);
-    return container_of(new_head, tcb_t, t_next);
+    return container_of(new_head, struct tcb_t, t_next);
   }
 
 }
 
 /*************************** MSG QUEUE ************************/
 //fma350
-
+#if 0
 void msgq_init(void){
   INIT_LIST_HEAD(message_h);
   for(int i = 0; i < MAXMSG; i++){
@@ -240,3 +248,4 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value){
   }
 
 }
+#endif
