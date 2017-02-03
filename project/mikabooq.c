@@ -7,12 +7,12 @@ struct pcb_t process[MAXPROC];
 
 /* Space alloccated for threads */
 struct tcb_t thread[MAXTHREAD];
-struct list_head *thread_h;
+struct list_head thread_h;
 
 #if 0
 /*  Space allocated for messages */
 struct msg_t message[MAXMSG];
-struct list_head *message_h;
+struct list_head message_h;
 #endif
 
 
@@ -141,12 +141,12 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc){
 
 //FMA350
 void thread_init(void){
-  INIT_LIST_HEAD(thread_h);
+  INIT_LIST_HEAD(&thread_h);
   for (size_t i = 0; i < MAXTHREAD; i++){
       thread[i].t_pcb = NULL;
       thread[i].t_status = T_STATUS_NONE;
       thread[i].t_wait4sender = NULL;
-      list_add_tail(&thread[i].t_next, thread_h);
+      list_add_tail(&thread[i].t_next, &thread_h);
       INIT_LIST_HEAD(&thread[i].t_sched);
       INIT_LIST_HEAD(&thread[i].t_msgq);
     }
@@ -158,7 +158,7 @@ struct tcb_t *thread_alloc(struct pcb_t *process){
     //ERROR! the given process pointer is NULL
     return NULL;
   }
-  struct list_head *new_head = list_next(thread_h);
+  struct list_head *new_head = list_next(&thread_h);
   if(new_head == NULL){
       //if success returns 0 else -1
     return NULL; //out of threads memory
@@ -232,9 +232,9 @@ struct tcb_t *thread_dequeue(struct list_head *queue){
 //fma350
 #if 0
 void msgq_init(void){
-  INIT_LIST_HEAD(message_h);
+  INIT_LIST_HEAD(&message_h);
   for(int i = 0; i < MAXMSG; i++){
-    list_add_(message[i].m_next, message_h);
+    list_add_(message[i].m_next, &message_h);
     message[i].m_sender = NULL;
     message[i].m_value  = NULL;
   }
@@ -242,7 +242,7 @@ void msgq_init(void){
 }
 
 int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value){
-  if(list_empty(message_h)||sender == NULL || destination == NULL){
+  if(list_empty(&message_h)||sender == NULL || destination == NULL){
     //free list is empty
     return -1;
   }
