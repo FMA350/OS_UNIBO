@@ -142,6 +142,7 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc){
 //FMA350
 void thread_init(void){
   INIT_LIST_HEAD(&thread_h);
+
   for (size_t i = 0; i < MAXTHREAD; i++){
       thread[i].t_pcb = NULL;
       thread[i].t_status = T_STATUS_NONE;
@@ -150,24 +151,24 @@ void thread_init(void){
       INIT_LIST_HEAD(&thread[i].t_sched);
       INIT_LIST_HEAD(&thread[i].t_msgq);
     }
-  return thread;
 }
 
 struct tcb_t *thread_alloc(struct pcb_t *process){
-  if(process == NULL){
-    //ERROR! the given process pointer is NULL
-    return NULL;
-  }
-  struct list_head *new_head = list_next(&thread_h);
-  if(new_head == NULL){
-      //if success returns 0 else -1
-    return NULL; //out of threads memory
-  }
-  struct tcb_t *new_thread = container_of(new_head, struct tcb_t, t_next);
+    struct list_head *new_head = list_next(&thread_h);
+
+    if(process == NULL || new_head == NULL) {
+        /* ERROR! the given process pointer is NULL
+           or the free list is empty */
+        return NULL;
+    }
+
+    struct tcb_t *new_thread = container_of(new_head, struct tcb_t, t_next);
     //initializing the new thread
+    /* removes the thread from the free list */
+    list_del(new_head);
     new_thread->t_pcb = process;
     /*adds the thread to the control thread list of the process*/
-    list_add_tail(&new_thread->t_next, &process->p_threads);
+    list_add_tail(new_head, &process->p_threads);
     new_thread->t_status = T_STATUS_READY; //ready to be scheduled
     return new_thread;
 }
