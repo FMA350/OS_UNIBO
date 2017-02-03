@@ -27,12 +27,13 @@ struct tcb_t {
 	struct list_head t_msgq; /* list of pending messages for the current thread */
 };
 
-
+#if 0
 struct msg_t {
 	struct tcb_t *m_sender; /* sender thread */
 	uintptr_t m_value; /* payload of the message */
 	struct list_head m_next; /* link the other elements of the pending message queue */
 };
+#endif
 
 /************************************** PROC MGMT ************************/
 
@@ -58,7 +59,7 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc);
 
 
 /****************************************** THREAD ALLOCATION ****************/
-
+#if 0
 /* initialize the data structure */
 void thread_init(void);
 
@@ -93,8 +94,9 @@ static inline void thread_outqueue(struct tcb_t *this) {
 #define for_each_thread_in_q(pos, queue) \
 	list_for_each_entry(pos, queue, t_sched);
 //TODO: I had to add a ; at the end of the line above. Check.
+#endif
 /*************************** MSG QUEUE ************************/
-
+#if 0
 /* initialize the data structure */
 /* the return value is the address of the root process */
 
@@ -112,5 +114,6 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
 /* return -1 if there are no messages in the queue matching the request.
 	 return 0 and store the message payload in *value otherwise. */
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value);
+#endif
 
 #endif
