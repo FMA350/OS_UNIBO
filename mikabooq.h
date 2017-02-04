@@ -2,6 +2,7 @@
 #define MIKABOOQ_H
 #include "listx.h"
 #include <sys/types.h>
+#include <stdint.h>
 
 struct pcb_t {
 	struct pcb_t * p_parent ; /* pointer to parent */
@@ -27,13 +28,11 @@ struct tcb_t {
 	struct list_head t_msgq; /* list of pending messages for the current thread */
 };
 
-#if 0
 struct msg_t {
 	struct tcb_t *m_sender; /* sender thread */
 	uintptr_t m_value; /* payload of the message */
 	struct list_head m_next; /* link the other elements of the pending message queue */
 };
-#endif
 
 /************************************** PROC MGMT ************************/
 
@@ -122,8 +121,6 @@ static inline void thread_outqueue(struct tcb_t *this) {
 /*************************** MSG QUEUE ************************/
 
 /* initialize the data structure */
-/* the return value is the address of the root process */
-
 void msgq_init(void);
 
 /* add a message to a message queue. */

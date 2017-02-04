@@ -25,7 +25,8 @@ struct pcb_t *proc_init(void){
     INIT_LIST_HEAD(&process[0].p_siblings);
 
     /* We do not initialize any field here */
-    for (size_t i = 1; i < MAXPROC; i++)
+    size_t i;
+    for (i = 1; i < MAXPROC; i++)
         /* the sentinel of the free list is process[0].p_siblings */
         list_add_tail(&process[i].p_siblings, &(process[0].p_siblings));
 
@@ -88,7 +89,7 @@ int proc_delete(struct pcb_t *oldproc){
         if (proc_firstchild(oldproc_parent) == oldproc) {
             /* oldproc is the first child */
             list_del(&(oldproc->p_children));
-            struct line_head *next_sibling = list_next(&(oldproc->p_siblings));
+            struct list_head *next_sibling = list_next(&(oldproc->p_siblings));
 
             if (next_sibling) {
                 /* if oldproc isn't the only child */
@@ -140,8 +141,8 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc){
 //FMA350
 void thread_init(void){
   INIT_LIST_HEAD(&thread_h);
-
-  for (size_t i = 0; i < MAXTHREAD; i++){
+  size_t i;
+  for (i = 0; i < MAXTHREAD; i++){
       thread[i].t_pcb = NULL;
       thread[i].t_status = T_STATUS_NONE;
       thread[i].t_wait4sender = NULL;
@@ -234,16 +235,17 @@ struct tcb_t *thread_dequeue(struct list_head *queue){
 
 void msgq_init(void){
   INIT_LIST_HEAD(&message_h);
-  for(int i = 0; i < MAXMSG; i++){
+  size_t i;
+  for(i = 0; i < MAXMSG; i++){
     list_add(&message[i].m_next, &message_h);
     message[i].m_sender = NULL;
-    /* m_value is not exactly a pointer */
-    message[i].m_value  = NULL;
+    //message[i].m_value  = 0;
   }
 }
 
 int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value){
-    struct list_head *new_space = list_empty(&message_h);
+    /* extracting space from free list */
+    struct list_head *new_space = list_next(&message_h);
     if(new_space == NULL ||sender == NULL || destination == NULL)
         //free list is empty or wrong argument passed
         return -1;
@@ -278,7 +280,7 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
              /* extracting the vaue */
              *value = container_of(msg_conc, struct msg_t, m_next)->m_value;
              /* adding the element to the free list */
-             list_add_tail(msg_conc, message_h);
+             list_add_tail(msg_conc, &message_h);
              return 0;
          }
 
@@ -294,14 +296,14 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
             /* empty queue */
             return -1;
         else {
-            struct msg_t *msg = container_of(msg_conc, struct msg_t, m_next)
+            struct msg_t *msg = container_of(msg_conc, struct msg_t, m_next);
             /* removing the message from the list */
             list_del(msg_conc);
             /* extracting value and sender */
             *value = msg->m_value;
             *sender = msg->m_sender;
             /* adding the element to the free list */
-            list_add_tail(msg_conc, message_h);
+            list_add_tail(msg_conc, &message_h);
 
             return 0;
         }
@@ -310,14 +312,14 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
     else {
         /* restituisce il primo messaggio in coda che ha *sender come mittente */
         struct msg_t *pos;
-        list_for_each_entry(pos, &destination->t_msgq, member){
+        list_for_each_entry(pos, &destination->t_msgq, m_next){
             if(pos->m_sender == *sender){
                 /* removing the message from the list */
                 list_del(&pos->m_next);
                 /* extracting the value */
                 *value = pos->m_value;
                 /* adding the element to the free list */
-                list_add_tail(&pos->m_next, message_h);
+                list_add_tail(&pos->m_next, &message_h);
                 return 0;
             }
         }
