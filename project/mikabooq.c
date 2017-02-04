@@ -9,11 +9,9 @@ struct pcb_t process[MAXPROC];
 struct tcb_t thread[MAXTHREAD];
 struct list_head thread_h;
 
-#if 0
 /*  Space allocated for messages */
 struct msg_t message[MAXMSG];
 struct list_head message_h;
-#endif
 
 
 //mnalli
