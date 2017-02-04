@@ -1,7 +1,7 @@
 #ifndef MIKABOOQ_H
 #define MIKABOOQ_H
-#include <listx.h>
-#include <types.h>
+#include "listx.h"
+#include <sys/types.h>
 
 struct pcb_t {
 	struct pcb_t * p_parent ; /* pointer to parent */
@@ -17,22 +17,23 @@ struct pcb_t {
 
 struct tcb_t {
 	struct pcb_t *t_pcb; /* pointer to the process */
-	state_t t_s ; /* processor state */
+	// state_t t_s ; /* processor state */
 
 	int t_status;
-	
+
 	struct tcb_t *t_wait4sender; /* expected sender (if t_status == T_STATUS_W4MSG), NULL means accept msg from anybody */
 	struct list_head t_next; /* link the other elements of the list of threads in the same process */
 	struct list_head t_sched; /* link the other elements on the same scheduling list */
 	struct list_head t_msgq; /* list of pending messages for the current thread */
 };
 
+#if 0
 struct msg_t {
 	struct tcb_t *m_sender; /* sender thread */
 	uintptr_t m_value; /* payload of the message */
-
 	struct list_head m_next; /* link the other elements of the pending message queue */
 };
+#endif
 
 /************************************** PROC MGMT ************************/
 
@@ -44,6 +45,7 @@ struct pcb_t *proc_init(void);
 /* p_parent cannot be NULL */
 struct pcb_t *proc_alloc(struct pcb_t *p_parent);
 
+
 /* delete a process (properly updating the process tree links) */
 /* this function must fail if the process has threads or children. */
 /* return value: 0 in case of success, -1 otherwise */
@@ -54,6 +56,7 @@ struct pcb_t *proc_firstchild(struct pcb_t *proc);
 
 /* return the pointer to the first thread (NULL if the process has no threads) */
 struct tcb_t *proc_firstthread(struct pcb_t *proc);
+
 
 /****************************************** THREAD ALLOCATION ****************/
 
@@ -91,10 +94,36 @@ static inline void thread_outqueue(struct tcb_t *this) {
 #define for_each_thread_in_q(pos, queue) \
 	list_for_each_entry(pos, queue, t_sched)
 
+//TODO: I had to add a ; at the end of the line above. Check.
+/*
+ * mnalli - UPDATE - ';' removed
+ *
+ * This macro is nothing more than a pre-set for loop declaration
+ * i.e. for( various; para; meters){
+ * 			the code we have to write
+ *			after the macro
+ *		}
+ *
+ *	If a ';' is put the for loop does nothing
+ *  Usage:
+ *  for_each_thread_in_q(pos, queue){
+ *		codiamo insieme
+ *	}
+ *
+ * check the original macro
+ *
+ * #define list_for_each_entry(pos, head, member)                          \
+ *	  for (pos = container_of((head)->next, typeof(*pos), member);      \
+ *	  &pos->member != (head);        \
+ *	  pos = container_of(pos->member.next, typeof(*pos), member))
+ *
+ */
+
 /*************************** MSG QUEUE ************************/
 
 /* initialize the data structure */
 /* the return value is the address of the root process */
+
 void msgq_init(void);
 
 /* add a message to a message queue. */
@@ -109,5 +138,4 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
 /* return -1 if there are no messages in the queue matching the request.
 	 return 0 and store the message payload in *value otherwise. */
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value);
-
 #endif

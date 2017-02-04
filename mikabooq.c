@@ -35,9 +35,10 @@ struct pcb_t *proc_init(void){
 struct pcb_t *proc_alloc(struct pcb_t *p_parent){
     /* We extract the space from the free list */
     struct list_head *new_space = list_next(&(process[0].p_siblings));
-    if (new_space == NULL) {
-        /* Out of memory */;
-    }
+    if (new_space == NULL || p_parent == NULL)
+        /* the free list is empty or no parent is specified */
+        return NULL;
+
     /* Deleting the element from the free list */
     list_del(new_space);
 
@@ -72,10 +73,9 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent){
  */
 
 int proc_delete(struct pcb_t *oldproc){
-    if (oldproc->p_parent == NULL) {
+    if (oldproc->p_parent == NULL)
         /* Trying to delete root or a non-allocated process */
         return -1;
-    }
 
     if (proc_firstchild(oldproc) == NULL && proc_firstthread(oldproc) == NULL) {
         /* the process can be deleted */
