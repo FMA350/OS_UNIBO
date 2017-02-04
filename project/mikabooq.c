@@ -263,3 +263,67 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value){
         return 0;
     }
 }
+
+int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value){
+    if(sender == NULL){
+        /* restituisce il primo messaggio in coda qualsiasi ne sia il mittente
+         * L’indirizzo del TCB del mittente viene memorizzato in *sender */
+
+         //concatenatore del primo messaggio in coda
+         struct list_head *msg_conc = list_next(&destination->t_msgq);
+         if (msg_conc == NULL)
+            /* empty queue */
+            return -1;
+         else {
+             /* removing the message from the list */
+             list_del(msg_conc);
+             /* extracting the vaue */
+             *value = container_of(msg_conc, struct msg_t, m_next)->m_value;
+             /* adding the element to the free list */
+             list_add_tail(msg_conc, message_h);
+             return 0;
+         }
+
+    }
+    /* sender != NULL && *sender == NULL */
+    else if (*sender == NULL){
+        /* restituisce il primo messaggio in coda qualsiasi ne sia il mittente
+         * L’indirizzo del TCB del mittente viene memorizzato in *sender */
+
+         //concatenatore del primo messaggio in coda
+         struct list_head *msg_conc = list_next(&destination->t_msgq);
+         if (msg_conc == NULL)
+            /* empty queue */
+            return -1;
+        else {
+            struct msg_t *msg = container_of(msg_conc, struct msg_t, m_next)
+            /* removing the message from the list */
+            list_del(msg_conc);
+            /* extracting value and sender */
+            *value = msg->m_value;
+            *sender = msg->m_sender;
+            /* adding the element to the free list */
+            list_add_tail(msg_conc, message_h);
+
+            return 0;
+        }
+    }
+    /* sender != NULL && *sender != NULL */
+    else {
+        /* restituisce il primo messaggio in coda che ha *sender come mittente */
+        struct msg_t *pos;
+        list_for_each_entry(pos, &destination->t_msgq, member){
+            if(pos->m_sender == *sender){
+                /* removing the message from the list */
+                list_del(&pos->m_next);
+                /* extracting the value */
+                *value = pos->m_value;
+                /* adding the element to the free list */
+                list_add_tail(&pos->m_next, message_h);
+                return 0;
+            }
+        }
+        /* nessun massaggio da parte di sender è stato trovato */
+        return -1;
+    }
+}
