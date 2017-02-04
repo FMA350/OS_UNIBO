@@ -59,7 +59,7 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc);
 
 
 /****************************************** THREAD ALLOCATION ****************/
-#if 0
+
 /* initialize the data structure */
 void thread_init(void);
 
@@ -92,11 +92,35 @@ static inline void thread_outqueue(struct tcb_t *this) {
 }
 
 #define for_each_thread_in_q(pos, queue) \
-	list_for_each_entry(pos, queue, t_sched);
+	list_for_each_entry(pos, queue, t_sched)
+
 //TODO: I had to add a ; at the end of the line above. Check.
-#endif
+/*
+ * mnalli - UPDATE - ';' removed
+ *
+ * This macro is nothing more than a pre-set for loop declaration
+ * i.e. for( various; para; meters){
+ * 			the code we have to write
+ *			after the macro
+ *		}
+ *
+ *	If a ';' is put the for loop does nothing
+ *  Usage:
+ *  for_each_thread_in_q(pos, queue){
+ *		codiamo insieme
+ *	}
+ *
+ * check the original macro
+ *
+ * #define list_for_each_entry(pos, head, member)                          \
+ *	  for (pos = container_of((head)->next, typeof(*pos), member);      \
+ *	  &pos->member != (head);        \
+ *	  pos = container_of(pos->member.next, typeof(*pos), member))
+ *
+ */
+
 /*************************** MSG QUEUE ************************/
-#if 0
+
 /* initialize the data structure */
 /* the return value is the address of the root process */
 
@@ -114,6 +138,4 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
 /* return -1 if there are no messages in the queue matching the request.
 	 return 0 and store the message payload in *value otherwise. */
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value);
-#endif
-
 #endif

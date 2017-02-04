@@ -184,8 +184,11 @@ int thread_free(struct tcb_t *oldthread){
   oldthread->t_status = T_STATUS_NONE;
   oldthread->t_wait4sender = NULL;
 
-  INIT_LIST_HEAD(&oldthread->t_next);
-  INIT_LIST_HEAD(&oldthread->t_sched);
+  /* Non necessario, verrà inserito nella lista libera */
+  //INIT_LIST_HEAD(&oldthread->t_next);
+  /* Va rimosso dalla coda dello scheduler??? */
+  //INIT_LIST_HEAD(&oldthread->t_sched);
+
   //t_msgq is already empty.
   /*adding oldthread to the free list*/
   list_add_tail(&oldthread->t_next, &(thread[0].t_next));
@@ -197,7 +200,7 @@ int thread_free(struct tcb_t *oldthread){
 
 
 /* add a tcb to the scheduling queue */
-void thread_enqueue(struct tcb_t *new, struct list_head *queue){
+inline void thread_enqueue(struct tcb_t *new, struct list_head *queue){
   list_add_tail(&new->t_next, queue);
 }
 
@@ -206,12 +209,11 @@ void thread_enqueue(struct tcb_t *new, struct list_head *queue){
 	 return NULL if the list is empty */
 struct tcb_t *thread_qhead(struct list_head *queue){
     struct list_head *new_head = list_next(queue);
-    if(new_head == NULL){
+    if(new_head == NULL)
       return NULL;
-    }
-    else{
-      return container_of(new_head, struct tcb_t, t_next);
-    }
+    else
+      /* t_next ---> t_sched */
+      return container_of(new_head, struct tcb_t, t_sched);
 }
 
 
@@ -219,34 +221,45 @@ struct tcb_t *thread_qhead(struct list_head *queue){
 	 return NULL if the list is empty */
 struct tcb_t *thread_dequeue(struct list_head *queue){
   struct list_head *new_head = list_next(queue);
-  if(new_head == NULL){
+  if(new_head == NULL)
     return NULL;
-  }
   else{
     list_del(new_head);
-    return container_of(new_head, struct tcb_t, t_next);
+    /* t_next ---> t_sched */
+    return container_of(new_head, struct tcb_t, t_sched);
   }
 
 }
 
 /*************************** MSG QUEUE ************************/
 //fma350
-#if 0
+
 void msgq_init(void){
   INIT_LIST_HEAD(&message_h);
   for(int i = 0; i < MAXMSG; i++){
-    list_add_(message[i].m_next, &message_h);
+    list_add(&message[i].m_next, &message_h);
     message[i].m_sender = NULL;
+    /* m_value is not exactly a pointer */
     message[i].m_value  = NULL;
   }
-  return;
 }
 
 int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value){
-  if(list_empty(&message_h)||sender == NULL || destination == NULL){
-    //free list is empty
-    return -1;
-  }
+    struct list_head *new_space = list_empty(&message_h);
+    if(new_space == NULL ||sender == NULL || destination == NULL)
+        //free list is empty or wrong argument passed
+        return -1;
+    else {
+        /* deleting the element from the free list */
+        list_del(new_space);
+        /* obtaining a pointer to the new message */
+        struct msg_t *new_msg = container_of(new_space, struct msg_t, m_next);
+        /* setting the fields */
+        new_msg->m_sender = sender;
+        new_msg->m_value = value;
+        /* placing the message in the message list of destination */
+        list_add_tail(new_space, &destination->t_msgq);
 
+        return 0;
+    }
 }
-#endif
