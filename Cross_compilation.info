@@ -38,6 +38,14 @@ Per permetterle al compilatore di includerle dobbiamo compilare con
 
 Per compilare il file oggetto:
 arm-none-eabi-gcc -mcpu=arm7tdmi -c mikabooq.c -o mikabooq.o -I /usr/include/uarm
+-----------------------------------------------------------------------------------------------------------------------------------------------
+dopo aver ottenuto così il file oggetto di mikaboo, devo compilare (allo stesso modo) il file p1test.c che diventerà quindi p1test.o,
+poi con il comando
+arm-none-eabi-ld -T /usr/include/uarm/ldscripts/elf32ltsarm.h.uarmcore.x-o p1test.elf /usr/include/uarm/crtso.o /usr/include/uarm/libuarm.o p1test.o
+ottengo p1test.elf
+poi con elf2uarm -k p1test.elf ottengo i file .core e .stab necessari all'emulatore per caricare il tutto.
+
+
 
 ------------------------------------IMPORTANTE----------------------------------------------------------------------------------------
 NO ----> for(size_t i = 0; ---- ; ---- ){ ...
