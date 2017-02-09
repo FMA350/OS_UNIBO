@@ -3,27 +3,20 @@
 #include "listx.h"
 
 /* Space allocated for processes */
-static struct pcb_t process[MAXPROC];
-
-/*
-#define LIST_HEAD(name) \
-	struct list_head name = LIST_HEAD_INIT(name)
-*/
+struct pcb_t process[MAXPROC];
 
 /* Space alloccated for threads */
-static struct tcb_t thread[MAXTHREAD];
-LIST_HEAD(thread_h);
-//struct list_head thread_h;
+struct tcb_t thread[MAXTHREAD];
+struct list_head thread_h;
 
 /*  Space allocated for messages */
-static struct msg_t message[MAXMSG];
-LIST_HEAD(message_h);
-//struct list_head message_h;
+struct msg_t message[MAXMSG];
+struct list_head message_h;
 
 
 //mnalli
 
-struct pcb_t *proc_init(void){
+struct pcb_t *proc_init(void){//chopperEdit
 
     /* process[0] is the root process */
     process[0].p_parent = NULL;
@@ -31,16 +24,18 @@ struct pcb_t *proc_init(void){
     INIT_LIST_HEAD(&process[0].p_children);
     INIT_LIST_HEAD(&process[0].p_siblings);
 
-    /* We do not initialize any field here */
     size_t i;
-    for (i = 1; i < MAXPROC; i++)
+    for (i = 1; i < MAXPROC; i++){
         /* the sentinel of the free list is process[0].p_siblings */
         list_add_tail(&process[i].p_siblings, &(process[0].p_siblings));
-
+		process[i].p_parent = NULL;
+		INIT_LIST_HEAD(&process[i].p_threads);
+		INIT_LIST_HEAD(&process[i].p_children);
+	}
     return process;
 }
 
-struct pcb_t *proc_alloc(struct pcb_t *p_parent){
+struct pcb_t *proc_alloc(struct pcb_t *p_parent){ //chopperEdit
     /* We extract the space from the free list */
     struct list_head *new_space = list_next(&(process[0].p_siblings));
     if (new_space == NULL || p_parent == NULL)
@@ -49,88 +44,46 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent){
 
     /* Deleting the element from the free list */
     list_del(new_space);
-
     struct pcb_t *new_proc = container_of(new_space, struct pcb_t, p_siblings);
-
     new_proc->p_parent = p_parent;
-    INIT_LIST_HEAD(&new_proc->p_threads);
-
-    /* first_child is the first child of p_parent if p_parent has a child.
-       It is NULL or one of the ancestrors if not */
-    struct pcb_t *first_child = proc_firstchild(p_parent);
-
-    if (first_child) {
-        /* if p_parent has at least one child (first_child is the elder child) */
-        list_add_tail(&(new_proc->p_siblings), &(first_child->p_siblings));
-        INIT_LIST_HEAD(&new_proc->p_children);
-    } else {
-        /* if p_parent doesn't have any child */
-        list_add(&(new_proc->p_children), &(p_parent->p_children));
-        INIT_LIST_HEAD(&new_proc->p_siblings);
-    }
-
+	list_add_tail(new_space, &(p_parent->p_children));
+    
     return new_proc;
 }
 
 /* delete a process (properly updating the process tree links) */
 /* this function must fail if the process has threads or children. */
 /* return value: 0 in case of success, -1 otherwise */
-/*
- * DOESN'T WORK WITH ROOT PROCESS (SEGMENTATION FAULT)
- * IS THAT A PROBLEM???????????????????????
- */
 
-int proc_delete(struct pcb_t *oldproc){
-    if (oldproc->p_parent == NULL ||
-        proc_firstchild(oldproc) != NULL ||
-        proc_firstthread(oldproc) != NULL)
-        /* Trying to delete root or a non-allocated process */
-        /* Trying to delete a process with children */
-        /* Trying to delete a process with threads */
+int proc_delete(struct pcb_t *oldproc){ //chopperEdit
+	if (oldproc->p_parent == NULL)
+        //Trying to delete root or a non-allocated process 
         return -1;
-    else {
-        /* the process can be deleted */
 
-        /* Parent of oldproc */
+    if ((proc_firstchild(oldproc) == NULL) && (proc_firstthread(oldproc) == NULL)) {
+        
+        // the process can be deleted 
+
+        // Parent of oldproc 
         struct pcb_t *oldproc_parent = oldproc->p_parent;
-
+		
+		list_del(&(oldproc->p_siblings));
         oldproc->p_parent = NULL;
-
-        if (proc_firstchild(oldproc_parent) == oldproc) {
-            /* oldproc is the first child */
-            list_del(&(oldproc->p_children));
-            struct list_head *next_sibling = list_next(&(oldproc->p_siblings));
-
-            if (next_sibling != NULL) {
-                /* if oldproc isn't the only child */
-                list_del(&(oldproc->p_siblings));
-                list_add(&(container_of(next_sibling, struct pcb_t, p_siblings)->p_children),
-                         &(oldproc_parent->p_children));
-            }
-
-            /* add oldproc tho the free list */
-            list_add_tail(&(oldproc->p_siblings), &(process[0].p_siblings));
-
-        } else {
-            /* oldproc isn't the first child */
-            list_del(&(oldproc->p_siblings));
-            /* add oldproc tho the free list */
-            list_add_tail(&(oldproc->p_siblings), &(process[0].p_siblings));
-        }
-
+		list_add_tail(&(oldproc->p_siblings), &(process[0].p_siblings));
         return 0;
-    }
+    } 
+    else return -1;
 }
 
 /* return the pointer to the first child (NULL if the process has no children) */
-struct pcb_t *proc_firstchild(struct pcb_t *proc) {
+struct pcb_t *proc_firstchild(struct pcb_t *proc) { //chopperEdit
     struct list_head *first_child = list_next(&(proc->p_children));
-    if (first_child == NULL || proc != (container_of(first_child, struct pcb_t, p_children)->p_parent))
+    if (first_child == NULL || proc != (container_of(first_child, struct pcb_t, p_siblings)->p_parent))
         /* if p_parent doesn't have any child */
         return NULL;
     else
         /* if p_parent has at least one child (first_child is the elder child) */
-        return container_of(first_child, struct pcb_t, p_children);
+        return container_of(first_child, struct pcb_t, p_siblings);
 }
 
 struct tcb_t *proc_firstthread(struct pcb_t *proc){
@@ -149,8 +102,7 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc){
 
 //FMA350
 void thread_init(void){
-  //INIT_LIST_HEAD(&thread_h);
-  //mnalli: added initialization with declaration
+  INIT_LIST_HEAD(&thread_h);
   size_t i;
   for (i = 0; i < MAXTHREAD; i++){
       thread[i].t_pcb = NULL;
@@ -244,8 +196,7 @@ struct tcb_t *thread_dequeue(struct list_head *queue){
 //fma350
 
 void msgq_init(void){
-  //INIT_LIST_HEAD(&message_h);
-  //mnalli: added iniialization with declaration
+  INIT_LIST_HEAD(&message_h);
   size_t i;
   for(i = 0; i < MAXMSG; i++){
     list_add(&message[i].m_next, &message_h);
