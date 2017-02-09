@@ -3,15 +3,22 @@
 #include "listx.h"
 
 /* Space allocated for processes */
-struct pcb_t process[MAXPROC];
+static struct pcb_t process[MAXPROC];
+
+/*
+#define LIST_HEAD(name) \
+	struct list_head name = LIST_HEAD_INIT(name)
+*/
 
 /* Space alloccated for threads */
-struct tcb_t thread[MAXTHREAD];
-struct list_head thread_h;
+static struct tcb_t thread[MAXTHREAD];
+LIST_HEAD(thread_h);
+//struct list_head thread_h;
 
 /*  Space allocated for messages */
-struct msg_t message[MAXMSG];
-struct list_head message_h;
+static struct msg_t message[MAXMSG];
+LIST_HEAD(message_h);
+//struct list_head message_h;
 
 
 //mnalli
@@ -74,11 +81,14 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent){
  */
 
 int proc_delete(struct pcb_t *oldproc){
-    if (oldproc->p_parent == NULL)
+    if (oldproc->p_parent == NULL ||
+        proc_firstchild(oldproc) != NULL ||
+        proc_firstthread(oldproc) != NULL)
         /* Trying to delete root or a non-allocated process */
+        /* Trying to delete a process with children */
+        /* Trying to delete a process with threads */
         return -1;
-
-    if (proc_firstchild(oldproc) == NULL && proc_firstthread(oldproc) == NULL) {
+    else {
         /* the process can be deleted */
 
         /* Parent of oldproc */
@@ -91,10 +101,11 @@ int proc_delete(struct pcb_t *oldproc){
             list_del(&(oldproc->p_children));
             struct list_head *next_sibling = list_next(&(oldproc->p_siblings));
 
-            if (next_sibling) {
+            if (next_sibling != NULL) {
                 /* if oldproc isn't the only child */
                 list_del(&(oldproc->p_siblings));
-                list_add(&(container_of(next_sibling, struct pcb_t, p_siblings)->p_children), &(oldproc_parent->p_children));
+                list_add(&(container_of(next_sibling, struct pcb_t, p_siblings)->p_children),
+                         &(oldproc_parent->p_children));
             }
 
             /* add oldproc tho the free list */
@@ -108,9 +119,7 @@ int proc_delete(struct pcb_t *oldproc){
         }
 
         return 0;
-    } else
-        /* the process has got children or threads */
-        return -1;
+    }
 }
 
 /* return the pointer to the first child (NULL if the process has no children) */
@@ -140,7 +149,8 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc){
 
 //FMA350
 void thread_init(void){
-  INIT_LIST_HEAD(&thread_h);
+  //INIT_LIST_HEAD(&thread_h);
+  //mnalli: added initialization with declaration
   size_t i;
   for (i = 0; i < MAXTHREAD; i++){
       thread[i].t_pcb = NULL;
@@ -234,7 +244,8 @@ struct tcb_t *thread_dequeue(struct list_head *queue){
 //fma350
 
 void msgq_init(void){
-  INIT_LIST_HEAD(&message_h);
+  //INIT_LIST_HEAD(&message_h);
+  //mnalli: added iniialization with declaration
   size_t i;
   for(i = 0; i < MAXMSG; i++){
     list_add(&message[i].m_next, &message_h);

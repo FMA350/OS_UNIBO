@@ -47,11 +47,16 @@ void test_proc_alloc(struct pcb_t *root) {
 		adderrbuf("ERROR proc_alloc: wrongly available pcb\n");
 	addokbuf("proc_alloc: Okay\n");
 	for(i = 0; i < MAXPROC - 1; i++) {
+		tprint("INIZIO");
 		if (list_empty(&root->p_children))
 			adderrbuf("ERROR wrong management of children list");
+		tprint("2");
 		pcb = proc_firstchild(root);
+		tprint("3");
 		proc_delete(pcb);
+		tprint("4");
 	}
+		tprint("5");
 	if (!list_empty(&root->p_children))
 		adderrbuf("ERROR wrong management of children list (extra items)");
 	addokbuf("proc_delete: Okay\n");
@@ -77,7 +82,7 @@ void test_proc_hierarchy(struct pcb_t *root) {
 		adderrbuf("ERROR proc_delete should fail if non-empty p_children \n");
 	i=0;
 	while (!list_empty(&root->p_children)) {
-		for (pcb = root; !list_empty(&pcb->p_children); 
+		for (pcb = root; !list_empty(&pcb->p_children);
 				pcb = proc_firstchild(pcb))
 			;
 		if (proc_delete(pcb) == -1)
@@ -149,7 +154,7 @@ void test_thread_queue(struct pcb_t *root) {
 		if (ttcb == NULL || ttcb != tcb[2 * i + 1])
 			adderrbuf("ERROR thread_enqueue FIFO mismatch (multiq)\n");
 	}
-	for (i = 0; i < 20; i++) 
+	for (i = 0; i < 20; i++)
 		thread_free(tcb[i]);
 	addokbuf("thread queue: Okay\n");
 }
@@ -161,7 +166,7 @@ void test_msg_queue(struct pcb_t *root) {
 	alpha = thread_alloc(root);
 	bravo = thread_alloc(root);
 	charlie = thread_alloc(root);
-	
+
 	for (value = 0; value < MAXMSG; value++) {
 		if (msgq_add(alpha, bravo, value) != 0)
 			adderrbuf("ERROR msgq_add wrongly unavailable msg\n");
