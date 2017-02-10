@@ -15,8 +15,7 @@ struct list_head message_h;
 
 
 //mnalli
-
-struct pcb_t *proc_init(void){//chopperEdit
+struct pcb_t *proc_init(void) { //chopperEdit
 
     /* process[0] is the root process */
     process[0].p_parent = NULL;
@@ -24,18 +23,18 @@ struct pcb_t *proc_init(void){//chopperEdit
     INIT_LIST_HEAD(&process[0].p_children);
     INIT_LIST_HEAD(&process[0].p_siblings);
 
-    size_t i;
-    for (i = 1; i < MAXPROC; i++){
+    int i;
+    for (i = 1; i < MAXPROC; i++) {
         /* the sentinel of the free list is process[0].p_siblings */
         list_add_tail(&process[i].p_siblings, &(process[0].p_siblings));
-		process[i].p_parent = NULL;
-		INIT_LIST_HEAD(&process[i].p_threads);
-		INIT_LIST_HEAD(&process[i].p_children);
-	}
+        process[i].p_parent = NULL;
+        INIT_LIST_HEAD(&process[i].p_threads);
+        INIT_LIST_HEAD(&process[i].p_children);
+    }
     return process;
 }
 
-struct pcb_t *proc_alloc(struct pcb_t *p_parent){ //chopperEdit
+struct pcb_t *proc_alloc(struct pcb_t *p_parent) { //chopperEdit
     /* We extract the space from the free list */
     struct list_head *new_space = list_next(&(process[0].p_siblings));
     if (new_space == NULL || p_parent == NULL)
@@ -46,8 +45,8 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent){ //chopperEdit
     list_del(new_space);
     struct pcb_t *new_proc = container_of(new_space, struct pcb_t, p_siblings);
     new_proc->p_parent = p_parent;
-	list_add_tail(new_space, &(p_parent->p_children));
-    
+    list_add_tail(new_space, &(p_parent->p_children));
+
     return new_proc;
 }
 
@@ -55,23 +54,23 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent){ //chopperEdit
 /* this function must fail if the process has threads or children. */
 /* return value: 0 in case of success, -1 otherwise */
 
-int proc_delete(struct pcb_t *oldproc){ //chopperEdit
-	if (oldproc->p_parent == NULL)
-        //Trying to delete root or a non-allocated process 
+int proc_delete(struct pcb_t *oldproc) { //chopperEdit
+    if (oldproc->p_parent == NULL)
+        //Trying to delete root or a non-allocated process
         return -1;
 
     if ((proc_firstchild(oldproc) == NULL) && (proc_firstthread(oldproc) == NULL)) {
-        
-        // the process can be deleted 
 
-        // Parent of oldproc 
+        // the process can be deleted
+
+        // Parent of oldproc
         struct pcb_t *oldproc_parent = oldproc->p_parent;
-		
-		list_del(&(oldproc->p_siblings));
+
+        list_del(&(oldproc->p_siblings));
         oldproc->p_parent = NULL;
-		list_add_tail(&(oldproc->p_siblings), &(process[0].p_siblings));
+        list_add_tail(&(oldproc->p_siblings), &(process[0].p_siblings));
         return 0;
-    } 
+    }
     else return -1;
 }
 
@@ -86,10 +85,10 @@ struct pcb_t *proc_firstchild(struct pcb_t *proc) { //chopperEdit
         return container_of(first_child, struct pcb_t, p_siblings);
 }
 
-struct tcb_t *proc_firstthread(struct pcb_t *proc){
+struct tcb_t *proc_firstthread(struct pcb_t *proc) {
     struct list_head *first_thread = list_next(&(proc->p_threads));
 
-    if (first_thread)
+    if (first_thread!=NULL)
         /* the process has at least one thread */
         return container_of(first_thread, struct tcb_t, t_next);
     else
@@ -101,59 +100,52 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc){
 
 
 //FMA350
-void thread_init(void){
-  INIT_LIST_HEAD(&thread_h);
-  size_t i;
-  for (i = 0; i < MAXTHREAD; i++){
-      thread[i].t_pcb = NULL;
-      thread[i].t_status = T_STATUS_NONE;
-      thread[i].t_wait4sender = NULL;
-      list_add_tail(&thread[i].t_next, &thread_h);
-      INIT_LIST_HEAD(&thread[i].t_sched);
-      INIT_LIST_HEAD(&thread[i].t_msgq);
+void thread_init(void) { 
+    INIT_LIST_HEAD(&thread_h); //inizializzo la lista libera
+    int i;
+    for (i = 0; i < MAXTHREAD; i++) {
+        thread[i].t_pcb = NULL;
+        thread[i].t_status = T_STATUS_NONE;
+        thread[i].t_wait4sender = NULL;
+        list_add_tail(&thread[i].t_next, &thread_h); //collego i vari elementi della lista libera
+        INIT_LIST_HEAD(&thread[i].t_sched);
+        INIT_LIST_HEAD(&thread[i].t_msgq);
     }
 }
 
-struct tcb_t *thread_alloc(struct pcb_t *process){
-    struct list_head *new_head = list_next(&thread_h);
+struct tcb_t *thread_alloc(struct pcb_t *process) {
+    struct list_head *new_head = list_next(&thread_h); 
 
     if(process == NULL || new_head == NULL) {
         /* ERROR! the given process pointer is NULL
            or the free list is empty */
         return NULL;
     }
-
+    
     struct tcb_t *new_thread = container_of(new_head, struct tcb_t, t_next);
-    //initializing the new thread
-    /* removes the thread from the free list */
-    list_del(new_head);
+    
+    list_del(new_head); 							/* removes the thread from the free list */
     new_thread->t_pcb = process;
-    /*adds the thread to the control thread list of the process*/
-    list_add_tail(new_head, &process->p_threads);
-    new_thread->t_status = T_STATUS_READY; //ready to be scheduled
+    list_add_tail(new_head, &process->p_threads);   /*adds the thread to the control thread list of the process*/
+    new_thread->t_status = T_STATUS_READY; 			//ready to be scheduled
     return new_thread;
 }
 
-int thread_free(struct tcb_t *oldthread){
-  //check that no messages are left in the queue.
-  if(!list_empty(&oldthread->t_msgq)){
-    return -1; //there are messsages left in the queue.
-  }
-  //remove the thread from the process queue.
-  list_del(&oldthread->t_next);
-  oldthread->t_pcb = NULL;
-  oldthread->t_status = T_STATUS_NONE;
-  oldthread->t_wait4sender = NULL;
+int thread_free(struct tcb_t *oldthread) { //chopperEdit
+    //check that no messages are left in the queue.
+    if(!list_empty(&oldthread->t_msgq)) {
+        return -1; //there are messsages left in the queue.
+    }
+    //remove the thread from the process queue.
+    list_del(&oldthread->t_next);
+    oldthread->t_pcb = NULL;
+    oldthread->t_status = T_STATUS_NONE;
+    oldthread->t_wait4sender = NULL;
 
-  /* Non necessario, verrà inserito nella lista libera */
-  //INIT_LIST_HEAD(&oldthread->t_next);
-  /* Va rimosso dalla coda dello scheduler??? */
-  //INIT_LIST_HEAD(&oldthread->t_sched);
-
-  //t_msgq is already empty.
-  /*adding oldthread to the free list*/
-  list_add_tail(&oldthread->t_next, &(thread[0].t_next));
-  return 0;
+    //t_msgq is already empty.
+    /*adding oldthread to the free list*/
+    list_add_tail(&oldthread->t_next, &(thread_h));
+    return 0;
 }
 
 /*************************** THREAD QUEUE ************************/
@@ -161,51 +153,48 @@ int thread_free(struct tcb_t *oldthread){
 
 
 /* add a tcb to the scheduling queue */
-inline void thread_enqueue(struct tcb_t *new, struct list_head *queue){
-  list_add_tail(&new->t_next, queue);
+inline void thread_enqueue(struct tcb_t *new, struct list_head *queue) { //chopperEdit
+    list_add_tail(&new->t_sched, queue);
 }
 
 /* return the head element of a scheduling queue.
 	 (this function does not dequeues the element)
 	 return NULL if the list is empty */
-struct tcb_t *thread_qhead(struct list_head *queue){
+struct tcb_t *thread_qhead(struct list_head *queue) { //chopperEdit
     struct list_head *new_head = list_next(queue);
     if(new_head == NULL)
-      return NULL;
+        return NULL;
     else
-      /* t_next ---> t_sched */
-      return container_of(new_head, struct tcb_t, t_sched);
+        /* t_next ---> t_sched */
+        return container_of(new_head, struct tcb_t, t_sched);
 }
 
 
 /* get the first element of a scheduling queue.
 	 return NULL if the list is empty */
-struct tcb_t *thread_dequeue(struct list_head *queue){
-  struct list_head *new_head = list_next(queue);
-  if(new_head == NULL)
-    return NULL;
-  else{
-    list_del(new_head);
-    /* t_next ---> t_sched */
-    return container_of(new_head, struct tcb_t, t_sched);
-  }
-
+struct tcb_t *thread_dequeue(struct list_head *queue) { //chopperEdit
+    struct list_head *new_head = list_next(queue);
+    if(new_head == NULL)
+        return NULL;
+    else {
+        list_del(new_head);
+        return container_of(new_head, struct tcb_t, t_sched);
+    }
 }
 
 /*************************** MSG QUEUE ************************/
 //fma350
-
-void msgq_init(void){
-  INIT_LIST_HEAD(&message_h);
-  size_t i;
-  for(i = 0; i < MAXMSG; i++){
-    list_add(&message[i].m_next, &message_h);
-    message[i].m_sender = NULL;
-    //message[i].m_value  = 0;
-  }
+void msgq_init(void) {
+    INIT_LIST_HEAD(&message_h);
+    size_t i;
+    for(i = 0; i < MAXMSG; i++) {
+        list_add(&message[i].m_next, &message_h);
+        message[i].m_sender = NULL;
+        //message[i].m_value  = 0;
+    }
 }
 
-int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value){
+int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value) {
     /* extracting space from free list */
     struct list_head *new_space = list_next(&message_h);
     if(new_space == NULL ||sender == NULL || destination == NULL)
@@ -226,35 +215,35 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value){
     }
 }
 
-int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value){
-    if(sender == NULL){
+int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value) {
+    if(sender == NULL) {
         /* restituisce il primo messaggio in coda qualsiasi ne sia il mittente
          * L’indirizzo del TCB del mittente viene memorizzato in *sender */
 
-         //concatenatore del primo messaggio in coda
-         struct list_head *msg_conc = list_next(&destination->t_msgq);
-         if (msg_conc == NULL)
+        //concatenatore del primo messaggio in coda
+        struct list_head *msg_conc = list_next(&destination->t_msgq);
+        if (msg_conc == NULL)
             /* empty queue */
             return -1;
-         else {
-             /* removing the message from the list */
-             list_del(msg_conc);
-             /* extracting the vaue */
-             *value = container_of(msg_conc, struct msg_t, m_next)->m_value;
-             /* adding the element to the free list */
-             list_add_tail(msg_conc, &message_h);
-             return 0;
-         }
+        else {
+            /* removing the message from the list */
+            list_del(msg_conc);
+            /* extracting the vaue */
+            *value = container_of(msg_conc, struct msg_t, m_next)->m_value;
+            /* adding the element to the free list */
+            list_add_tail(msg_conc, &message_h);
+            return 0;
+        }
 
     }
     /* sender != NULL && *sender == NULL */
-    else if (*sender == NULL){
+    else if (*sender == NULL) {
         /* restituisce il primo messaggio in coda qualsiasi ne sia il mittente
          * L’indirizzo del TCB del mittente viene memorizzato in *sender */
 
-         //concatenatore del primo messaggio in coda
-         struct list_head *msg_conc = list_next(&destination->t_msgq);
-         if (msg_conc == NULL)
+        //concatenatore del primo messaggio in coda
+        struct list_head *msg_conc = list_next(&destination->t_msgq);
+        if (msg_conc == NULL)
             /* empty queue */
             return -1;
         else {
@@ -274,8 +263,8 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
     else {
         /* restituisce il primo messaggio in coda che ha *sender come mittente */
         struct msg_t *pos;
-        list_for_each_entry(pos, &destination->t_msgq, m_next){
-            if(pos->m_sender == *sender){
+        list_for_each_entry(pos, &destination->t_msgq, m_next) {
+            if(pos->m_sender == *sender) {
                 /* removing the message from the list */
                 list_del(&pos->m_next);
                 /* extracting the value */
