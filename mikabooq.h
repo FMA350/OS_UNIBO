@@ -1,8 +1,7 @@
 #ifndef MIKABOOQ_H
 #define MIKABOOQ_H
-#include "listx.h"
+#include <listx.h>
 #include <sys/types.h>
-#include <stdint.h>
 
 struct pcb_t {
 	struct pcb_t * p_parent ; /* pointer to parent */

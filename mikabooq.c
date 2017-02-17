@@ -1,17 +1,16 @@
-#include "mikabooq.h"
-#include "const.h"
-#include "listx.h"
+#include <mikabooq.h>
+#include <const.h>
 
 /* Space allocated for processes */
-struct pcb_t process[MAXPROC];
+static struct pcb_t process[MAXPROC];
 
 /* Space alloccated for threads */
-struct tcb_t thread[MAXTHREAD];
-struct list_head thread_h;
+static struct tcb_t thread[MAXTHREAD];
+static LIST_HEAD(thread_h);
 
 /*  Space allocated for messages */
-struct msg_t message[MAXMSG];
-struct list_head message_h;
+static struct msg_t message[MAXMSG];
+static LIST_HEAD(message_h);
 
 
 //mnalli
@@ -23,7 +22,7 @@ struct pcb_t *proc_init(void) { //chopperEdit
     INIT_LIST_HEAD(&process[0].p_children);
     INIT_LIST_HEAD(&process[0].p_siblings);
 
-    int i;
+    size_t i;
     for (i = 1; i < MAXPROC; i++) {
         /* the sentinel of the free list is process[0].p_siblings */
         list_add_tail(&process[i].p_siblings, &(process[0].p_siblings));
@@ -54,42 +53,44 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent) { //chopperEdit
 /* this function must fail if the process has threads or children. */
 /* return value: 0 in case of success, -1 otherwise */
 
-int proc_delete(struct pcb_t *oldproc) { //chopperEdit
-    if (oldproc->p_parent == NULL)
-        //Trying to delete root or a non-allocated process
+int proc_delete(struct pcb_t *oldproc){
+    if (oldproc->p_parent == NULL ||
+        !list_empty(&oldproc->p_children) ||
+        !list_empty(&oldproc->p_threads))
+        // Trying to delete root or a non-allocated process
+        // Trying to delete a process with children
+        // Trying to delete a process with threads
         return -1;
-
-    if ((proc_firstchild(oldproc) == NULL) && (proc_firstthread(oldproc) == NULL)) {
-
+    else {
         // the process can be deleted
 
-        // Parent of oldproc
-        struct pcb_t *oldproc_parent = oldproc->p_parent;
-
-        list_del(&(oldproc->p_siblings));
         oldproc->p_parent = NULL;
-        list_add_tail(&(oldproc->p_siblings), &(process[0].p_siblings));
+        list_del(&oldproc->p_siblings);
+        list_add_tail(&oldproc->p_siblings, &(process[0].p_siblings));
+
         return 0;
     }
-    else return -1;
 }
 
 /* return the pointer to the first child (NULL if the process has no children) */
-struct pcb_t *proc_firstchild(struct pcb_t *proc) { //chopperEdit
-    struct list_head *first_child = list_next(&(proc->p_children));
-    if (first_child == NULL || proc != (container_of(first_child, struct pcb_t, p_siblings)->p_parent))
-        /* if p_parent doesn't have any child */
-        return NULL;
-    else
-        /* if p_parent has at least one child (first_child is the elder child) */
+inline struct pcb_t *proc_firstchild(struct pcb_t *proc) {
+
+    struct list_head *first_child = list_next(&proc->p_children);
+
+    if (first_child)
+        //the process has a child
+        //children are linked with p_sibling field
         return container_of(first_child, struct pcb_t, p_siblings);
+    else
+        //if p_parent doesn't have any child
+        return NULL;
 }
 
-struct tcb_t *proc_firstthread(struct pcb_t *proc) {
-    struct list_head *first_thread = list_next(&(proc->p_threads));
+inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
+    struct list_head *first_thread = list_next(&proc->p_threads);
 
-    if (first_thread!=NULL)
-        /* the process has at least one thread */
+    if (first_thread)
+        // the process has at least one thread
         return container_of(first_thread, struct tcb_t, t_next);
     else
         return NULL;
@@ -100,9 +101,8 @@ struct tcb_t *proc_firstthread(struct pcb_t *proc) {
 
 
 //FMA350
-void thread_init(void) { 
-    INIT_LIST_HEAD(&thread_h); //inizializzo la lista libera
-    int i;
+void thread_init(void) {
+    size_t i;
     for (i = 0; i < MAXTHREAD; i++) {
         thread[i].t_pcb = NULL;
         thread[i].t_status = T_STATUS_NONE;
@@ -114,16 +114,15 @@ void thread_init(void) {
 }
 
 struct tcb_t *thread_alloc(struct pcb_t *process) {
-    struct list_head *new_head = list_next(&thread_h); 
+    struct list_head *new_head = list_next(&thread_h);
 
-    if(process == NULL || new_head == NULL) {
+    if(process == NULL || new_head == NULL)
         /* ERROR! the given process pointer is NULL
            or the free list is empty */
         return NULL;
-    }
-    
+
     struct tcb_t *new_thread = container_of(new_head, struct tcb_t, t_next);
-    
+
     list_del(new_head); 							/* removes the thread from the free list */
     new_thread->t_pcb = process;
     list_add_tail(new_head, &process->p_threads);   /*adds the thread to the control thread list of the process*/
