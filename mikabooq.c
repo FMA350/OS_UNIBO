@@ -184,7 +184,6 @@ struct tcb_t *thread_dequeue(struct list_head *queue) { //chopperEdit
 /*************************** MSG QUEUE ************************/
 //fma350
 void msgq_init(void) {
-    INIT_LIST_HEAD(&message_h);
     size_t i;
     for(i = 0; i < MAXMSG; i++) {
         list_add(&message[i].m_next, &message_h);
