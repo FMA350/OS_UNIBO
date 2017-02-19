@@ -47,16 +47,11 @@ void test_proc_alloc(struct pcb_t *root) {
 		adderrbuf("ERROR proc_alloc: wrongly available pcb\n");
 	addokbuf("proc_alloc: Okay\n");
 	for(i = 0; i < MAXPROC - 1; i++) {
-		tprint("INIZIO");
 		if (list_empty(&root->p_children))
 			adderrbuf("ERROR wrong management of children list");
-		tprint("2");
 		pcb = proc_firstchild(root);
-		tprint("3");
 		proc_delete(pcb);
-		tprint("4");
 	}
-		tprint("5");
 	if (!list_empty(&root->p_children))
 		adderrbuf("ERROR wrong management of children list (extra items)");
 	addokbuf("proc_delete: Okay\n");
