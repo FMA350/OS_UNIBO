@@ -13,8 +13,8 @@ static struct msg_t message[MAXMSG];
 static LIST_HEAD(message_h);
 
 
-//mnalli
-struct pcb_t *proc_init(void) { //chopperEdit
+
+struct pcb_t *proc_init(void) {
 
     /* process[0] is the root process */
     process[0].p_parent = NULL;
@@ -33,7 +33,7 @@ struct pcb_t *proc_init(void) { //chopperEdit
     return process;
 }
 
-struct pcb_t *proc_alloc(struct pcb_t *p_parent) { //chopperEdit
+struct pcb_t *proc_alloc(struct pcb_t *p_parent) {
     /* We extract the space from the free list */
     struct list_head *new_space = list_next(&(process[0].p_siblings));
     if (new_space == NULL || p_parent == NULL)
@@ -100,7 +100,6 @@ inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
 /****************************************** THREAD ALLOCATION ****************/
 
 
-//FMA350
 void thread_init(void) {
     size_t i;
     for (i = 0; i < MAXTHREAD; i++) {
@@ -130,7 +129,7 @@ struct tcb_t *thread_alloc(struct pcb_t *process) {
     return new_thread;
 }
 
-int thread_free(struct tcb_t *oldthread) { //chopperEdit
+int thread_free(struct tcb_t *oldthread) {
     //check that no messages are left in the queue.
     if(!list_empty(&oldthread->t_msgq)) {
         return -1; //there are messsages left in the queue.
@@ -148,7 +147,6 @@ int thread_free(struct tcb_t *oldthread) { //chopperEdit
 }
 
 /*************************** THREAD QUEUE ************************/
-//fma350
 
 
 /* add a tcb to the scheduling queue */
@@ -171,7 +169,7 @@ struct tcb_t *thread_qhead(struct list_head *queue) { //chopperEdit
 
 /* get the first element of a scheduling queue.
 	 return NULL if the list is empty */
-struct tcb_t *thread_dequeue(struct list_head *queue) { //chopperEdit
+struct tcb_t *thread_dequeue(struct list_head *queue) {
     struct list_head *new_head = list_next(queue);
     if(new_head == NULL)
         return NULL;
@@ -182,7 +180,7 @@ struct tcb_t *thread_dequeue(struct list_head *queue) { //chopperEdit
 }
 
 /*************************** MSG QUEUE ************************/
-//fma350
+
 void msgq_init(void) {
     size_t i;
     for(i = 0; i < MAXMSG; i++) {
