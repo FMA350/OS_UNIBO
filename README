@@ -6,7 +6,7 @@ BUILDING
 
 
 
-arm-none-eabi-gcc -mcpu=arm7tdmi -c mikabooq.c -o mikabooq.o -I . -include 'stdint.h'
+arm-none-eabi-gcc -mcpu=arm7tdmi -c mikabooq.c -o mikabooq.o -I . -include <stdint.h>
 arm-none-eabi-gcc -mcpu=arm7tdmi -c p1test.c -o p1test.o -I . -I /usr/include/uarm
 
 arm-none-eabi-ld \
@@ -15,3 +15,8 @@ arm-none-eabi-ld \
    /usr/include/uarm/libuarm.o p1test.o mikabooq.o
 
 elf2uarm -k p1test.elf
+
+MIKABOO PT.2 README
+=====================
+
+Il file main.c è relativo alla fase 2
