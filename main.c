@@ -19,10 +19,27 @@ int main(int argc, char const *argv[]) {
 
     tprint(" Data structures initialized\n");
 
-    /* TODO: load interrupt and trap vector */
+    /* TODO: load exception vector correctly
+    The first bus addresses (0x0000.0000 → 0x0000.001C) are occupied by
+    the fast exception vectors.*/
+/*
+    // Reset -- 0x00000000
+    // Undefined Instruction
+    *((unsigned int *) 0x00000004) = 0;
+    // Software Interrupt
+    *((unsigned int *) 0x00000008) = 0;
+    // Prefetch Abort
+    *((unsigned int *) 0x0000000C) = 0;
+    // Data Abort
+    *((unsigned int *) 0x00000010) = 0;
+    // reserved/unused -- 0x00000014
+    // Interrupt Request
+    *((unsigned int *) 0x00000018) = 0;
+    // Fast Interrupt Request
+    *((unsigned int *) 0x0000001C) = 0;
+*/
 
     struct tcb_t *first_thread = thread_alloc(root);
-
     tprint(" First thread allocated\n");
 
     /* caricare stato di partenza del thread */
