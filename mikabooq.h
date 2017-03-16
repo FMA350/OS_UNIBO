@@ -2,6 +2,7 @@
 #define MIKABOOQ_H
 #include <listx.h>
 #include <sys/types.h>
+#include <uARMtypes.h>
 
 struct pcb_t {
 	struct pcb_t * p_parent ; /* pointer to parent */
@@ -17,7 +18,7 @@ struct pcb_t {
 
 struct tcb_t {
 	struct pcb_t *t_pcb; /* pointer to the process */
-	// state_t t_s ; /* processor state */
+	state_t t_s ; /* processor state */
 
 	int t_status;
 

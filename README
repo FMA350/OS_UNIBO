@@ -20,3 +20,9 @@ MIKABOO PT.2 README
 =====================
 
 Il file main.c è relativo alla fase 2
+
+tesi è descrive un sistema operativo che ha molte parti in comune con ciò che stiamo
+realizzando noi. La sezione a p. 123 è piuttosto importante per capire come agire.
+
+NOTA: ho aggiunto '#include <uARMtypes.h>' nel file mikabooq.h; serve per la definizione
+		di state_t, il quale è stato decommentato nella struttura tcb_t
