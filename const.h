@@ -5,4 +5,15 @@
 #define MAXTHREAD 30
 #define MAXMSG 40
 
+
+/* Exception States Vector */
+#define SYSCALL_NEW 0x00007268
+#define SYSCALL_OLD 0x00007210
+#define PGMT_NEW 0x000071B8
+#define PGMT_OLD 0x00007160
+#define TLB_NEW 0x00007108
+#define TLB_OLD 0x000070B0
+#define INTERRUPT_NEW 0x00007058
+#define INTERRUPT_OLD 0x00007000
+
 #endif
