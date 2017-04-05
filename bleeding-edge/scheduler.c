@@ -1,6 +1,7 @@
 #include "../const.h"
 #include "../mikabooq.h"
 #include "../listx.h"
+
 /*
 pages 16...23 of the manual
 
@@ -71,29 +72,29 @@ TLB New       0x0000.7108
 TLB Old       0x0000.70B0
 Interrupt New 0x0000.7058
 Interrupt Old 0x0000.7000
+*/
 
-
-
-
-
-
-
-
-/*
+static unsigned int * oldprocstate = 0x00007000;
 
 static LIST_HEAD(ready_queue); //holds the queue
-
+static struct tcb_t * current_thread;
 
 //where should we save the state of the processor?
 
-int append(){
+int append(tcb_t new_thread){
   //should we check if the thread is already present in the list?
+  thread_enqueue(ready_queue)
+}
 
-
+void saveprcstate(tcb_t * thread){
+  thread->t_s =
 }
 
 void tick(){
   /** everytime the subroutine tick() is called
     * the next thread is put into execution
   */
+  saveprcstate(current_thread);
+
+
 }
