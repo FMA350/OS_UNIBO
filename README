@@ -1,3 +1,9 @@
+Link utili (solo per development)
+
+Accedere ad i registri della CPU con linguaggio C e assembly:
+http://stackoverflow.com/questions/3022046/is-it-possible-to-access-32-bit-registers-in-c
+http://stackoverflow.com/questions/2582629/how-to-determine-values-saved-on-the-stack/2582902#2582902
+
 MIKABOO PT.1 README
 =====================
 
