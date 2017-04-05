@@ -2,9 +2,16 @@
 #include <listx.h>
 #include <arch.h>
 #include <uARMconst.h>
+#include <uARMtypes.h>
+
 
 
 extern void test();
+
+void interrupt_h(){
+    tprint("interrupt_h has started!");
+    HALT();
+}
 
 
 int main(int argc, char const *argv[]) {
@@ -38,6 +45,12 @@ int main(int argc, char const *argv[]) {
     // Fast Interrupt Request
     *((unsigned int *) 0x0000001C) = 0;
 */
+
+    /* Loading exception states vector */
+    ((state_t *) INT_NEWAREA)->pc = (unsigned int) interrupt_h;
+    setTIMER(1);
+
+    WAIT();
 
     struct tcb_t *first_thread = thread_alloc(root);
     tprint(" First thread allocated\n");
