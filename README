@@ -36,3 +36,6 @@ realizzando noi. La sezione a p. 123 è piuttosto importante per capire come agi
 
 NOTA: ho aggiunto '#include <uARMtypes.h>' nel file mikabooq.h; serve per la definizione
 		di state_t, il quale è stato decommentato nella struttura tcb_t
+
+Il main esegue in system mode con fast & normal interrupts disabilitati (i software interrupt sono abilitati perché sono exceptions):
+	attenzione in fase di testing
