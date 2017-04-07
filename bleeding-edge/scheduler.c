@@ -1,5 +1,8 @@
-#include "../const.h"
-#include "../mikabooq.h"
+// #include "../const.h"
+// #include "../mikabooq.h"
+// #include "../listx.h"
+#include <mikabooq.h>
+#include <listx.h>
 #include "../listx.h"
 
 /*
@@ -78,6 +81,11 @@ static unsigned int * oldprocstate = 0x00007000;
 
 static LIST_HEAD(ready_queue); //holds the queue
 static struct tcb_t * current_thread;
+
+void IQ_HANDLER(){
+  tprint("Entered into the FIQ_HANDLER() function");
+  HALT();
+}
 
 //where should we save the state of the processor?
 
