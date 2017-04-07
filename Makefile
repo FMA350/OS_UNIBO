@@ -1,15 +1,21 @@
-cc     = arm-none-eabi-gcc
-CFLAGS = -mcpu=arm7tdmi-I
-IFLAG  = -I /usr/include/uarm
-LDFLAGS=
-EXECUTABLE=p2test.elf
+CC     = arm-none-eabi-gcc
+LL		 = arm-none-eabi-ld
+CFLAGS = -mcpu=arm7tdmi -c -I . -I /usr/include/uarm
+IFLAG  = -I /usr/include/uarm -I . -include 'stdint.h' -include 'uARMtypes.h'
+LDFLAGS= -T /usr/include/uarm/ldscripts/elf32ltsarm.h.uarmcore.x
 
-SOURCES=initial.c interrupts.c p2test.c scheduler.c mikabooq.c
-OBJECTS=$(SOURCES:.cpp=.o)
+SOURCES = p2test.c initial.c scheduler.c mikabooq.c interrupts.c
+OBJECTS = $(SOURCES:.c=.o) /usr/include/uarm/crtso.o /usr/include/uarm/libuarm.o
+EXECUTABLE = p2test.elf
 
-all:uArmos
+all: $(SOURCES) $(EXECUTABLE)
 
-uArmos: initial.o
+$(EXECUTABLE): $(OBJECTS)
+	$(LL) $(LDFLAGS) $(OBJECTS) -o $@
+	elf2uarm -k p2test.elf
+
+.c.o:
+	$(CC) $(CFLAGS) $(IFLAG) $< -o $@
 
 clean:
-	rm *.o
+	rm *.o *.elf
