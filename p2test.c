@@ -1,18 +1,18 @@
 #include <libuarm.h>
 
-extern void breakpoint();
+extern void BREAKPOINT();
 
 void test_wait(){
     tprint(" The test has started\n"
            " Ready to wait\n"
         );
-    breakpoint();
+    BREAKPOINT();
     WAIT();
 }
 
 void test_syscall(){
     tprint("test_syscall has started\n");
-    breakpoint();
+    BREAKPOINT();
     tprint("First syscall...\n"
            "All arguments are 1\n");
     SYSCALL(1, 1, 1, 1);
