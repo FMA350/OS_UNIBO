@@ -13,7 +13,7 @@ extern void test_wait();
 
 extern void test_syscall();
 
-void syscall_h(a1, a2, a3, a4){
+void syscall_h(int a1, int a2, int a3, int a4){
     BREAKPOINT();
     if (a1 == 1)
         tprint("a1 == 1\n");
