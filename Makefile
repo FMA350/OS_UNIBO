@@ -6,16 +6,17 @@ LDFLAGS= -T /usr/include/uarm/ldscripts/elf32ltsarm.h.uarmcore.x
 
 SOURCES = p2test.c initial.c scheduler.c mikabooq.c interrupts.c
 OBJECTS = $(SOURCES:.c=.o) /usr/include/uarm/crtso.o /usr/include/uarm/libuarm.o
-EXECUTABLE = p2test.elf
+EXEPATH = elf-files/
+EXECUTABLE = $(EXEPATH)p2test.elf
 
 all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(LL) $(LDFLAGS) $(OBJECTS) -o $@
-	elf2uarm -k p2test.elf
+	elf2uarm -k $(EXECUTABLE)
 
 .c.o:
 	$(CC) $(CFLAGS) $(IFLAG) $< -o $@
 
 clean:
-	rm *.o *.elf
+	rm *.o $(EXEPATH)*.elf
