@@ -5,7 +5,7 @@
 #include <uARMtypes.h>
 #include <interrupts.h>
 
-extern void syscall_h(int a1, int a2, int a3, int a4);
+extern void syscall_h(int a1, int a2, int a3, int a4); //a1 = syscall a2 =a1
 
 void states_init(){
     //TODO: complete loading and care for execution mode

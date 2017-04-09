@@ -1,5 +1,6 @@
 
 /*
+EXCEPTION VECTOR
 Fast Interrupt Request    0x0000.001C
 Interrupt Request         0x0000.0018
 reserved/unused           0x0000.0014
@@ -14,7 +15,7 @@ is correctly set up, a branch instruction will lead the execution
 to the correct handler.
 */
 
-
+Excepions and Handlers
 
 void FIQ_Handler(){
 
@@ -38,13 +39,20 @@ void PrefetchAbortException(){
 
 void SoftwareInterrupt(unsigned int SystemCAllNumber, unsigned int a1, unsigned int a2, unsigned int a3){
   //0x0000.0008
-  if(SystemCAllNumber == SYS_SEND){
-
+       if(SystemCAllNumber == SYS_SEND){
+        int err = send(a1, a2); //TODO to be defined
   }
   else if (SystemCAllNumber == SYS_RECV){
-
+        recv (a1, a2);
   }
 
+  else return //TODO: throws an excepion.
+}
 
+void UndefinedInstruction(){
+
+}
+
+void Reset(){
 
 }
