@@ -15,15 +15,7 @@ is correctly set up, a branch instruction will lead the execution
 to the correct handler.
 */
 
-//Excepions and Handlers
-
-void FIQ_Handler(){
-
-}
-
-void IQ_Handler(){
-
-}
+// Excepions and Handlers
 
 void RUExeption(){
 
@@ -50,9 +42,5 @@ void SoftwareInterrupt(unsigned int SystemCAllNumber, unsigned int a1, unsigned 
 }
 
 void UndefinedInstruction(){
-
-}
-
-void Reset(){
 
 }

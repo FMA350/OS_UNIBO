@@ -7,18 +7,39 @@
 
 extern void syscall_h(int a1, int a2, int a3, int a4); //a1 = syscall a2 =a1
 
+#define NEW_STATE(NEW_AREA) ((state_t *) NEW_AREA)
+
+#define LOAD_NEW_STATE(NEW_AREA, HANDLER_NAME)                                       \
+    NEW_STATE(NEW_AREA)->pc = (unsigned int) HANDLER_NAME;                    \
+    NEW_STATE(NEW_AREA)->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);     \
+    NEW_STATE(NEW_AREA)->sp = RAM_TOP;
+
 void states_init(){
     //TODO: complete loading and care for execution mode
+    //FIXME: come vanno caricati gli altri registri?
 
-    ((state_t *) INT_NEWAREA)->pc = (unsigned int) interrupt_h;
-    ((state_t *) INT_NEWAREA)->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
-    ((state_t *) INT_NEWAREA)->sp = RAM_TOP;
+    LOAD_NEW_STATE(INT_NEWAREA, interrupt_h);
 
-    ((state_t *) SYSBK_NEWAREA)->pc = (unsigned int) syscall_h;
-    ((state_t *) SYSBK_NEWAREA)->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
-    ((state_t *) SYSBK_NEWAREA)->sp = RAM_TOP;
+    // TLB_NEWAREA
+    // TODO: Settare HANDLER_NAME
+    // LOAD_NEW_STATE(TLB_NEWAREA, HANDLER_NAME)
+
+    // PGMTRAP_NEWAREA
+    // TODO: Settare HANDLER_NAME
+    // LOAD_NEW_STATE(PGMTRAP_NEWAREA, HANDLER_NAME)
+
+    LOAD_NEW_STATE(SYSBK_NEWAREA, syscall_h);
 }
 
 void interrupt_h() {
-    /* code */
+    tprint("interrupt_h started\n");
+    HALT();
+}
+
+void FIQ_Handler(){
+
+}
+
+void IQ_Handler(){
+
 }

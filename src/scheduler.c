@@ -12,20 +12,16 @@ extern unsigned int soft_block_count;
 
 extern void test_syscall();
 
-extern void tprint();
-extern void  WAIT();
-extern void  HALT();
-extern void  PANIC();
-extern void  setTIMER();
-extern void  LDST();
-
-
+void IDLE_proc() {
+    tprint("IDLE_proc started\n");
+    WAIT();
+}
 
 void first_thread_launch(struct tcb_t *first_thread) {
 
     /* caricare stato di partenza del thread */
     // PC points the thread we are starting
-    first_thread->t_s.pc = (unsigned int) test_syscall;
+    first_thread->t_s.pc = (unsigned int) IDLE_proc;
     // SP
     first_thread->t_s.sp = RAM_TOP - FRAME_SIZE;
     // CPSR -> mask all interrupts and be in kernel mode
