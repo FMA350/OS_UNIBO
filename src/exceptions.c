@@ -15,7 +15,7 @@ is correctly set up, a branch instruction will lead the execution
 to the correct handler.
 */
 
-Excepions and Handlers
+//Excepions and Handlers
 
 void FIQ_Handler(){
 

@@ -12,6 +12,15 @@ extern unsigned int soft_block_count;
 
 extern void test_syscall();
 
+extern void tprint();
+extern void  WAIT();
+extern void  HALT();
+extern void  PANIC();
+extern void  setTIMER();
+extern void  LDST();
+
+
+
 void first_thread_launch(struct tcb_t *first_thread) {
 
     /* caricare stato di partenza del thread */
