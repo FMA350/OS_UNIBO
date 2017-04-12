@@ -93,31 +93,6 @@ static inline void thread_outqueue(struct tcb_t *this) {
 #define for_each_thread_in_q(pos, queue) \
 	list_for_each_entry(pos, queue, t_sched)
 
-//TODO: I had to add a ; at the end of the line above. Check.
-/*
- * mnalli - UPDATE - ';' removed
- *
- * This macro is nothing more than a pre-set for loop declaration
- * i.e. for( various; para; meters){
- * 			the code we have to write
- *			after the macro
- *		}
- *
- *	If a ';' is put the for loop does nothing
- *  Usage:
- *  for_each_thread_in_q(pos, queue){
- *		codiamo insieme
- *	}
- *
- * check the original macro
- *
- * #define list_for_each_entry(pos, head, member)                          \
- *	  for (pos = container_of((head)->next, typeof(*pos), member);      \
- *	  &pos->member != (head);        \
- *	  pos = container_of(pos->member.next, typeof(*pos), member))
- *
- */
-
 /*************************** MSG QUEUE ************************/
 
 /* initialize the data structure */
