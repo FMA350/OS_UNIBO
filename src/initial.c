@@ -39,13 +39,17 @@ void syscall_h(int a1, int a2, int a3, int a4){
     LDST((void *) SYSBK_OLDAREA);
 }
 
+// the thread that has currently the control of the CPU
+struct tcb_t *current_thread = NULL;
 
 // sentinella della ready queue
 LIST_HEAD(readyq);
-// number of processes in the system
-/* first thread */
-unsigned int proc_count = 1;
-//
+
+// the number of threads in the system
+unsigned int thread_count = 0;
+
+// the number of threads that are blocked awaiting for I/O or
+// completion of a service request by the SSI
 unsigned int soft_block_count = 0;
 
 int main(int argc, char const *argv[]) {

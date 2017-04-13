@@ -8,7 +8,7 @@ extern void BREAKPOINT();
 
 extern struct list_head readyq;
 
-extern unsigned int proc_count;
+extern unsigned int thread_count;
 
 extern unsigned int soft_block_count;
 
