@@ -75,7 +75,9 @@ void scheduler() {
     }
     // tprint(" Got next thread to execute\n"
     //        " Jumping...\n");
-     setTIMER(0x000FFFFF); // sample value
-    // setTIMER(BUS_REG_TIMER);
+    //  setTIMER(0x000FFFFF); // sample value
+    BREAKPOINT();
+    setTIMER(*((int *) BUS_REG_TIME_SCALE));
+    BREAKPOINT();
     LDST(&runner->t_s);
 }
