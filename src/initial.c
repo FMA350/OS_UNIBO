@@ -64,7 +64,7 @@ int main(int argc, char const *argv[]) {
 
     states_init();
 
-    first_thread_launch(thread_alloc(root));
+    load_readyq(thread_alloc(root));
     tprint(" First thread allocated\n");
 
     scheduler();

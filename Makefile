@@ -23,14 +23,6 @@ $(EXECUTABLE): $(OBJECTS)
 
 .c.o:
 		$(CC) $(CFLAGS) $(IFLAG) $< -o $@
-#
-# bleeding: $(EXECUTABLE)
-#
-# $(EXECUTABLE): $(OBJECTS)
-# 	$(LL) $(LDFLAGS) $(OBJECTS) -o $@
-# 	elf2uarm -k $(EXECUTABLE)
-# $(OBJECTS):
-# 	$(CC) $(CFLAGS) $(IBLDFLAG) $(IFLAG) $< -o $@
 
 clean:
 	rm $(SRCPATH)*.o $(EXEPATH)*.elf

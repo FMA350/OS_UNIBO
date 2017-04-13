@@ -3,6 +3,8 @@
 #include <arch.h>
 #include <uARMconst.h>
 #include <uARMtypes.h>
+#include <libuarm.h>
+#include <ssi.h>
 
 extern void BREAKPOINT();
 
@@ -15,7 +17,7 @@ extern unsigned int soft_block_count;
 extern void test_syscall();
 
 void IDLE_proc() {
-    tprint("IDLE_proc started\n");
+    // tprint("IDLE_proc started\n");
     WAIT();
 }
 
@@ -33,13 +35,12 @@ void test_timer() {
 }
 
 /* TODO: Probabilmente bisogna caricare i demoni necessari al funzionamento del
-         sistema nella coda ready in questa funzione. Un nome migliore potrebbe
-         essere load_readyq */
-void first_thread_launch(struct tcb_t *first_thread) {
+         sistema nella coda ready in questa funzione. */
+void load_readyq(struct tcb_t *first_thread) {
 
     /* caricare stato di partenza del thread */
     // PC points the thread we are starting
-    first_thread->t_s.pc = (unsigned int) test_timer;
+    first_thread->t_s.pc = (unsigned int) SSI;
     // SP
     first_thread->t_s.sp = RAM_TOP - FRAME_SIZE;
     // CPSR -> mask all interrupts and be in kernel mode
@@ -76,7 +77,8 @@ void scheduler() {
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
-    setTIMER(* ((unsigned int *) BUS_REG_TIME_SCALE) * ((unsigned int) 1000));
+    setTIMER(* ((unsigned int *) BUS_REG_TIME_SCALE) * ((unsigned int) 5000));
     BREAKPOINT();
     LDST(&runner->t_s);
+
 }

@@ -7,6 +7,9 @@
 
 extern void syscall_h(int a1, int a2, int a3, int a4); //a1 = syscall a2 =a1
 
+extern void scheduler();
+extern struct list_head readyq;
+
 #define NEW_STATE(NEW_AREA) ((state_t *) NEW_AREA)
 
 #define LOAD_NEW_STATE(NEW_AREA, HANDLER_NAME)                                       \
@@ -45,19 +48,17 @@ void *memcpy(void *dest, const void *source, size_t num) {
     // casting pointers
     char *dest8 = (char *)dest;
     char *source8 = (char *)source;
-    for (i = 0; i < num; i++) {
+    for (i = 0; i < num; i++)
         dest8[i] = source8[i];
-    }
     return dest;
 }
 
-extern struct list_head readyq;
-
 /* Interval timer handler without pseudoclock facilities */
-inline void interval_timer_h() {
+void interval_timer_h() {
     // tprint("interval_timer_h started\n");
     struct tcb_t *preempted = thread_dequeue(&readyq);
-    preempted->t_s = *((state_t *) INT_OLDAREA);
+    // salvataggio stato del processore
+    preempted->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
     thread_enqueue(preempted, &readyq);
     scheduler();
 }
