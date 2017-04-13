@@ -15,16 +15,17 @@ is correctly set up, a branch instruction will lead the execution
 to the correct handler.
 */
 
-
+/*
 
 void SoftwareInterrupt(unsigned int SystemCAllNumber, unsigned int a1, unsigned int a2, unsigned int a3){
-  //0x0000.0008
-       if(SystemCAllNumber == SYS_SEND){
+    //0x0000.0008
+    if(SystemCAllNumber == SYS_SEND)
         int err = send(a1, a2); //TODO to be defined
-  }
-  else if (SystemCAllNumber == SYS_RECV){
-        recv (a1, a2);
-  }
 
-  else return //TODO: throws an excepion.
+    else if (SystemCAllNumber == SYS_RECV)
+        recv (a1, a2);
+
+    else return //TODO: throws an excepion.
 }
+
+*/
