@@ -15,19 +15,7 @@ is correctly set up, a branch instruction will lead the execution
 to the correct handler.
 */
 
-// Excepions and Handlers
 
-void RUExeption(){
-
-}
-
-void DataAbortException(){
-
-}
-
-void PrefetchAbortException(){
-
-}
 
 void SoftwareInterrupt(unsigned int SystemCAllNumber, unsigned int a1, unsigned int a2, unsigned int a3){
   //0x0000.0008
@@ -39,8 +27,4 @@ void SoftwareInterrupt(unsigned int SystemCAllNumber, unsigned int a1, unsigned 
   }
 
   else return //TODO: throws an excepion.
-}
-
-void UndefinedInstruction(){
-
 }

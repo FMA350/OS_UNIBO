@@ -57,7 +57,6 @@ extern struct list_head readyq;
 inline void interval_timer_h() {
     // tprint("interval_timer_h started\n");
     struct tcb_t *preempted = thread_dequeue(&readyq);
-    // TODO: save old state in preempted->t_s
     preempted->t_s = *((state_t *) INT_OLDAREA);
     thread_enqueue(preempted, &readyq);
     scheduler();

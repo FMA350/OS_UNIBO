@@ -23,16 +23,13 @@ void test_timer() {
     tprint("test_timer started\n");
     register size_t i, j;
     for (i = 0; i < 10; i++) {
-        for (j = 0; i < 1000; i++) {
+        for (j = 0; j < 100; j++) {
             WAIT();
         }
         BREAKPOINT();
-        if (i % 2 == 0) {
-            tprint("tic\n");
-        } else {
-            tprint("tac\n");
-        }
+        tprint("100 done\n");
     }
+    tprint("terminating test_timer\n");
 }
 
 /* TODO: Probabilmente bisogna caricare i demoni necessari al funzionamento del
@@ -63,7 +60,8 @@ void scheduler() {
 
     if (runner == NULL) {
     /* ready queue empty */
-        if (proc_count == 0)
+        if (thread_count == 1)
+        /* the SSI is the only thread in the system */
         /* shutdown */
             HALT();
         else if (soft_block_count == 0)
@@ -75,9 +73,10 @@ void scheduler() {
     }
     // tprint(" Got next thread to execute\n"
     //        " Jumping...\n");
-    //  setTIMER(0x000FFFFF); // sample value
-    BREAKPOINT();
-    setTIMER(*((int *) BUS_REG_TIME_SCALE));
+
+    // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
+    // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
+    setTIMER(* ((unsigned int *) BUS_REG_TIME_SCALE) * ((unsigned int) 1000));
     BREAKPOINT();
     LDST(&runner->t_s);
 }
