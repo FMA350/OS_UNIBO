@@ -41,7 +41,7 @@ void states_init(){
 
 void interrupt_h() {
     // tprint("interrupt_h started\n");
-    // check pending interrupts
+    // TODO: check pending interrupts
 
     interval_timer_h();
 

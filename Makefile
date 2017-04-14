@@ -9,7 +9,7 @@ LDFLAGS  = -T /usr/include/uarm/ldscripts/elf32ltsarm.h.uarmcore.x
 EXEPATH  = elf-files/
 SRCPATH  = src/
 BLDPATH  = bleeding-edge/
-CFILES   = p2test.c initial.c scheduler.c mikabooq.c interrupts.c ssi.c syscall.c tlbtrap.c prgtrap.c
+CFILES   = p2test.c initial.c scheduler.c mikabooq.c interrupts.c ssi.c syscall.c tlbtrap.c prgtrap.c syslib.c debug_tests.c
 SOURCES  = $(addprefix $(SRCPATH), $(CFILES))
 OBJECTS  = $(SOURCES:.c=.o) /usr/include/uarm/crtso.o /usr/include/uarm/libuarm.o
 

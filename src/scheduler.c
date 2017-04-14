@@ -5,6 +5,7 @@
 #include <uARMtypes.h>
 #include <libuarm.h>
 #include <ssi.h>
+#include <debug_tests.h>
 
 
 /*****EXTERN*****/
@@ -19,12 +20,9 @@ extern void BREAKPOINT();
 
 /*****global*****/
 unsigned int timeSliceLeft;
+
 unsigned int clockPerTimeslice =  (unsigned int)(BUS_REG_TIME_SCALE*(unsigned int)5000);
 
-void IDLE_proc() {
-    // tprint("IDLE_proc started\n");
-    WAIT();
-}
 
 void experimentalClerk(){
   //how many milliseconds did pass?
@@ -32,23 +30,11 @@ void experimentalClerk(){
     //5 ms
   }
   else{
-    ((timeSliceLeft)*5/clockPerTimeslice)
+    ((timeSliceLeft)*5/clockPerTimeslice);
   }
   tprint("ok");
 }
 
-void test_timer() {
-    tprint("test_timer started\n");
-    register size_t i, j;
-    for (i = 0; i < 10; i++) {
-        for (j = 0; j < 100; j++) {
-            WAIT();
-        }
-        BREAKPOINT();
-        tprint("100 done\n");
-    }
-    tprint("terminating test_timer\n");
-}
 
 /* TODO: Probabilmente bisogna caricare i demoni necessari al funzionamento del
          sistema nella coda ready in questa funzione. */
@@ -72,7 +58,6 @@ void scheduler() {
     //tprint("Scheduler in action\n");
     current_thread = thread_dequeue(&readyq);
     // thread_dequeue sostituito con thread_qhead
-    // la thread dequeue viene usata nel gestore dell'interval timer (senza pseudoclock)
     experimentalClerk();
     //recalculate how many clock cicles 5ms are.
     clockPerTimeslice = (unsigned int)(BUS_REG_TIME_SCALE*(unsigned int)5000); //FIXME (Way to high!)

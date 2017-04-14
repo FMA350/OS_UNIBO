@@ -69,7 +69,7 @@ int TERMINATE_PROCESS(struct pcb_t *processToDelete){
   return proc_delete(processToDelete);
 }
 
-int TERMINATE_THREAD(struct tcb_t * threadToDelete){
+int TERMINATE_THREAD(struct tcb_t *threadToDelete){
   if(!threadToDelete) return -1;
 
   if(!(thread_qhead(&threadToDelete->t_next))){
@@ -77,7 +77,7 @@ int TERMINATE_THREAD(struct tcb_t * threadToDelete){
       return TERMINATE_PROCESS(threadToDelete->t_pcb);
   }
   else{
-    struct list_head * temp = &threadToDelete->t_pcb->p_threads;
+    struct list_head *temp = &threadToDelete->t_pcb->p_threads;
     while(temp!=threadToDelete){
       list_next(temp);
     }

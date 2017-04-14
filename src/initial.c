@@ -18,25 +18,28 @@ LIST_HEAD(readyq);
 // the number of threads in the system
 unsigned int thread_count = 0;
 
-// the number of threads that are blocked awaiting for I/O or
-// completion of a service request by the SSI
+/*
+ * Soft block: threads that are blocked awaiting for I/O or completion of
+ * a service request by the SSI
+ *
+ * Hard block: threads that are blocked awaiting for a message
+ */
 unsigned int soft_block_count = 0;
 
-int main(int argc, char const *argv[]) {
-    tprint(" main starting...\n");
+int main() {
 
-    /* Initialization */
+    /* Initializing data structures */
     struct pcb_t *root = proc_init();
     thread_init();
     msgq_init();
 
-    tprint(" Data structures initialized\n");
-
+    /* Loading exceptions state vector */
     states_init();
 
+    /* Loading ready queue with system processes */
     load_readyq(root);
-    tprint(" First thread allocated\n");
 
+    /* Starting normal life of the system */
     scheduler();
 
     return 0;
