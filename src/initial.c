@@ -9,36 +9,6 @@
 
 void BREAKPOINT(){ }
 
-extern void test_wait();
-
-extern void test_syscall();
-
-void syscall_h(int a1, int a2, int a3, int a4){
-    // BREAKPOINT();
-    if (a1 == 1)
-        tprint("a1 == 1\n");
-    else
-        tprint("a1 != 1\n");
-
-    if (a2 == 1)
-        tprint("a2 == 1\n");
-    else
-        tprint("a2 != 1\n");
-
-    if (a3 == 1)
-        tprint("a3 == 1\n");
-    else
-        tprint("a3 != 1\n");
-
-    if (a4 == 1)
-        tprint("a4 == 1\n");
-    else
-        tprint("a4 != 1\n");
-
-    tprint("====================================\n");
-    LDST((void *) SYSBK_OLDAREA);
-}
-
 // the thread that has currently the control of the CPU
 struct tcb_t *current_thread = NULL;
 
@@ -64,7 +34,7 @@ int main(int argc, char const *argv[]) {
 
     states_init();
 
-    load_readyq(thread_alloc(root));
+    load_readyq(root);
     tprint(" First thread allocated\n");
 
     scheduler();

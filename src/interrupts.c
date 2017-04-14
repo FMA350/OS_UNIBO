@@ -2,18 +2,20 @@
 
 extern void syscall_h(int a1, int a2, int a3, int a4); //a1 = syscall a2 =a1
 
+
 extern void scheduler();
 extern struct list_head readyq;
 
 #define NEW_STATE(NEW_AREA) ((state_t *) NEW_AREA)
 
-#define LOAD_NEW_STATE(NEW_AREA, HANDLER_NAME)                                       \
+#define LOAD_NEW_STATE(NEW_AREA, HANDLER_NAME)                                \
     NEW_STATE(NEW_AREA)->pc = (unsigned int) HANDLER_NAME;                    \
-    NEW_STATE(NEW_AREA)->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);     \
+    NEW_STATE(NEW_AREA)->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);      \
     NEW_STATE(NEW_AREA)->sp = RAM_TOP;
+    // NEW_STATE(NEW_AREA)->sl = ???;
 
 void states_init(){
-    //TODO: complete loading and care for execution mode
+    //TODO: complete loading and care for execution mode; stack limit register???
     //FIXME: come vanno caricati gli altri registri?
 
     LOAD_NEW_STATE(INT_NEWAREA, interrupt_h);
