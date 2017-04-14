@@ -21,6 +21,7 @@ void syscall_h(){
         case 2:
             recv(((state_t *) SYSBK_OLDAREA)->a2, ((state_t *) SYSBK_OLDAREA)->a3);
         default:
+            NULL;
             /* system call non 1 o 2 vengono trasformate in messaggi al thread
             definito tramite SETSYSMGR se esiste altrimenti msg SETPGMMGR se
             esiste altrimenti TERMINATE_THREAD  */

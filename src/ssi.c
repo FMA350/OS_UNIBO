@@ -61,16 +61,17 @@ int TERMINATE_PROCESS(struct pcb_t *processToDelete){
 
 int TERMINATE_THREAD(struct tcb_t * threadToDelete){
   if(!threadToDelete) return -1;
-  struct tcb_t * temp;
+
   if(!(thread_qhead(&threadToDelete->t_next))){
     //only if this thread does not have any siblings
       return TERMINATE_PROCESS(threadToDelete->t_pcb);
   }
   else{
-    //look for the right thread
-    while(temp=thread_dequeue(&threadToDelete->t_pcb->p_threads)!=threadToDelete){
-      thread_enqueue(temp, &threadToDelete->t_pcb->p_threads); //FIXME
+    struct list_head * temp = &threadToDelete->t_pcb->p_threads;
+    while(temp!=threadToDelete){
+      list_next(temp);
     }
+    thread_dequeue(temp);
   }
   return thread_free(threadToDelete);
 }
