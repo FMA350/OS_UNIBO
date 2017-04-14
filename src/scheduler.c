@@ -14,6 +14,8 @@ extern unsigned int thread_count;
 
 extern unsigned int soft_block_count;
 
+extern struct tcb_t *current_thread;
+
 extern void test_syscall();
 
 void IDLE_proc() {
@@ -36,21 +38,20 @@ void test_timer() {
 
 /* TODO: Probabilmente bisogna caricare i demoni necessari al funzionamento del
          sistema nella coda ready in questa funzione. */
-void load_readyq(struct tcb_t *first_thread) {
-
+void load_readyq(struct pcb_t *root) {
+    struct tcb_t *first_thread = thread_alloc(root);
     /* caricare stato di partenza del thread */
     // PC points the thread we are starting
-    first_thread->t_s.pc = (unsigned int) SSI;
+    first_thread->t_s.pc = (unsigned int) test_timer;
     // SP
     first_thread->t_s.sp = RAM_TOP - FRAME_SIZE;
     // CPSR -> mask all interrupts and be in kernel mode
     first_thread->t_s.cpsr = STATUS_DISABLE_INT(STATUS_SYS_MODE);
 
-    // tprint(" Thread status set\n");
-
     // aggiungere il thread alla ready queue a mano
     thread_enqueue(first_thread, &readyq);
-    // tprint(" Thread enqueued\n");
+
+    // TODO: inserire SSI thread
 }
 
 void scheduler() {
@@ -66,14 +67,18 @@ void scheduler() {
         /* shutdown */
             HALT();
         else if (soft_block_count == 0)
+        /* all process are hard blocked (waiting for msg) */
         /* deadlock */
             PANIC();
-        else
-        //FIXME: scheduler runs with all interrupts disabled; WAIT couldn't work
+        else {
+            setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
             WAIT();
+        }
     }
     // tprint(" Got next thread to execute\n"
     //        " Jumping...\n");
+
+    // TODO: update current_thread
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
