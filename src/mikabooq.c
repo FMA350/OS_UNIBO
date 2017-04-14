@@ -63,7 +63,6 @@ int proc_delete(struct pcb_t *oldproc){
         return -1;
     else {
         // the process can be deleted
-
         oldproc->p_parent = NULL;
         list_del(&oldproc->p_siblings);
         list_add_tail(&oldproc->p_siblings, &(process[0].p_siblings));
