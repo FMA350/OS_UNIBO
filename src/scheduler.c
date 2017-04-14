@@ -21,19 +21,20 @@ extern void BREAKPOINT();
 /*****global*****/
 unsigned int timeSliceLeft;
 
-unsigned int clockPerTimeslice =  (unsigned int)(BUS_REG_TIME_SCALE * (unsigned int) 5000);
-                               /* (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000); */
+unsigned int clockPerTimeslice;
 
 
 void experimentalClerk(){
-  //how many milliseconds did pass?
-  if(timeSliceLeft > clockPerTimeslice){
+
+    clockPerTimeslice =  (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
+    //how many milliseconds did pass?
+    if(timeSliceLeft > clockPerTimeslice){
     //5 ms
-  }
-  else{
-    ((timeSliceLeft)*5/clockPerTimeslice);
-  }
-  tprint("ok");
+    }
+    else{
+        ((timeSliceLeft)*5/clockPerTimeslice);
+    }
+    tprint("ok\n");
 }
 
 
@@ -61,7 +62,7 @@ void scheduler() {
     // thread_dequeue sostituito con thread_qhead
     experimentalClerk();
     //recalculate how many clock cicles 5ms are.
-    clockPerTimeslice = (unsigned int)(BUS_REG_TIME_SCALE*(unsigned int)5000); //FIXME (Way to high!)
+    clockPerTimeslice = (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
     if (current_thread == NULL) {
     /* ready queue empty */
         if (thread_count == 1)
