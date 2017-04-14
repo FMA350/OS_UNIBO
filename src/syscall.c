@@ -1,6 +1,6 @@
 #include <mikabooq.h>
-
-void *memcpy(void *dest, const void *source, size_t num);
+#include <nucleus.h>
+#include <syslib.h>
 
 extern struct list_head readyq;
 
@@ -41,6 +41,7 @@ static inline send(struct tcb_t *dest, uintptr_t msg){
         case T_STATUS_NONE:
             // TODO: controlli nel caso il thread fosse terminato
             break;
+            // TODO: cosa fare se il thread si reincarna?
     }
 
     LDST((state_t *) SYSBK_OLDAREA);
@@ -67,12 +68,12 @@ void syscall_h(){
     // copiare old_state in thread->t_s
 
     switch (((state_t *) SYSBK_OLDAREA)->a1) {
-        case 0:
+        case SYS_ERR:
             // Segnalazione di errore
             break;
-        case 1:
+        case SYS_SEND:
             send((struct tcb_t *) ((state_t *) SYSBK_OLDAREA)->a2, ((state_t *) SYSBK_OLDAREA)->a3);
-        case 2:
+        case SYS_RECV:
             recv((struct tcb_t *) ((state_t *) SYSBK_OLDAREA)->a2, (uintptr_t *) ((state_t *) SYSBK_OLDAREA)->a3);
         default:
         break;
