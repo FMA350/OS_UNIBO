@@ -1,3 +1,6 @@
+#include <ssi.h>
+
+extern void tprint();
 
 void SSI(){
     tprint("SSI started\n");
@@ -8,7 +11,6 @@ void SSI(){
     //prgtrap(back to the scheduler)
 }
 
-errorNumber = 0;
 
 /***********SERVICES*****************/
 
@@ -17,23 +19,23 @@ int GET_ERRNO(){
 }
 
 struct pcb_t * CREATE_PROCESS(state_t initial_state){
-  pcb_t * new_process = proc_alloc();
+  struct pcb_t * new_process = proc_alloc(NULL);
   if(!new_process){
     //TODO: throw an error, no more space availeable
     return NULL; //si, in teoria l'oggetto new_process e' gia' null...
   }
-  tcb_t * first_thread = thread_alloc();
+  struct tcb_t * first_thread = thread_alloc(new_process);
   if(!first_thread){
     //TODO: throw an error, no more space availeable
   }
   first_thread->t_s = initial_state; //memcpy
-  thread_enqueue(first_thread, new_process->p_threads);
+  thread_enqueue(first_thread, &new_process->p_threads);
   //all good
   return new_process;
 }
 
-struct tcb_t * CREATE_THREAD(state_t initial_state){
-  tcb_t * new_thread = thread_alloc();
+struct tcb_t * CREATE_THREAD(state_t initial_state, struct pcb_t * process){
+  struct tcb_t * new_thread = thread_alloc(process);
   if(!new_thread){
     //TODO: throw an error, no more space availeable
     return NULL;
@@ -43,9 +45,10 @@ struct tcb_t * CREATE_THREAD(state_t initial_state){
   return new_thread;
 }
 
-int TERMINATE_PROCESS(pcb_t *processToDelete){
-  tcb_t * threadToDelete;
-  while(threadToDelete = proc_firstthread(processToDelete)){
+int TERMINATE_PROCESS(struct pcb_t *processToDelete){
+  if(!processToDelete) return -1;
+  struct tcb_t * threadToDelete;
+  while(threadToDelete = thread_dequeue(&processToDelete->p_threads)){
     if(thread_free(threadToDelete)==-1){
       //could not close a specific thread since
       //some messages are still in the queue.
@@ -53,23 +56,21 @@ int TERMINATE_PROCESS(pcb_t *processToDelete){
       return -1;
     }
   }
-  if(proc_delete(pcb_t)==-1){
-    return -1;
-    //could not close for some reasons (has children maybe?)
-  }
-  return 0;
+  return proc_delete(processToDelete);
 }
 
-int TERMINATE_THREAD(tcb_t * threadToDelete){
-  if(thread_free(threadToDelete)==-1){
-    //error, there are still messages in the queue.
-    return -1;
-  }
-  if(!threadToDelete->t_next){
+int TERMINATE_THREAD(struct tcb_t * threadToDelete){
+  if(!threadToDelete) return -1;
+  struct tcb_t * temp;
+  if(!(thread_qhead(&threadToDelete->t_next))){
     //only if this thread does not have any siblings
-    if(proc_delete(threadToDelete->t_pcb)==-1){
-      return -1
+      return TERMINATE_PROCESS(threadToDelete->t_pcb);
+  }
+  else{
+    //look for the right thread
+    while(temp=thread_dequeue(&threadToDelete->t_pcb->p_threads)!=threadToDelete){
+      thread_enqueue(temp, &threadToDelete->t_pcb->p_threads); //FIXME
     }
   }
-  else return 0;
+  return thread_free(threadToDelete);
 }

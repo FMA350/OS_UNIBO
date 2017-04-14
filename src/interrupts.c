@@ -1,8 +1,3 @@
-#include <mikabooq.h>
-#include <listx.h>
-#include <arch.h>
-#include <uARMconst.h>
-#include <uARMtypes.h>
 #include <interrupts.h>
 
 extern void syscall_h(int a1, int a2, int a3, int a4); //a1 = syscall a2 =a1
