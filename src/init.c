@@ -15,9 +15,6 @@ LIST_HEAD(readyq);
 // Number of threads currently active in the system
 unsigned int thread_count = 0;
 
-// the number of threads that are blocked awaiting for I/O or
-// completion of a service request by the SSI
-
 /*
  * Soft block: threads that are blocked awaiting for I/O or completion of
  *             a service request by the SSI; they're going to unblock for
@@ -29,7 +26,7 @@ unsigned int thread_count = 0;
 
 unsigned int soft_block_count = 0;
 
-int main(int argc, char const *argv[]) {
+int main() {
 
     /* Initialization */
     struct pcb_t *root = proc_init();

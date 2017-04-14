@@ -7,10 +7,12 @@
      /____/
 */
 
-
+#include <listx.h>
 #include <ssi.h>
+#include <uARMtypes.h>
+#include <libuarm.h>
+#include <syslib.h>
 
-extern void tprint();
 
 void SSI(){
     tprint("SSI started\n");
@@ -28,8 +30,9 @@ int GET_ERRNO(){
   return errorNumber;
 }
 
+/* FIXME: passing a pointer as an argument is more efficient */
 struct pcb_t * CREATE_PROCESS(state_t initial_state){
-  struct pcb_t * new_process = proc_alloc(NULL);
+  struct pcb_t * new_process = proc_alloc(NULL);    // mnalli: proc_alloc(NULL) ?
   if(!new_process){
     //TODO: throw an error, no more space availeable
     return NULL; //si, in teoria l'oggetto new_process e' gia' null...

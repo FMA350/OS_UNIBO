@@ -1,27 +1,28 @@
+#ifndef SSI_H
+#define SSI_H
+
 #include <mikabooq.h>
-#include <listx.h>
-#include <arch.h>
-#include <uARMconst.h>
-#include <sys/types.h>
-#include <uARMtypes.h>
-#include <interrupts.h>
-#include <const.h>
 
 void SSI();
 
+// FIXME: should errorNumber be moved in ssi.c and called static???
 int errorNumber;
+// TODO: is error number different from thread to thread???
 
-/*SERVICES*/
+
+/* SERVICES */
 int GET_ERRNO();
 
-struct pcb_t * CREATE_PROCESS(state_t initial_state);
+struct pcb_t *CREATE_PROCESS(state_t initial_state);
 
-struct tcb_t * CREATE_THREAD(state_t initial_state, struct pcb_t * process);
+struct tcb_t *CREATE_THREAD(state_t initial_state, struct pcb_t *process);
 
 int TERMINATE_PROCESS(struct pcb_t *processToDelete);
 
-int TERMINATE_THREAD(struct tcb_t * threadToDelete);
+int TERMINATE_THREAD(struct tcb_t *threadToDelete);
 
-unsigned int GETCPUTIME(struct tcb_t * thread);
+// unsigned int GETCPUTIME(struct tcb_t * thread);
 
 struct pcb_t *GET_PROCESSID(struct tcb_t * thread);
+
+#endif

@@ -21,7 +21,8 @@ extern void BREAKPOINT();
 /*****global*****/
 unsigned int timeSliceLeft;
 
-unsigned int clockPerTimeslice =  (unsigned int)(BUS_REG_TIME_SCALE*(unsigned int)5000);
+unsigned int clockPerTimeslice =  (unsigned int)(BUS_REG_TIME_SCALE * (unsigned int) 5000);
+                               /* (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000); */
 
 
 void experimentalClerk(){
@@ -76,8 +77,6 @@ void scheduler() {
             WAIT();
         }
     }
-    // tprint(" Got next thread to execute\n"
-    //        " Jumping...\n");
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO

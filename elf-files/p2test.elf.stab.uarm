@@ -7,6 +7,7 @@ list_empty                       :FUN:0x000083A4:0x0000003C:LOC
 list_next                        :FUN:0x000083E0:0x00000044:LOC
 thread_h                         :OBJ:0x00019930:0x00000008:LOC
 message_h                        :OBJ:0x00019938:0x00000008:LOC
+interval_timer_h                 :FUN:0x00008E0C:0x0000006C:LOC
 list_empty                       :FUN:0x00008E78:0x0000003C:LOC
 list_next                        :FUN:0x00008EB4:0x00000044:LOC
 list_del                         :FUN:0x000091E4:0x00000038:LOC
@@ -51,7 +52,6 @@ TERMINATE_THREAD                 :FUN:0x000090BC:0x000000A8:GLB
 states_init                      :FUN:0x00008D68:0x0000008C:GLB
 thread_qhead                     :FUN:0x000089D0:0x00000054:GLB
 proc_firstchild                  :FUN:0x0000867C:0x00000058:GLB
-interval_timer_h                 :FUN:0x00008E0C:0x0000006C:GLB
 BREAKPOINT                       :FUN:0x00008074:0x00000014:GLB
 proc_delete                      :FUN:0x000085D4:0x000000A8:GLB
 proc_init                        :FUN:0x00008424:0x00000120:GLB
