@@ -1,12 +1,17 @@
 #include <interrupts.h>
 
+
+
+/*****EXTERN*****/
 extern void syscall_h(int a1, int a2, int a3, int a4); //a1 = syscall a2 =a1
-
-
+extern unsigned int getTIMER();
 extern void scheduler();
-extern struct list_head readyq;
 
+extern unsigned int *timeSliceLeft;
+
+extern struct list_head readyq;
 extern struct tcb_t *current_thread;
+
 
 #define NEW_STATE(NEW_AREA) ((state_t *) NEW_AREA)
 
@@ -54,6 +59,7 @@ void *memcpy(void *dest, const void *source, size_t num) {
 
 /* Interval timer handler without pseudoclock facilities */
 void interval_timer_h() {
+    timeSliceLeft = (unsigned int *)getTIMER();
     // salvataggio stato del processore
     current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
     // Inserimento del processo in coda

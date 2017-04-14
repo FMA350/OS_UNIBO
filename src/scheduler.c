@@ -6,21 +6,35 @@
 #include <libuarm.h>
 #include <ssi.h>
 
-extern void BREAKPOINT();
 
-extern struct list_head readyq;
-
+/*****EXTERN*****/
 extern unsigned int thread_count;
-
 extern unsigned int soft_block_count;
 
 extern struct tcb_t *current_thread;
+extern struct list_head readyq;
 
 extern void test_syscall();
+extern void BREAKPOINT();
+
+/*****global*****/
+unsigned int timeSliceLeft;
+unsigned int clockPerTimeslice =  (unsigned int)(BUS_REG_TIME_SCALE*(unsigned int)5000);
 
 void IDLE_proc() {
     // tprint("IDLE_proc started\n");
     WAIT();
+}
+
+void experimentalClerk(){
+  //how many milliseconds did pass?
+  if(timeSliceLeft > clockPerTimeslice){
+    //5 ms
+  }
+  else{
+    ((timeSliceLeft)*5/clockPerTimeslice)
+  }
+  tprint("ok");
 }
 
 void test_timer() {
@@ -59,7 +73,9 @@ void scheduler() {
     current_thread = thread_dequeue(&readyq);
     // thread_dequeue sostituito con thread_qhead
     // la thread dequeue viene usata nel gestore dell'interval timer (senza pseudoclock)
-
+    experimentalClerk();
+    //recalculate how many clock cicles 5ms are.
+    clockPerTimeslice = (unsigned int)(BUS_REG_TIME_SCALE*(unsigned int)5000); //FIXME (Way to high!)
     if (current_thread == NULL) {
     /* ready queue empty */
         if (thread_count == 1)
@@ -80,7 +96,7 @@ void scheduler() {
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
-    setTIMER(* ((unsigned int *) BUS_REG_TIME_SCALE) * ((unsigned int) 5000));
+    setTIMER(clockPerTimeslice);
     BREAKPOINT();
     LDST(&current_thread->t_s);
 

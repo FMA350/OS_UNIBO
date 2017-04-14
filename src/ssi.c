@@ -1,3 +1,13 @@
+/*
+   _____            __                    _____                 _              ____      __            ____
+  / ___/__  _______/ /____  ____ ___     / ___/___  ______   __(_)_______     /  _/___  / /____  _____/ __/___ _________
+  \__ \/ / / / ___/ __/ _ \/ __ `__ \    \__ \/ _ \/ ___/ | / / / ___/ _ \    / // __ \/ __/ _ \/ ___/ /_/ __ `/ ___/ _ \
+ ___/ / /_/ (__  ) /_/  __/ / / / / /   ___/ /  __/ /   | |/ / / /__/  __/  _/ // / / / /_/  __/ /  / __/ /_/ / /__/  __/
+/____/\__, /____/\__/\___/_/ /_/ /_/   /____/\___/_/    |___/_/\___/\___/  /___/_/ /_/\__/\___/_/  /_/  \__,_/\___/\___/
+     /____/
+*/
+
+
 #include <ssi.h>
 
 extern void tprint();
@@ -74,4 +84,16 @@ int TERMINATE_THREAD(struct tcb_t * threadToDelete){
     thread_dequeue(temp);
   }
   return thread_free(threadToDelete);
+}
+
+/*
+stuff
+*/
+
+unsigned int GETCPUTIME(struct tcb_t * thread){
+
+}
+
+struct pcb_t *GET_PROCESSID(struct tcb_t * thread){
+  return thread->t_pcb; //TODO: What do they really want? Documentation isn't clear.
 }
