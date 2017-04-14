@@ -4,14 +4,14 @@
 extern void BREAKPOINT();
 
 
-void test_wait(){
+void test_wait() {
     tprint(" The test has started\n"
            " Ready to wait\n");
     BREAKPOINT();
     WAIT();
 }
 
-void test_syscall(){
+void test_syscall() {
     tprint("test_syscall has started\n");
     BREAKPOINT();
     tprint("First syscall...\n"
