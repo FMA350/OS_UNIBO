@@ -54,12 +54,9 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent) {
 /* return value: 0 in case of success, -1 otherwise */
 
 int proc_delete(struct pcb_t *oldproc){
-    if (oldproc->p_parent == NULL ||
-        !list_empty(&oldproc->p_children) ||
-        !list_empty(&oldproc->p_threads))
-        // Trying to delete root or a non-allocated process
-        // Trying to delete a process with children
-        // Trying to delete a process with threads
+    if (oldproc->p_parent == NULL ||                // Trying to delete root or a non-allocated process
+        !list_empty(&oldproc->p_children) ||        // Trying to delete a process with children
+        !list_empty(&oldproc->p_threads))           // Trying to delete a process with threads
         return -1;
     else {
         // the process can be deleted

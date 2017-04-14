@@ -56,11 +56,11 @@ void load_readyq(struct pcb_t *root) {
 
 void scheduler() {
     //tprint("Scheduler in action\n");
-    struct tcb_t *runner = thread_qhead(&readyq);
+    current_thread = thread_dequeue(&readyq);
     // thread_dequeue sostituito con thread_qhead
     // la thread dequeue viene usata nel gestore dell'interval timer (senza pseudoclock)
 
-    if (runner == NULL) {
+    if (current_thread == NULL) {
     /* ready queue empty */
         if (thread_count == 1)
         /* the SSI is the only thread in the system */
@@ -78,12 +78,10 @@ void scheduler() {
     // tprint(" Got next thread to execute\n"
     //        " Jumping...\n");
 
-    // TODO: update current_thread
-
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
     setTIMER(* ((unsigned int *) BUS_REG_TIME_SCALE) * ((unsigned int) 5000));
     BREAKPOINT();
-    LDST(&runner->t_s);
+    LDST(&current_thread->t_s);
 
 }

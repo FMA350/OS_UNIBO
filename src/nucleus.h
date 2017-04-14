@@ -24,6 +24,7 @@ extern void *SSI;
 
 #define msgsend(dest,payload) (SYSCALL(SYS_SEND,(unsigned int) (dest),(unsigned int) (payload),0,0))
 
+/* if source == NULL si prende un messaggio da qualunque sender */
 #define msgrecv(source,reply) (((tcb_t *) SYSCALL(SYS_RECV,(unsigned int) (source),(unsigned int) (reply),0,0)))
 
 #endif
