@@ -102,6 +102,9 @@ void msgq_init(void);
 /* msgq_add fails (returning -1) if no more msgq elements are available */
 int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
 
+/* same as msgq_add, except from the fact that the message is added in the head */
+int msgq_add_head(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
+
 /* retrieve a message from a message queue */
 /* -> if sender == NULL: get a message from any sender
 	 -> if sender != NULL && *sender == NULL: get a message from any sender and store

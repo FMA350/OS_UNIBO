@@ -207,6 +207,27 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value) {
     }
 }
 
+int msgq_add_head(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value) {
+    /* extracting space from free list */
+    struct list_head *new_space = list_next(&message_h);
+    if(new_space == NULL ||sender == NULL || destination == NULL)
+        //free list is empty or wrong argument passed
+        return -1;
+    else {
+        /* deleting the element from the free list */
+        list_del(new_space);
+        /* obtaining a pointer to the new message */
+        struct msg_t *new_msg = container_of(new_space, struct msg_t, m_next);
+        /* setting the fields */
+        new_msg->m_sender = sender;
+        new_msg->m_value = value;
+        /* placing the message in the message list of destination */
+        list_add(new_space, &destination->t_msgq);
+
+        return 0;
+    }
+}
+
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value) {
     if(sender == NULL) {
         /* restituisce il primo messaggio in coda qualsiasi ne sia il mittente
