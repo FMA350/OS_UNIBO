@@ -57,10 +57,10 @@ void load_readyq(struct pcb_t *root) {
 }
 
 void scheduler() {
-    //tprint("Scheduler in action\n");
+    tprint("\nScheduler in action\n\n");
     current_thread = thread_dequeue(&readyq);
     // thread_dequeue sostituito con thread_qhead
-    experimentalClerk();
+    // experimentalClerk();
     //recalculate how many clock cicles 5ms are.
     clockPerTimeslice = (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
     if (current_thread == NULL) {
@@ -82,7 +82,6 @@ void scheduler() {
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
     setTIMER(clockPerTimeslice);
-    BREAKPOINT();
     LDST(&current_thread->t_s);
 
 }
