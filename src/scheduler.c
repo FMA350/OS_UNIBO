@@ -57,7 +57,7 @@ void load_readyq(struct pcb_t *root) {
 }
 
 void scheduler() {
-    tprint("\nScheduler in action\n\n");
+    // tprint("\nScheduler in action\n\n");
     current_thread = thread_dequeue(&readyq);
     // thread_dequeue sostituito con thread_qhead
     // experimentalClerk();

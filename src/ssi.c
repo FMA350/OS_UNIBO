@@ -12,15 +12,74 @@
 #include <uARMtypes.h>
 #include <libuarm.h>
 #include <syslib.h>
+#include <nucleus.h>
 
+
+static inline void DISPATCH(unsigned int MSG) {
+    switch (MSG) {
+        case GET_ERRNO:
+            /* code */
+            break;
+        case CREATE_PROCESS:
+            /* code */
+            break;
+        case CREATE_THREAD:
+            /* code */
+            break;
+        case TERMINATE_PROCESS:
+            /* code */
+            break;
+        case TERMINATE_THREAD:
+            /* code */
+            break;
+        case SETPGMMGR:
+            /* code */
+            break;
+        case SETTLBMGR:
+            /* code */
+            break;
+        case SETSYSMGR:
+            /* code */
+            break;
+        case GETCPUTIME:
+            /* code */
+            break;
+        case WAIT_FOR_CLOCK:
+            /* code */
+            break;
+        case DO_IO:
+            /* code */
+            break;
+        case GET_PROCESSID:
+            /* code */
+            break;
+        case GET_THREAD:
+            /* code */
+            break;
+        default:
+        // TODO: se il messaggio è diverso dai codici noti
+    }
+}
 
 void SSI(){
     tprint("SSI started\n");
-    //get all messages(requests from other threads)
-    //for(till there are still messages in the queue){
-      //do service request
-      //send message back.}
-    //prgtrap(back to the scheduler)
+
+    while (1) {
+
+        unsigned int msg;
+        struct tcb_t *applicant = msgrecv(NULL, &msg);
+
+        DISPATCH(msg);
+
+        // send response back
+        // TODO: send payload back
+        if (msgsend(applicant, /* payload */) == -1) {
+        // if msgsend fails
+        // TODO: find a better solution
+            PANIC();
+        }
+
+    }
 }
 
 
