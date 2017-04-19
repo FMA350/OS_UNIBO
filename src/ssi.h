@@ -5,7 +5,7 @@
 
 
 /* SSI daemon */
-void SSI();
+// void SSI();
 
 // FIXME: should errorNumber be moved in ssi.c and called static???
 int errorNumber;

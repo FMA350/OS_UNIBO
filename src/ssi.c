@@ -14,7 +14,7 @@
 #include <syslib.h>
 #include <nucleus.h>
 
-
+#if 0
 static inline void DISPATCH(unsigned int MSG) {
     switch (MSG) {
         case GET_ERRNO:
@@ -58,6 +58,7 @@ static inline void DISPATCH(unsigned int MSG) {
             break;
         default:
         // TODO: se il messaggio è diverso dai codici noti
+            break;
     }
 }
 
@@ -81,7 +82,7 @@ void SSI(){
 
     }
 }
-
+#endif
 
 /***********SERVICES*****************/
 

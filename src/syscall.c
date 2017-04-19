@@ -23,17 +23,27 @@ extern struct tcb_t *current_thread;
 #define ST_RVAL(RVAL)   \
     ((state_t *) SYSBK_OLDAREA)->a1 = (unsigned int) (RVAL)
 
+static inline DELIVER_MSG(DEST, MSG) {
+    if (msgq_add(current_thread, DEST, MSG) == 0)
+    /* Se la consegna del messaggio è andata a buon fine */
+        ST_RVAL(SEND_SUCCESS);
+    else
+    /* Se i messaggi disponibili sono finiti */
+        ST_RVAL(SEND_FAILURE);
+}
 
-/* DELIVERING_FUN == msgq_add, msgq_add_tail */
-#define DELIVER_MSG(DELIVERING_FUN, DEST, MSG) {                    \
-    if (DELIVERING_FUN(current_thread, DEST, MSG) == 0)             \
-    /* Se la consegna del messaggio è andata a buon fine */         \
-        ST_RVAL(SEND_SUCCESS);                                      \
-    else                                                            \
-    /* Se i messaggi disponibili sono finiti */                     \
-        ST_RVAL(SEND_FAILURE);                                      \
-    }
-
+/*
+ * This function deliver the message directly, without passing from the message
+ * queue of thread dest
+ *
+ * Preconditions:
+ * dest is currently in the blocked queue. It's waiting for a message from the
+ * thread that calls this function (current thread) or from any thread.
+ */
+static inline DELIVER_DIRECTLY(struct tcb_t *dest, uintptr_t msg) {
+    dest->t_s.a1 = (unsigned int) current_thread;
+    *((uintptr_t *) (dest->t_s.a3)) = msg;
+}
 
 // TODO: is blockedq necessary?
 
@@ -43,7 +53,7 @@ static inline send(struct tcb_t *dest, uintptr_t msg){
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
-            DELIVER_MSG(msgq_add, dest, msg);
+            DELIVER_MSG(dest, msg);
             break;
         case T_STATUS_W4MSG:
         /* Se il thread destinazione è in attesa di un messaggio */
@@ -52,17 +62,17 @@ static inline send(struct tcb_t *dest, uintptr_t msg){
                 parte del processo corrente o da qualsiasi processo (non ha messaggi) */
 
                 // il messaggio è consegnato con priorità
-                DELIVER_MSG(msgq_add_head, dest, msg);
+                DELIVER_DIRECTLY(dest, msg);
 
                 dest->t_status = T_STATUS_READY;
-                dest->t_wait4sender = NULL; // non necessario
+                dest->t_wait4sender = NULL; // necessario? secondo me no (michele)
                 // dest è rimosso dai processi in attesa
                 thread_outqueue(dest);
                 // e reinserito nella coda ready
                 thread_enqueue(dest, &readyq);
             }
             else
-                DELIVER_MSG(msgq_add, dest, msg);
+                DELIVER_MSG(dest, msg);
 
             break;
         case T_STATUS_NONE:
@@ -82,8 +92,6 @@ static inline recv(struct tcb_t *src, uintptr_t *pmsg){
     /* caso bloccante */
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
-        // Quando questo thread riprenderà l'esecuzione chiamare di nuovo la receive
-        current_thread->t_s.pc -= 4;
 
         // changing thread status
         current_thread->t_status = T_STATUS_W4MSG;
