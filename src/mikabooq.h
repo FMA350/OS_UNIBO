@@ -21,6 +21,8 @@ struct tcb_t {
 	state_t t_s ; /* processor state */
 
 	int t_status;
+	unsigned int run_time; //milliseconds of CPU time used. check scheduler.c for the accounting function
+	//TODO: initialize for each thread run_time to zero.
 
 	struct tcb_t *t_wait4sender; /* expected sender (if t_status == T_STATUS_W4MSG), NULL means accept msg from anybody */
 	struct list_head t_next; /* link the other elements of the list of threads in the same process */

@@ -1,0 +1,28 @@
+
+Message passing:
+    SYSCALL 0 caso errore
+    2) nella receive, se l'argomento e' null, non salviamo il payload
+    3) SEND e RECEIVE non devono essere accessibili ai thread in usermode.
+
+ssi
+    1) creazione thread tcb_t ssi e inizializzazione
+    2) Meccanismi di temporizzazione
+        waitforclock
+        distinguere l'interrupt dello pseudoclock e quello dell'intervaltimer
+    3) Aggiungere le funzioni mancanti alla ssi (vedi specifiche fase2)
+terminazione processi
+    1) Rimozione dei processi in attesa di messaggi dal processo terminato
+    2) (?) aggiungere una coda tcb_t per thread di thread in attesa di messaggi.
+
+
+managers:
+    1)SYSMGR
+    2)PGMMGR
+    andranno entrambi ad interrupt abilitati in kernel mode.
+
+scheduler
+    Gestione contabilita' con TOD.
+    pseudoclock con TOD
+
+ERROR_HANDLING
+    Decidere i codici di errore

@@ -24,17 +24,23 @@ unsigned int timeSliceLeft;
 unsigned int clockPerTimeslice;
 
 
-void experimentalClerk(){
+void accountant(struct tcb_t* thread){
+/*                               _              _
+                                | |            | |
+  __ _  ___ ___ ___  _   _ _ __ | |_ __ _ _ __ | |_
+ / _` |/ __/ __/ _ \| | | | '_ \| __/ _` | '_ \| __|
+| (_| | (_| (_| (_) | |_| | | | | || (_| | | | | |_
+\__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
 
-    clockPerTimeslice =  (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
+*/    
     //how many milliseconds did pass?
-    if(timeSliceLeft > clockPerTimeslice){
-    //5 ms
+    if(timeSliceLeft >= clockPerTimeslice){
+        //5 ms in total
+        thread->runTime += 5;
     }
     else{
-        ((timeSliceLeft)*5/clockPerTimeslice);
+        thread->runTime += (5-((timeSliceLeft)*5/clockPerTimeslice));
     }
-    tprint("ok\n");
 }
 
 
@@ -57,10 +63,10 @@ void load_readyq(struct pcb_t *root) {
 }
 
 void scheduler() {
-    // tprint("\nScheduler in action\n\n");
-    current_thread = thread_dequeue(&readyq);
+    //accountant(current_thread);
+    current_thread = thread_dequeue(readyq);
     // thread_dequeue sostituito con thread_qhead
-    // experimentalClerk();
+    // accountant();
     //recalculate how many clock cicles 5ms are.
     clockPerTimeslice = (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
     if (current_thread == NULL) {
