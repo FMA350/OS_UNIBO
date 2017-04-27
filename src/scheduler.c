@@ -23,7 +23,7 @@ unsigned int timeSliceLeft;
 
 unsigned int clockPerTimeslice;
 
-
+#if 0
 void accountant(struct tcb_t* thread){
 /*                               _              _
                                 | |            | |
@@ -32,7 +32,7 @@ void accountant(struct tcb_t* thread){
 | (_| | (_| (_| (_) | |_| | | | | || (_| | | | | |_
 \__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
 
-*/    
+*/
     //how many milliseconds did pass?
     if(timeSliceLeft >= clockPerTimeslice){
         //5 ms in total
@@ -42,7 +42,7 @@ void accountant(struct tcb_t* thread){
         thread->runTime += (5-((timeSliceLeft)*5/clockPerTimeslice));
     }
 }
-
+#endif
 
 /* TODO: Probabilmente bisogna caricare i demoni necessari al funzionamento del
          sistema nella coda ready in questa funzione. */
@@ -64,7 +64,7 @@ void load_readyq(struct pcb_t *root) {
 
 void scheduler() {
     //accountant(current_thread);
-    current_thread = thread_dequeue(readyq);
+    current_thread = thread_dequeue(&readyq);
     // thread_dequeue sostituito con thread_qhead
     // accountant();
     //recalculate how many clock cicles 5ms are.

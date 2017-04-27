@@ -12,7 +12,7 @@
 #include <uARMtypes.h>
 #include <libuarm.h>
 #include <syslib.h>
-#include <nucleus.h>
+// #include <nucleus.h>
 
 #if 0
 static inline void DISPATCH(unsigned int MSG) {

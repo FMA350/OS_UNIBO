@@ -15,15 +15,22 @@ extern struct tcb_t *current_thread;
 
 #define SEND_FAILURE    -1
 
+#define RECV_FAILURE    NULL
+
+
+#define ST_RVAL(RVAL)   \
+    (((state_t *) SYSBK_OLDAREA)->a1 = (unsigned int) (RVAL))
 
 #define SYSCALL_ARG(N)  \
     (((state_t *) SYSBK_OLDAREA)->a ## N)
 
+// il chiamante è in kernel mode
+// TODO: check
+#define IS_KERNEL_MODE  \
+    (((state_t *) SYSBK_OLDAREA)->cpsr & STATUS_SYS_MODE == STATUS_SYS_MODE)
 
-#define ST_RVAL(RVAL)   \
-    ((state_t *) SYSBK_OLDAREA)->a1 = (unsigned int) (RVAL)
 
-static inline DELIVER_MSG(DEST, MSG) {
+static inline void DELIVER_MSG(struct tcb_t *DEST, uintptr_t MSG) {
     if (msgq_add(current_thread, DEST, MSG) == 0)
     /* Se la consegna del messaggio è andata a buon fine */
         ST_RVAL(SEND_SUCCESS);
@@ -40,16 +47,14 @@ static inline DELIVER_MSG(DEST, MSG) {
  * dest is currently in the blocked queue. It's waiting for a message from the
  * thread that calls this function (current thread) or from any thread.
  */
-static inline DELIVER_DIRECTLY(struct tcb_t *dest, uintptr_t msg) {
+static inline void DELIVER_DIRECTLY(struct tcb_t *dest, uintptr_t msg) {
     dest->t_s.a1 = (unsigned int) current_thread;
     *((uintptr_t *) (dest->t_s.a3)) = msg;
 }
 
-// TODO: is blockedq necessary?
-
-// send ritorna 0 in caso di successo, 1 in caso di fallimento
+// send ritorna 0 in caso di successo, -1 in caso di fallimento
 // TODO: cosa fare se il thread si reincarna?
-static inline send(struct tcb_t *dest, uintptr_t msg){
+static inline void send(struct tcb_t *dest, uintptr_t msg){
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
@@ -82,7 +87,7 @@ static inline send(struct tcb_t *dest, uintptr_t msg){
     LDST((state_t *) SYSBK_OLDAREA);
 }
 
-static inline recv(struct tcb_t *src, uintptr_t *pmsg){
+static inline void recv(struct tcb_t *src, uintptr_t *pmsg){
 
     if (msgq_get(&src, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
     /* caso non bloccante: il messaggio cercato si trova nella coda */
@@ -103,6 +108,57 @@ static inline recv(struct tcb_t *src, uintptr_t *pmsg){
     }
 }
 
+/*******************************************************************************/
+/*
+ * These two functions are wrappers for send and recv
+ * send and recv are called only if the calling thread is in kernel mode,
+ * otherwise an error value is returned and the error number is set
+ *
+ * Note: these functions never return control to the caller
+ */
+
+static inline void send_kernel(struct tcb_t *dest, uintptr_t msg) {
+    if (IS_KERNEL_MODE)
+        send(dest, msg);
+    else {
+        ST_RVAL(SEND_FAILURE);
+        // TODO: set error number
+
+        LDST((state_t *) SYSBK_OLDAREA);
+    }
+}
+
+static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg) {
+    if (IS_KERNEL_MODE)
+        recv(src, pmsg);
+    else {
+        ST_RVAL(RECV_FAILURE);
+        // TODO: set error number
+
+        LDST((state_t *) SYSBK_OLDAREA);
+    }
+}
+
+/*******************************************************************************/
+// Syscall != 0, 1, 2
+
+/* system call non 1 o 2 vengono trasformate in messaggi al thread
+definito tramite SETSYSMGR se esiste altrimenti msg SETPGMMGR se
+esiste altrimenti TERMINATE_THREAD  */
+
+static inline void syscall_other(uintptr_t msg) {
+    // se è definito un thread tramite SETSYSMGR
+        // send(/*Thread*/, );
+    // altrimenti se esiste un thread definito tramite SETPGMMGR
+        // send(/*Thread*/, );
+    // altrimenti TERMINATE_THREAD
+        // send(/* SSI */, TERMINATE_THREAD);
+}
+
+/*******************************************************************************/
+// Syscall Handler
+
+
 void syscall_h(){
     // copiare old_state in thread->t_s
     BREAKPOINT();
@@ -111,15 +167,10 @@ void syscall_h(){
             // Segnalazione di errore
             break;
         case SYS_SEND:
-            send((struct tcb_t *) SYSCALL_ARG(2), SYSCALL_ARG(3));
+            send_kernel((struct tcb_t *) SYSCALL_ARG(2), SYSCALL_ARG(3));
         case SYS_RECV:
-            recv((struct tcb_t *) SYSCALL_ARG(2), (uintptr_t *) SYSCALL_ARG(3));
+            recv_kernel((struct tcb_t *) SYSCALL_ARG(2), (uintptr_t *) SYSCALL_ARG(3));
         default:
-            /* system call non 1 o 2 vengono trasformate in messaggi al thread
-            definito tramite SETSYSMGR se esiste altrimenti msg SETPGMMGR se
-            esiste altrimenti TERMINATE_THREAD  */
-            break;
+            syscall_other(SYSCALL_ARG(3));
     }
-
-    // LDST((state_t *) SYSBK_OLDAREA);
 }
