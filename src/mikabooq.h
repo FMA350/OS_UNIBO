@@ -112,6 +112,7 @@ int msgq_add_head(struct tcb_t *sender, struct tcb_t *destination, uintptr_t val
 	 -> if sender != NULL && *sender == NULL: get a message from any sender and store
 	 the address of the sending tcb in *sender
 	 -> if sender != NULL && *sender != NULL: get a message sent by *sender */
+/* -> if value == NULL: the message is not stored */
 /* return -1 if there are no messages in the queue matching the request.
 	 return 0 and store the message payload in *value otherwise. */
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value);

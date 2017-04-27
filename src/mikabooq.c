@@ -228,6 +228,14 @@ int msgq_add_head(struct tcb_t *sender, struct tcb_t *destination, uintptr_t val
     }
 }
 
+// stores the value only if value != NULL
+static inline store_val(uintptr_t *value, struct msg_t *msg) {
+    if (value)
+    // value != NULL
+        /* storing the vaue */
+        *value = msg->m_value;
+}
+
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value) {
     if(sender == NULL) {
         /* restituisce il primo messaggio in coda qualsiasi ne sia il mittente
@@ -241,8 +249,7 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
         else {
             /* removing the message from the list */
             list_del(msg_conc);
-            /* extracting the vaue */
-            *value = container_of(msg_conc, struct msg_t, m_next)->m_value;
+            store_val(value, container_of(msg_conc, struct msg_t, m_next));
             /* adding the element to the free list */
             list_add_tail(msg_conc, &message_h);
             return 0;
@@ -263,8 +270,8 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
             struct msg_t *msg = container_of(msg_conc, struct msg_t, m_next);
             /* removing the message from the list */
             list_del(msg_conc);
-            /* extracting value and sender */
-            *value = msg->m_value;
+
+            store_val(value, msg);
             *sender = msg->m_sender;
             /* adding the element to the free list */
             list_add_tail(msg_conc, &message_h);
@@ -280,8 +287,7 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
             if(pos->m_sender == *sender) {
                 /* removing the message from the list */
                 list_del(&pos->m_next);
-                /* extracting the value */
-                *value = pos->m_value;
+                store_val(value, pos);
                 /* adding the element to the free list */
                 list_add_tail(&pos->m_next, &message_h);
                 return 0;

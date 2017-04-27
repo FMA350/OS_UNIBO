@@ -1,7 +1,7 @@
 
 Message passing:
     SYSCALL 0 caso errore
-    2) nella receive, se l'argomento e' null, non salviamo il payload
+    2) nella receive, se l'argomento e' null, non salviamo il payload	--> DONE: TODO: check
     3) SEND e RECEIVE non devono essere accessibili ai thread in usermode.
 
 ssi
