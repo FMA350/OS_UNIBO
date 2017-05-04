@@ -56,7 +56,7 @@ static inline uintptr_t DISPATCH(uintptr_t MSG) {
         case SETSYSMGR:
             /* code */
             break;
-        case GETCPUTIME:
+        case GET_CPUTIME:
             /* code */
             break;
         case WAIT_FOR_CLOCK:
@@ -68,7 +68,10 @@ static inline uintptr_t DISPATCH(uintptr_t MSG) {
         case GET_PROCESSID:
             /* code */
             break;
-        case GET_THREAD:
+        case GET_PARENTPROCID:
+            /* code */
+            break;
+        case GET_MYTHREADID:
             /* code */
             break;
         default:
