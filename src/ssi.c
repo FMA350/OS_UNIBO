@@ -13,7 +13,7 @@
 #include <libuarm.h>
 #include <syslib.h>
 #include <mikabooq.h>
-// #include <nucleus.h>
+#include <nucleus.h>
 
 
 struct tcb_t *ssi_thread_init() {
@@ -82,7 +82,7 @@ static inline uintptr_t DISPATCH(uintptr_t MSG) {
 }
 
 
-void SSI(){
+void *SSI(){
     tprint("SSI started\n");
     while (1) {
         uintptr_t msg, reply;
@@ -101,7 +101,7 @@ void SSI(){
 
 
 /***********SERVICES*****************/
-
+#if 0
 int GET_ERRNO(){
   return errorNumber;
 }
@@ -176,3 +176,4 @@ unsigned int GETCPUTIME(struct tcb_t * thread){
 struct pcb_t *GET_PROCESSID(struct tcb_t * thread){
   return thread->t_pcb; //TODO: What do they really want? Documentation isn't clear.
 }
+#endif
