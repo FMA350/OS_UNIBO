@@ -15,10 +15,22 @@
 #include <mikabooq.h>
 // #include <nucleus.h>
 
-struct tcb_t ssi;
+
+struct tcb_t *ssi_thread_init() {
+    static struct tcb_t ssi;
+
+    ssi.t_pcb = NULL;
+    ssi.t_status = T_STATUS_READY;
+    ssi.t_wait4sender = NULL;
+    INIT_LIST_HEAD(&ssi.t_next);
+    INIT_LIST_HEAD(&ssi.t_sched);
+    INIT_LIST_HEAD(&ssi.t_msgq);
+
+    return(&ssi);
+}
 
 
-static inline void DISPATCH(uintptr_t MSG) {
+static inline uintptr_t DISPATCH(uintptr_t MSG) {
     switch (MSG) {
         case GET_ERRNO:
             /* code */
@@ -69,22 +81,18 @@ static inline void DISPATCH(uintptr_t MSG) {
 
 void SSI(){
     tprint("SSI started\n");
-
     while (1) {
-
-        uintptr_t msg;
+        uintptr_t msg, reply;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
 
-        DISPATCH(msg);
+        reply = DISPATCH(msg);
 
         // send response back
-        // TODO: send payload back instead of NULL
-        if (msgsend(applicant, NULL) == -1) {
+        if (msgsend(applicant, reply) == -1) {
         // if msgsend fails
-        // TODO: find a better solution
+            // TODO: find a better solution
             PANIC();
         }
-
     }
 }
 

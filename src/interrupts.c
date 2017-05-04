@@ -21,34 +21,35 @@ extern struct tcb_t *current_thread;
 static void interval_timer_h();
 
 
-#define NEW_STATE(NEW_AREA) ((state_t *) NEW_AREA)
-
-#define LOAD_NEW_STATE(NEW_AREA, HANDLER_NAME)                                   \
-    ((state_t *) NEW_AREA)->pc = (unsigned int) HANDLER_NAME;                    \
-    ((state_t *) NEW_AREA)->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);      \
-    ((state_t *) NEW_AREA)->sp = RAM_TOP;                                        \
-    // NEW_STATE(NEW_AREA)->sl = ???;
-
-void states_init(){
-    //TODO: complete loading and care for execution mode; stack limit register???
+/* This function is used to populate exception states vector
+ * Preconditions: new_area is the address of the new state, while handler
+ *                is the function that has to be executed
+ */
+static inline void LOAD_NEW_STATE(state_t *new_area, void *handler) {
     //FIXME: come vanno caricati gli altri registri?
 
-    LOAD_NEW_STATE(INT_NEWAREA, interrupt_h);
+    STST(new_area);
 
-    // TLB_NEWAREA
+    new_area->pc = (unsigned int) handler;
+    new_area->sp = RAM_TOP;
+    new_area->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
+}
+
+void states_init(){
+
+    LOAD_NEW_STATE((state_t *) INT_NEWAREA, interrupt_h);
+
     // TODO: Settare HANDLER_NAME
-    // LOAD_NEW_STATE(TLB_NEWAREA, HANDLER_NAME)
+    // LOAD_NEW_STATE((state_t *) TLB_NEWAREA, HANDLER_NAME)
 
-    // PGMTRAP_NEWAREA
     // TODO: Settare HANDLER_NAME
-    // LOAD_NEW_STATE(PGMTRAP_NEWAREA, HANDLER_NAME)
+    // LOAD_NEW_STATE((state_t *) PGMTRAP_NEWAREA, HANDLER_NAME)
 
-    LOAD_NEW_STATE(SYSBK_NEWAREA, syscall_h);
+    LOAD_NEW_STATE((state_t *) SYSBK_NEWAREA, syscall_h);
 }
 
 void interrupt_h() {
     // TODO: check pending interrupts in priority order
-
     interval_timer_h();
 }
 

@@ -2,7 +2,7 @@
 #define SCHEDULER_H
 
 
-void first_thread_launch();
+void load_readyq(struct pcb_t *root);
 
 void experimentalClerk();
 

@@ -6,6 +6,7 @@
 #include <libuarm.h>
 #include <ssi.h>
 #include <debug_tests.h>
+#include <nucleus.h>
 
 
 /*****EXTERN*****/
@@ -44,22 +45,42 @@ void accountant(struct tcb_t* thread){
 }
 #endif
 
-/* TODO: Probabilmente bisogna caricare i demoni necessari al funzionamento del
-         sistema nella coda ready in questa funzione. */
-void load_readyq(struct pcb_t *root) {
-    struct tcb_t *first_thread = thread_alloc(root);
-    /* caricare stato di partenza del thread */
+/* Loads the initial thread state
+ *
+ * Preconditions: to_load is the thread that has to be initialized, target is
+ * the function that the thread has to execute
+ */
+static inline void state_init(struct tcb_t *to_load, void *target) {
+    static unsigned int n = 1;
+
+    STST(&to_load->t_s);
+
     // PC points the thread we are starting
-    first_thread->t_s.pc = (unsigned int) test_timer;
+    to_load->t_s.pc = (unsigned int) target;
     // SP
-    first_thread->t_s.sp = RAM_TOP - FRAME_SIZE;
+    to_load->t_s.sp = RAM_TOP - n*FRAME_SIZE;
     // CPSR -> mask all interrupts and be in kernel mode
-    first_thread->t_s.cpsr = STATUS_DISABLE_INT(STATUS_SYS_MODE);
+    to_load->t_s.cpsr = STATUS_DISABLE_INT(STATUS_SYS_MODE);
 
+    n++;
+}
+
+/* Loads the initial thread state and loads the thread in the ready queue  */
+static inline void init_load(struct tcb_t *to_load, void *target) {
+    state_init(to_load, target);
     // aggiungere il thread alla ready queue a mano
-    thread_enqueue(first_thread, &readyq);
+    thread_enqueue(to_load, &readyq);
+}
 
-    // TODO: inserire SSI thread
+/* Loads the ready queue with the threads needed by the system */
+void load_readyq(struct pcb_t *root) {
+
+    /* Points to the thread we want to load*/
+    struct tcb_t *to_load;
+    to_load = ssi_thread_init();
+    init_load(to_load, SSI);
+
+    // root IS NOT NEEDED IF WE DON'T LOAD OTHER THREAD
 }
 
 void scheduler() {
