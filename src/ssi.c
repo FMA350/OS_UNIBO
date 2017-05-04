@@ -12,10 +12,13 @@
 #include <uARMtypes.h>
 #include <libuarm.h>
 #include <syslib.h>
+#include <mikabooq.h>
 // #include <nucleus.h>
 
-#if 0
-static inline void DISPATCH(unsigned int MSG) {
+struct tcb_t ssi;
+
+
+static inline void DISPATCH(uintptr_t MSG) {
     switch (MSG) {
         case GET_ERRNO:
             /* code */
@@ -60,21 +63,23 @@ static inline void DISPATCH(unsigned int MSG) {
         // TODO: se il messaggio è diverso dai codici noti
             break;
     }
+
 }
+
 
 void SSI(){
     tprint("SSI started\n");
 
     while (1) {
 
-        unsigned int msg;
+        uintptr_t msg;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
 
         DISPATCH(msg);
 
         // send response back
-        // TODO: send payload back
-        if (msgsend(applicant, /* payload */) == -1) {
+        // TODO: send payload back instead of NULL
+        if (msgsend(applicant, NULL) == -1) {
         // if msgsend fails
         // TODO: find a better solution
             PANIC();
@@ -82,7 +87,7 @@ void SSI(){
 
     }
 }
-#endif
+
 
 /***********SERVICES*****************/
 

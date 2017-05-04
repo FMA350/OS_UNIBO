@@ -65,7 +65,6 @@ void load_readyq(struct pcb_t *root) {
 void scheduler() {
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
-    // thread_dequeue sostituito con thread_qhead
     // accountant();
     //recalculate how many clock cicles 5ms are.
     clockPerTimeslice = (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);

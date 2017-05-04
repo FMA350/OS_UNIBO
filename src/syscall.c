@@ -46,10 +46,13 @@ static inline void DELIVER_MSG(struct tcb_t *DEST, uintptr_t MSG) {
  * Preconditions:
  * dest is currently in the blocked queue. It's waiting for a message from the
  * thread that calls this function (current thread) or from any thread.
+ * if we want to return an
  */
-static inline void DELIVER_DIRECTLY(struct tcb_t *dest, uintptr_t msg) {
-    dest->t_s.a1 = (unsigned int) current_thread;
-    *((uintptr_t *) (dest->t_s.a3)) = msg;
+static inline void DELIVER_DIRECTLY(struct tcb_t *dest, uintptr_t msg, struct tcb_t *sender) {
+    dest->t_s.a1 = (unsigned int) sender;
+    // FIXME: WARNING - if recv is called with pmsg == NULL this shouldn't work
+    if (((uintptr_t *) (dest->t_s.a3)) != NULL)
+        *((uintptr_t *) (dest->t_s.a3)) = msg;
 }
 
 // send ritorna 0 in caso di successo, -1 in caso di fallimento
@@ -67,7 +70,7 @@ static inline void send(struct tcb_t *dest, uintptr_t msg){
                 parte del processo corrente o da qualsiasi processo (non ha messaggi) */
 
                 // il messaggio è consegnato con priorità
-                DELIVER_DIRECTLY(dest, msg);
+                DELIVER_DIRECTLY(dest, msg, current_thread);
 
                 dest->t_status = T_STATUS_READY;
                 dest->t_wait4sender = NULL; // necessario? secondo me no (michele)
