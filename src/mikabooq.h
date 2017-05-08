@@ -31,7 +31,7 @@ struct tcb_t {
 
 	struct tcb_t *pgm_mgr;
 	struct tcb_t *tlb_mgr;
-	struct tcb_t *sys_mng;
+	struct tcb_t *sys_mgr;
 
 };
 

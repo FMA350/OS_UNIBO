@@ -105,7 +105,7 @@ void thread_init(void) {
 
         pgm_mgr = NULL;
     	tlb_mgr = NULL;
-    	sys_mng = NULL;
+    	sys_mgr = NULL;
 
         list_add_tail(&thread[i].t_next, &thread_h); //collego i vari elementi della lista libera
         INIT_LIST_HEAD(&thread[i].t_sched);
@@ -143,7 +143,7 @@ int thread_free(struct tcb_t *oldthread) {
 
     pgm_mgr = NULL;
     tlb_mgr = NULL;
-    sys_mng = NULL;
+    sys_mgr = NULL;
 
     //t_msgq is already empty.
     /*adding oldthread to the free list*/

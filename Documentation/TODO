@@ -38,3 +38,16 @@ ERROR_HANDLING
 //SETPGMMGR
 
 //TERMINATE_THREAD
+
+
+DOMANDE
+
+1) Thread appartenenti allo stesso processo possono avere manager differenti?
+
+2) In che relazione pertanto l'ereditarieta' influisce sulla inizializzazione
+di un manager per un nuovo processo.
+
+3) BUS_REG_TIME_SCALE varia nel tempo? Domanda in relazione alla contabilita'
+dei millisecondi.
+
+4) I manager vengono settati dai programmi? Piu' thread possono avere lo stesso manager?
