@@ -16,6 +16,17 @@
 #include <nucleus.h>
 
 
+static int get_errno();
+static struct pcb_t *create_process(state_t initial_state);
+static struct tcb_t *create_thread(state_t initial_state, struct pcb_t *process);
+static int terminate_process(struct pcb_t *processtodelete);
+static int terminate_thread(struct tcb_t *threadtodelete);
+static unsigned int getcputime(struct tcb_t * thread);
+static struct pcb_t *get_processid(struct tcb_t * thread);
+
+
+struct tcb_t *ssi;
+
 struct tcb_t *ssi_thread_init() {
     static struct tcb_t ssi;
 
@@ -82,7 +93,7 @@ static inline uintptr_t DISPATCH(uintptr_t MSG) {
 }
 
 
-void *SSI(){
+void SSI(){
     tprint("SSI started\n");
     while (1) {
         uintptr_t msg, reply;

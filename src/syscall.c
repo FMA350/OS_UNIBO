@@ -1,21 +1,14 @@
 #include <mikabooq.h>
 #include <nucleus.h>
 #include <syslib.h>
+#include <scheduler.h>
+#include <syscall.h>
 
-extern struct list_head readyq;
 
 // sentinella della coda dei processi in attesa di ricevere un messaggio
-LIST_HEAD(blockedq);
-
-extern struct tcb_t *current_thread;
+static LIST_HEAD(blockedq);
 
 
-
-#define SEND_SUCCESS    0
-
-#define SEND_FAILURE    -1
-
-#define RECV_FAILURE    NULL
 
 
 #define ST_RVAL(RVAL)   \

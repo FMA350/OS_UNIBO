@@ -7,14 +7,29 @@
 #include <ssi.h>
 #include <debug_tests.h>
 #include <nucleus.h>
+#include <scheduler.h>
 
 
-/*****EXTERN*****/
-extern unsigned int thread_count;
-extern unsigned int soft_block_count;
+// Thread that has currently the control of the CPU
+struct tcb_t *current_thread = NULL;
 
-extern struct tcb_t *current_thread;
-extern struct list_head readyq;
+// sentinella della ready queue
+LIST_HEAD(readyq);
+
+// Number of threads currently active in the system
+unsigned int thread_count = 0;
+
+/*
+ * Soft block: threads that are blocked awaiting for I/O or completion of
+ *             a service request by the SSI; they're going to unblock for
+ *             themselves in a limited amount of time.
+ *
+ * Hard block: threads that are blocked awaiting for a message; they need
+ *             another process to unblock them.
+ */
+
+unsigned int soft_block_count = 0;
+
 
 extern void test_syscall();
 extern void BREAKPOINT();
@@ -83,27 +98,35 @@ void load_readyq(struct pcb_t *root) {
     // root IS NOT NEEDED IF WE DON'T LOAD OTHER THREAD
 }
 
+/* This function is used to handle the case when the ready ready queue is empty
+ * inside the scheduler
+ * Preconditions: the ready queue is empty
+ */
+static inline void empty_readyq() {
+    if (thread_count == 1)
+    /* the SSI is the only thread in the system */
+    /* shutdown */
+        HALT();
+    else if (soft_block_count == 0)
+    /* all process are hard blocked (waiting for msg) */
+    /* deadlock */
+        PANIC();
+    else {
+    /* processes in the system are waiting for I/O */
+        setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
+        WAIT();
+    }
+}
+
 void scheduler() {
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
     // accountant();
     //recalculate how many clock cicles 5ms are.
     clockPerTimeslice = (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
-    if (current_thread == NULL) {
-    /* ready queue empty */
-        if (thread_count == 1)
-        /* the SSI is the only thread in the system */
-        /* shutdown */
-            HALT();
-        else if (soft_block_count == 0)
-        /* all process are hard blocked (waiting for msg) */
-        /* deadlock */
-            PANIC();
-        else {
-            setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
-            WAIT();
-        }
-    }
+
+    if (current_thread == NULL)
+        empty_readyq();
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO

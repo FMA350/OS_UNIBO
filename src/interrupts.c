@@ -71,10 +71,14 @@ void interrupt_h() {
 /* Interval timer handler without pseudoclock facilities */
 static void interval_timer_h() {
     timeSliceLeft = (unsigned int *) getTIMER();
-    // salvataggio stato del processore
-    current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
-    // Inserimento del processo in coda
-    thread_enqueue(current_thread, &readyq);
+
+    if (current_thread) {
+    // se deve avvenire il context-switch
+        // salvataggio stato del processore
+        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+        // Inserimento del processo in coda
+        thread_enqueue(current_thread, &readyq);
+    }
     scheduler();
 }
 

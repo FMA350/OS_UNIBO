@@ -27,7 +27,7 @@ typedef uintptr_t memaddr;
 typedef uintptr_t cputime;
 typedef uintptr_t devaddr;
 
-extern void *SSI();
+extern void SSI();
 
 #define msgsend(dest,payload) (SYSCALL(SYS_SEND,(unsigned int) (dest),(unsigned int) (payload),0))
 
