@@ -148,7 +148,7 @@ static inline void syscall_other(uintptr_t msg) {
     // altrimenti se esiste un thread definito tramite SETPGMMGR
         // send(/*Thread*/, );
     // altrimenti TERMINATE_THREAD
-        // send(/* SSI */, TERMINATE_THREAD);
+    send(/* SSI */, TERMINATE_THREAD);
 }
 
 /*******************************************************************************/

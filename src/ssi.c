@@ -19,7 +19,7 @@ static struct pcb_t *_get_processid(struct tcb_t * thread);
 struct tcb_t *ssi;
 
 struct tcb_t *ssi_thread_init() {
-    static struct tcb_t ssi;
+    static struct tcb_t _ssi;
 
     ssi.t_pcb = NULL;
     ssi.t_status = T_STATUS_READY;
@@ -28,7 +28,7 @@ struct tcb_t *ssi_thread_init() {
     INIT_LIST_HEAD(&ssi.t_sched);
     INIT_LIST_HEAD(&ssi.t_msgq);
 
-    return(&ssi);
+    return(ssi = &_ssi);
 }
 
 

@@ -12,6 +12,8 @@
 
 #include <mikabooq.h>
 
+/* SSI's thread */
+extern struct tcb_t *ssi;
 
 /* SSI daemon */
 // void SSI();
@@ -20,7 +22,8 @@
 int errorNumber;
 // TODO: is error number different from thread to thread???
 
-/* Returns the ssi thread already initialized, extept for processor state */
+/* Returns a pointer to the ssi thread already initialized,
+   extept for processor state */
 struct tcb_t *ssi_thread_init();
 
 

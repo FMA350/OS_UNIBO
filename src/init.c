@@ -53,11 +53,9 @@ static void states_init(){
 
     LOAD_NEW_STATE((state_t *) INT_NEWAREA, interrupt_h);
 
-    // TODO: Settare HANDLER_NAME
-    // LOAD_NEW_STATE((state_t *) TLB_NEWAREA, tlbtrap_h)
+    LOAD_NEW_STATE((state_t *) TLB_NEWAREA, tlbtrap_h);
 
-    // TODO: Settare HANDLER_NAME
-    // LOAD_NEW_STATE((state_t *) PGMTRAP_NEWAREA, pgmtrap_h)
+    LOAD_NEW_STATE((state_t *) PGMTRAP_NEWAREA, pgmtrap_h);
 
     LOAD_NEW_STATE((state_t *) SYSBK_NEWAREA, syscall_h);
 }
