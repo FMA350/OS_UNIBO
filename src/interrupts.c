@@ -22,32 +22,6 @@ static void io_request(unsigned int);
 static void interval_timer_h();
 
 
-/* This function is used to populate exception states vector
- * Preconditions: new_area is the address of the new state, while handler
- *                is the function that has to be executed
- */
-static inline void LOAD_NEW_STATE(state_t *new_area, void *handler) {
-    //FIXME: come vanno caricati gli altri registri?
-
-    STST(new_area);
-
-    new_area->pc = (unsigned int) handler;
-    new_area->sp = RAM_TOP;
-    new_area->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
-}
-
-void states_init(){
-
-    LOAD_NEW_STATE((state_t *) INT_NEWAREA, interrupt_h);
-
-    // TODO: Settare HANDLER_NAME
-    // LOAD_NEW_STATE((state_t *) TLB_NEWAREA, HANDLER_NAME)
-
-    // TODO: Settare HANDLER_NAME
-    // LOAD_NEW_STATE((state_t *) PGMTRAP_NEWAREA, HANDLER_NAME)
-
-    LOAD_NEW_STATE((state_t *) SYSBK_NEWAREA, syscall_h);
-}
 
 void interrupt_h() {
     // TODO: check pending interrupts in priority order
