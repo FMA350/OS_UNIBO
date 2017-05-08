@@ -28,6 +28,11 @@ struct tcb_t {
 	struct list_head t_next; /* link the other elements of the list of threads in the same process */
 	struct list_head t_sched; /* link the other elements on the same scheduling list */
 	struct list_head t_msgq; /* list of pending messages for the current thread */
+
+	struct tcb_t *pgm_mgr;
+	struct tcb_t *tlb_mgr;
+	struct tcb_t *sys_mng;
+
 };
 
 struct msg_t {

@@ -102,6 +102,11 @@ void thread_init(void) {
         thread[i].t_pcb = NULL;
         thread[i].t_status = T_STATUS_NONE;
         thread[i].t_wait4sender = NULL;
+
+        pgm_mgr = NULL;
+    	tlb_mgr = NULL;
+    	sys_mng = NULL;
+
         list_add_tail(&thread[i].t_next, &thread_h); //collego i vari elementi della lista libera
         INIT_LIST_HEAD(&thread[i].t_sched);
         INIT_LIST_HEAD(&thread[i].t_msgq);
@@ -135,6 +140,10 @@ int thread_free(struct tcb_t *oldthread) {
     oldthread->t_pcb = NULL;
     oldthread->t_status = T_STATUS_NONE;
     oldthread->t_wait4sender = NULL;
+
+    pgm_mgr = NULL;
+    tlb_mgr = NULL;
+    sys_mng = NULL;
 
     //t_msgq is already empty.
     /*adding oldthread to the free list*/

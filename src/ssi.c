@@ -12,6 +12,7 @@ static struct pcb_t *_create_process(state_t initial_state);
 static struct tcb_t *_create_thread(state_t initial_state, struct pcb_t *process);
 static int _terminate_process(struct pcb_t *processtodelete);
 static int _terminate_thread(struct tcb_t *threadtodelete);
+static int _setpgmmgr(struct tcb_t* thread);
 static unsigned int _getcputime(struct tcb_t * thread);
 static struct pcb_t *_get_processid(struct tcb_t * thread);
 
@@ -172,8 +173,20 @@ stuff
 */
 
 unsigned int _getcputime(struct tcb_t * thread){
+    //FIXME
+    return 0;
+}
+
+static tcb_t _setpgmmgr(struct tcb_t *s){
+    //come controllo che la chiamata sia stata fatta una sola volta?
+
+    msgsend(SSI,&s->t_s);
+
+
 
 }
+
+
 
 struct pcb_t *_get_processid(struct tcb_t * thread){
   return thread->t_pcb; //TODO: What do they really want? Documentation isn't clear.
