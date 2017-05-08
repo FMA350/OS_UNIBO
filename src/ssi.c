@@ -142,13 +142,20 @@ struct tcb_t * _create_thread(state_t initial_state, struct pcb_t * process){
 int _terminate_process(struct pcb_t *processToDelete){
   if(!processToDelete) return -1;
   struct tcb_t * threadToDelete;
-  while(threadToDelete = thread_dequeue(&processToDelete->p_threads)){
-    if(thread_free(threadToDelete)==-1){
+  while(threadToDelete = thread_qhead(&processToDelete->p_threads)){
+	while (!list_empty(&threadToDelete->t_msgq)) {
+		//cancello tutti i messaggi se ce ne sono		
+		msg_free(msg_qhead(&threadToDelete->t_msgq))
+    	}
+	thread_free(threadToDelete);
+	
       //could not close a specific thread since
       //some messages are still in the queue.
       //FIXME: should it stop like now or should it keep going?
-      return -1;
+	//direi che cancelliamo i messaggi i messaggi e via
+	
     }
+	
   }
   return proc_delete(processToDelete);
 }
@@ -156,17 +163,18 @@ int _terminate_process(struct pcb_t *processToDelete){
 int _terminate_thread(struct tcb_t *threadToDelete){
   if(!threadToDelete) return -1;
 
-  if(!(thread_qhead(&threadToDelete->t_next))){
+  if(thread_qhead(&threadToDelete->t_next)==NULL){
     //only if this thread does not have any siblings
-      return TERMINATE_PROCESS(threadToDelete->t_pcb);
+      return _terminate_process(threadToDelete->t_pcb);
   }
-  else{
+  /*else{ //non ho capito a cosa serva questa parte :')
     struct list_head *temp = &threadToDelete->t_pcb->p_threads;
     while(temp!=threadToDelete){
       list_next(temp);
     }
     thread_dequeue(temp);
-  }
+  }*/
+  
   return thread_free(threadToDelete);
 }
 
