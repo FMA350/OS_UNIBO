@@ -32,8 +32,10 @@ struct tcb_t *ssi_thread_init() {
 }
 
 
-static inline uintptr_t DISPATCH(uintptr_t MSG) {
-    switch (MSG) {
+static inline uintptr_t DISPATCH(uintptr_t msg) {
+
+
+    switch (((uintptr_t *) msg)[0]) {
         case GET_ERRNO:
             /* code */
             break;
