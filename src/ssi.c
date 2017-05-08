@@ -1,12 +1,3 @@
-/*
-   _____            __                    _____                 _              ____      __            ____
-  / ___/__  _______/ /____  ____ ___     / ___/___  ______   __(_)_______     /  _/___  / /____  _____/ __/___ _________
-  \__ \/ / / / ___/ __/ _ \/ __ `__ \    \__ \/ _ \/ ___/ | / / / ___/ _ \    / // __ \/ __/ _ \/ ___/ /_/ __ `/ ___/ _ \
- ___/ / /_/ (__  ) /_/  __/ / / / / /   ___/ /  __/ /   | |/ / / /__/  __/  _/ // / / / /_/  __/ /  / __/ /_/ / /__/  __/
-/____/\__, /____/\__/\___/_/ /_/ /_/   /____/\___/_/    |___/_/\___/\___/  /___/_/ /_/\__/\___/_/  /_/  \__,_/\___/\___/
-     /____/
-*/
-
 #include <listx.h>
 #include <ssi.h>
 #include <uARMtypes.h>
@@ -16,13 +7,13 @@
 #include <nucleus.h>
 
 
-static int get_errno();
-static struct pcb_t *create_process(state_t initial_state);
-static struct tcb_t *create_thread(state_t initial_state, struct pcb_t *process);
-static int terminate_process(struct pcb_t *processtodelete);
-static int terminate_thread(struct tcb_t *threadtodelete);
-static unsigned int getcputime(struct tcb_t * thread);
-static struct pcb_t *get_processid(struct tcb_t * thread);
+static int _get_errno();
+static struct pcb_t *_create_process(state_t initial_state);
+static struct tcb_t *_create_thread(state_t initial_state, struct pcb_t *process);
+static int _terminate_process(struct pcb_t *processtodelete);
+static int _terminate_thread(struct tcb_t *threadtodelete);
+static unsigned int _getcputime(struct tcb_t * thread);
+static struct pcb_t *_get_processid(struct tcb_t * thread);
 
 
 struct tcb_t *ssi;
@@ -112,13 +103,13 @@ void SSI(){
 
 
 /***********SERVICES*****************/
-#if 0
-int GET_ERRNO(){
+
+int _get_errno(){
   return errorNumber;
 }
 
 /* FIXME: passing a pointer as an argument is more efficient */
-struct pcb_t * CREATE_PROCESS(state_t initial_state){
+struct pcb_t * _create_process(state_t initial_state){
   struct pcb_t * new_process = proc_alloc(NULL);    // mnalli: proc_alloc(NULL) ?
   if(!new_process){
     //TODO: throw an error, no more space availeable
@@ -134,7 +125,7 @@ struct pcb_t * CREATE_PROCESS(state_t initial_state){
   return new_process;
 }
 
-struct tcb_t * CREATE_THREAD(state_t initial_state, struct pcb_t * process){
+struct tcb_t * _create_thread(state_t initial_state, struct pcb_t * process){
   struct tcb_t * new_thread = thread_alloc(process);
   if(!new_thread){
     //TODO: throw an error, no more space availeable
@@ -145,7 +136,7 @@ struct tcb_t * CREATE_THREAD(state_t initial_state, struct pcb_t * process){
   return new_thread;
 }
 
-int TERMINATE_PROCESS(struct pcb_t *processToDelete){
+int _terminate_process(struct pcb_t *processToDelete){
   if(!processToDelete) return -1;
   struct tcb_t * threadToDelete;
   while(threadToDelete = thread_dequeue(&processToDelete->p_threads)){
@@ -159,7 +150,7 @@ int TERMINATE_PROCESS(struct pcb_t *processToDelete){
   return proc_delete(processToDelete);
 }
 
-int TERMINATE_THREAD(struct tcb_t *threadToDelete){
+int _terminate_thread(struct tcb_t *threadToDelete){
   if(!threadToDelete) return -1;
 
   if(!(thread_qhead(&threadToDelete->t_next))){
@@ -180,11 +171,10 @@ int TERMINATE_THREAD(struct tcb_t *threadToDelete){
 stuff
 */
 
-unsigned int GETCPUTIME(struct tcb_t * thread){
+unsigned int _getcputime(struct tcb_t * thread){
 
 }
 
-struct pcb_t *GET_PROCESSID(struct tcb_t * thread){
+struct pcb_t *_get_processid(struct tcb_t * thread){
   return thread->t_pcb; //TODO: What do they really want? Documentation isn't clear.
 }
-#endif

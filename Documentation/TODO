@@ -31,3 +31,10 @@ ERROR_HANDLING
     Il tcb_t deve contenere l'errnum del thread ed anche una lista dei processi
     in attesa di messaggi da parte del thread per facilitare il corretto rilascio
     delle risorse durante la terminazione
+
+
+//SETSYSMGR
+
+//SETPGMMGR
+
+//TERMINATE_THREAD
