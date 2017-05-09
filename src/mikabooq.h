@@ -11,7 +11,9 @@ struct pcb_t {
 	struct list_head p_children; /* list of children (hierarchy of processes) */
 	struct list_head p_siblings; /* link the other siblings (children of p_parent) */
 
-	uintptr_t process_id;
+	struct tcb_t *pgm_mgr;
+	struct tcb_t *tlb_mgr;
+	struct tcb_t *sys_mgr;
 };
 
 #define T_STATUS_NONE  0    /* unused thread descriptor */
@@ -20,22 +22,21 @@ struct pcb_t {
 
 struct tcb_t {
 	struct pcb_t *t_pcb; /* pointer to the process */
-	state_t t_s ; /* processor state */
+	state_t t_s; /* processor state */
 
 	int t_status;
 	unsigned int run_time; //milliseconds of CPU time used. check scheduler.c for the accounting function
 	//TODO: initialize for each thread run_time to zero.
+
+	int errno; /* error status of the thread */
+	// TODO: initialize to 0
 
 	struct tcb_t *t_wait4sender; /* expected sender (if t_status == T_STATUS_W4MSG), NULL means accept msg from anybody */
 	struct list_head t_next; /* link the other elements of the list of threads in the same process */
 	struct list_head t_sched; /* link the other elements on the same scheduling list */
 	struct list_head t_msgq; /* list of pending messages for the current thread */
 
-	struct tcb_t *pgm_mgr;
-	struct tcb_t *tlb_mgr;
-	struct tcb_t *sys_mgr;
-
-	uintptr_t thread_id;
+	struct list_head t_waiting4msg; /* list of threads waiting for a message from the current thread */
 };
 
 struct msg_t {
@@ -114,8 +115,11 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
 
 /* same as msgq_add, except from the fact that the message is added in the head */
 int msgq_add_head(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
+
 int msg_free(struct msg_t *oldmsg);
+
 struct msg_t *msg_qhead(struct list_head *queue) ;
+
 /* retrieve a message from a message queue */
 /* -> if sender == NULL: get a message from any sender
 	 -> if sender != NULL && *sender == NULL: get a message from any sender and store
@@ -125,5 +129,9 @@ struct msg_t *msg_qhead(struct list_head *queue) ;
 /* return -1 if there are no messages in the queue matching the request.
 	 return 0 and store the message payload in *value otherwise. */
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value);
+
+/*************************** WAITING4MSG LIST *************************************/
+
+
 
 #endif

@@ -22,8 +22,6 @@ static struct pcb_t *_get_processid(struct tcb_t * thread);
 static struct pcb_t *_get_mythreadid(struct tcb_t *mythread);
 static struct pcb_t *_get_parentprocid(struct pcb_t*thread);
 
-static struct tcb_t *applicant;
-
 struct tcb_t *SSI;
 
 struct tcb_t *ssi_thread_init() {
@@ -41,7 +39,7 @@ struct tcb_t *ssi_thread_init() {
 }
 
 
-static inline uintptr_t DISPATCH(uintptr_t msg) {
+static inline uintptr_t dispatch(uintptr_t msg) {
 
 
     switch (((uintptr_t *) msg)[0]) {
@@ -98,10 +96,9 @@ static inline uintptr_t DISPATCH(uintptr_t msg) {
 void ssi(){
     while (1) {
         uintptr_t msg, reply;
-        //struct tcb_t *
-        applicant = msgrecv(NULL, &msg);
+        struct tcb_t *applicant = msgrecv(NULL, &msg);
 
-        reply = DISPATCH(msg);
+        reply = dispatch(msg);
 
         // send response back
         if (msgsend(applicant, reply) == -1) {
@@ -166,7 +163,7 @@ static int _terminate_process(struct pcb_t *processToDelete){
 
     }
 
-  
+
   return proc_delete(processToDelete);
 }
 
@@ -210,4 +207,3 @@ static struct pcb_t *_get_processid(struct tcb_t * s){
   return s->t_pcb; //TODO: What do they really want? Documentation isn't clear.
   msgsend(SSI,&s->t_s);
 }
-
