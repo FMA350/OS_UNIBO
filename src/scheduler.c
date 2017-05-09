@@ -75,6 +75,8 @@ static inline void state_init(struct tcb_t *to_load, void *target) {
     // SP
     to_load->t_s.sp = RAM_TOP - n*FRAME_SIZE;
     // CPSR -> mask all interrupts and be in kernel mode
+    //FIXME: ssi --> STATUS_ALL_INT_DISABLE
+    //       other kernel thread --> other status
     to_load->t_s.cpsr = STATUS_DISABLE_INT(STATUS_SYS_MODE);
 
     n++;

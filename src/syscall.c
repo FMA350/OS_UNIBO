@@ -142,13 +142,14 @@ static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg) {
 definito tramite SETSYSMGR se esiste altrimenti msg SETPGMMGR se
 esiste altrimenti TERMINATE_THREAD  */
 
+
 static inline void syscall_other(uintptr_t msg) {
     // se è definito un thread tramite SETSYSMGR
         // send(/*Thread*/, );
     // altrimenti se esiste un thread definito tramite SETPGMMGR
         // send(/*Thread*/, );
     // altrimenti TERMINATE_THREAD
-    send(/* SSI */, TERMINATE_THREAD);
+        // send(/* SSI */, TERMINATE_THREAD);
 }
 
 /*******************************************************************************/

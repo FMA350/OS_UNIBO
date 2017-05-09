@@ -22,7 +22,7 @@ static struct pcb_t *_get_processid(struct tcb_t * thread);
 static struct pcb_t *_get_mythreadid(struct tcb_t *mythread);
 static struct pcb_t *_get_parentprocid(struct pcb_t*thread);
 
-static tcb_t *applicant;
+static struct tcb_t *applicant;
 
 struct tcb_t *ssi;
 
@@ -116,6 +116,7 @@ void SSI(){
 
 /***********SERVICES*****************/
 
+#if 0
 static int _get_errno(){
   return errorNumber;
 }
@@ -212,3 +213,4 @@ static struct pcb_t *_get_processid(struct tcb_t * thread){
   return thread->t_pcb; //TODO: What do they really want? Documentation isn't clear.
   msgsend(SSI,&s->t_s);
 }
+#endif

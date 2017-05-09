@@ -3,8 +3,8 @@
 #include <scheduler.h>
 #include <interrupts.h>
 #include <debug_tests.h>
-#include <idman.h>
 #include <arch.h>
+#include <syslib.h>
 
 
 void BREAKPOINT(){ }
@@ -12,7 +12,6 @@ void BREAKPOINT(){ }
 static void states_init();
 
 int main() {
-
     /* Initialization */
     struct pcb_t *root = proc_init();
     thread_init();

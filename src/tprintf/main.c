@@ -1,28 +1,9 @@
-#include <syslib.h>
-
-
-// TODO: Optimize memcpy
-void *memcpy(void *dest, const void *source, size_t num) {
-    int i = 0;
-    // casting pointers
-    char *dest8 = (char *)dest;
-    char *source8 = (char *)source;
-    for (i = 0; i < num; i++)
-        dest8[i] = source8[i];
-    return dest;
-}
-
-
+#include <stdio.h>
 #include <stdarg.h>
-#include <libuarm.h>
 
-static int vrprintf(const char *format, va_list ap);
+int vrprintf(const char *format, va_list ap);
 
-static inline void putchar(int c) {
-    char s[2];
-    s[0] = c; s[1] = 0;
-    tprint(s);
-}
+//static function are functions that are only visible to functions in this file
 
 //writes the given character (as int) to the standard output it the character is not 0
 static int putcx(int c) {
@@ -54,7 +35,6 @@ static int put_backslash(char escapeChar) {
     return putcx(backchar[escapeChar & 0x7f]);
 }
 
-/* val >= 0 */
 static int rvrp_int(int val) {
     if (val == 0)
         return 0;
@@ -96,15 +76,15 @@ static int vrp_percent(const char *format, va_list ap) {
             return vrp_int(va_arg(ap, int)) + vrprintf(format + 1, ap);
         case 's':
             //call vrp_int with the next argument of the list with type pointer to char
-            return vrp_string(va_arg(ap, char *)) + vrprintf(format + 1, ap);
+            return vrp_string(va_arg(ap, char *)) + vrprintf(format + 1, ap);;
         default:
             //if the format is not recognized
-            tprint("ERROR\n");
+            printf("ERROR\n");
             return 0;
     }
 }
 
-static int vrprintf(const char *format, va_list ap) {
+int vrprintf(const char *format, va_list ap) {
     //parse the format
     switch (*format) {
         //case format null
@@ -123,7 +103,7 @@ static int vrprintf(const char *format, va_list ap) {
 }
 
 //function with undetermined number of arguments. Returns the number of characters printed.
-int tprintf(const char *format, ...) {
+int rprintf(const char *format, ...) {
     int rval;
     //declare a list of arguments
     va_list ap;
@@ -133,4 +113,28 @@ int tprintf(const char *format, ...) {
     //clean up the list
     va_end(ap);
     return rval;
+}
+
+int main() {
+    int v;
+    v = rprintf("hello world\n");
+    printf("%d\n", v);
+    v = printf("hello world\n");
+    printf("%d\n", v);
+    v = rprintf("hello world %d\n", 10);
+    printf("%d\n", v);
+    v = printf("hello world %d\n", 10);
+    printf("%d\n", v);
+    v = rprintf("hello world %s %d\n", "piripicchio", 42);
+    printf("%d\n", v);
+    v = printf("hello world %s %d\n", "piripicchio", 42);
+    printf("%d\n", v);
+    v = rprintf("hello world %% \"%s\" %d\n", "piripicchio\tbackslash", 42);
+    printf("%d\n", v);
+    v = printf("hello world %% \"%s\" %d\n", "piripicchio\tbackslash", 42);
+    printf("%d\n", v);
+    v = rprintf("%%\n");
+    printf("%d\n", v);
+    v = printf("%%\n");
+    printf("%d\n", v);
 }

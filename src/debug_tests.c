@@ -44,12 +44,7 @@ void test_timer() {
 
 /*********************************************************************************/
 
-void test_rval_msgsend(int rval) {
-    if (rval == 0)
-        tprint("msgsend succeded\n");
-    else if (rval == -1)
-        tprint("msgsend failed\n");
-}
+#include <syslib.h>
 
 void test_fail_msg() {
     tprint("test_fail_msg started\n");
@@ -58,10 +53,12 @@ void test_fail_msg() {
 
     BREAKPOINT();
 
-    test_rval_msgsend(rval);
+    tprintf("msgsend should fail (return -1) --> rval == %d\n", rval);
 
     HALT();
 }
+
+/******************************************************************************/
 
 struct tcb_t *sender;
 struct tcb_t *receiver;
@@ -73,10 +70,7 @@ void test_succed_msg_recv() {
     uintptr_t store;
     struct tcb_t *sender_of_msg = msgrecv(NULL, &store);
 
-    if (store == 1)
-        tprint("Right value received!\n");
-    else
-        tprint("Wrong value received!\n");
+    tprintf("The message value received should be 1 --> value == %d\n", (int) store);
 
     tprint("test_succed_msg_recv terminated\n");
     // HALT();
@@ -87,7 +81,7 @@ void test_succed_msg_recv() {
 void test_succed_msg_send() {
     tprint("test_succed_msg_send started\n");
     int rval = msgsend(receiver, 1);
-    test_rval_msgsend(rval);
+    tprintf("msgsend should succeed (return 0) --> rval == %d\n", rval);
 
     // stop the process
     uintptr_t store;
@@ -106,7 +100,7 @@ void test_succed_msg_init(struct pcb_t *root) {
     // SP
     receiver->t_s.sp = RAM_TOP - FRAME_SIZE;
     // CPSR -> mask all interrupts and be in kernel mode
-    receiver->t_s.cpsr = STATUS_DISABLE_INT(STATUS_SYS_MODE);
+    receiver->t_s.cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
 
     thread_enqueue(receiver, &readyq);
 
@@ -114,13 +108,13 @@ void test_succed_msg_init(struct pcb_t *root) {
     // SP
     sender->t_s.sp = RAM_TOP - 2*FRAME_SIZE;
     // CPSR -> mask all interrupts and be in kernel mode
-    sender->t_s.cpsr = STATUS_DISABLE_INT(STATUS_SYS_MODE);
+    sender->t_s.cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
 
     thread_enqueue(sender, &readyq);
 
     thread_count = 2;
 
-    tprint("test_succed_msg_init ended\n");
+    tprint("test_succed_msg_init ended\n\n");
 }
 
 
