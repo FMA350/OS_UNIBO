@@ -39,13 +39,11 @@ struct tcb_t *ssi_thread_init() {
 }
 
 
-static inline uintptr_t dispatch(uintptr_t msg) {
-
+static inline uintptr_t dispatch(uintptr_t msg, struct tcb_t *applicant) {
 
     switch (((uintptr_t *) msg)[0]) {
         case GET_ERRNO:
-            /* code */
-            break;
+            return _get_errno(applicant);
         case CREATE_PROCESS:
             /* code */
             break;
@@ -98,7 +96,7 @@ void ssi(){
         uintptr_t msg, reply;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
 
-        reply = dispatch(msg);
+        reply = dispatch(msg, applicant);
 
         // send response back
         if (msgsend(applicant, reply) == -1) {
@@ -114,8 +112,8 @@ void ssi(){
 
 
 
-static int _get_errno(){
-  return errorNumber;
+static inline int _get_errno(struct tcb_t *applicant){
+  return applicant->errno;
 }
 
 /* FIXME: passing a pointer as an argument is more efficient */
