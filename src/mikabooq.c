@@ -306,3 +306,20 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
         return -1;
     }
 }
+
+int msg_free(struct msg_t *oldmsg) {
+    //remove the msg from the process queue.
+    list_del(&oldmsg->m_next);
+    oldmsg->m_sender = NULL;
+
+    list_add_tail(&oldmsg->m_next, &(message_h));
+    return 0;
+}
+
+struct msg_t *msg_qhead(struct list_head *queue) {
+    struct list_head *new_head = list_next(queue);
+    if(new_head == NULL)
+        return NULL;
+    else
+        return container_of(new_head, struct msg_t, m_next);
+}
