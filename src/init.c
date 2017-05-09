@@ -3,6 +3,8 @@
 #include <scheduler.h>
 #include <interrupts.h>
 #include <debug_tests.h>
+#include <idman.h>
+#include <arch.h>
 
 
 void BREAKPOINT(){ }
