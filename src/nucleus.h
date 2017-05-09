@@ -5,7 +5,6 @@
 #include "mikabooq.h"
 
 /* Syscall mnemonic values */
-#define SYS_ERR     0
 #define SYS_SEND    1
 #define SYS_RECV    2
 

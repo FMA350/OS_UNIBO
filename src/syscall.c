@@ -64,7 +64,7 @@ static inline void send(struct tcb_t *dest, uintptr_t msg){
 
                 // il messaggio è consegnato con priorità
                 DELIVER_DIRECTLY(dest, msg, current_thread);
-
+                ST_RVAL(SEND_SUCCESS);
                 dest->t_status = T_STATUS_READY;
                 dest->t_wait4sender = NULL; // necessario? secondo me no (michele)
                 // dest è rimosso dai processi in attesa
@@ -160,9 +160,6 @@ void syscall_h(){
     // copiare old_state in thread->t_s
     BREAKPOINT();
     switch (SYSCALL_ARG(1)) {
-        case SYS_ERR:
-            // Segnalazione di errore
-            break;
         case SYS_SEND:
             send_kernel((struct tcb_t *) SYSCALL_ARG(2), SYSCALL_ARG(3));
         case SYS_RECV:

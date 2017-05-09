@@ -70,7 +70,7 @@ void test_succed_msg_recv() {
     uintptr_t store;
     struct tcb_t *sender_of_msg = msgrecv(NULL, &store);
 
-    tprintf("The message value received should be 1 --> value == %d\n", (int) store);
+    tprintf("The message value received should be 10 --> value == %d\n", (int) store);
 
     tprint("test_succed_msg_recv terminated\n");
     // HALT();
@@ -80,7 +80,7 @@ void test_succed_msg_recv() {
 
 void test_succed_msg_send() {
     tprint("test_succed_msg_send started\n");
-    int rval = msgsend(receiver, 1);
+    int rval = msgsend(receiver, 10);
     tprintf("msgsend should succeed (return 0) --> rval == %d\n", rval);
 
     // stop the process
