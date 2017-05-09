@@ -12,7 +12,7 @@ static struct pcb_t *_create_process(state_t *initial_state);
 static struct tcb_t *_create_thread(state_t *initial_state, struct pcb_t *process);
 static int _terminate_process(struct pcb_t *processtodelete);
 static int _terminate_thread(struct tcb_t *threadtodelete);
-static struct tcb_t * _setpgmmgr(struct tcb_t* thread);
+static struct tcb_t * _setpgmmgr(struct tcb_t* thread, struct tcb_t *applicant);
 static struct tcb_t * _settlbmgr(/*args*/);
 static struct tcb_t * _setsysmgr(/*args*/);
 static unsigned int _getcputime(struct tcb_t * thread);
@@ -192,11 +192,21 @@ static unsigned int _getcputime(struct tcb_t * thread){
     return 0;
 }
 
-static struct tcb_t *_setpgmmgr(struct tcb_t *s){
-    //come controllo che la chiamata sia stata fatta una sola volta?
-
-    msgsend(SSI,&s->t_s);
+static struct tcb_t *_setpgmmgr(struct tcb_t *s, struct tcb_t *applicant){
+	if (s!=NULL){
+		if(&applicant->t_pcb->pgm_mgr != NULL) {//controllo che la chiamata sia stata fatta una sola volta
+			_terminate_process(&applicant->t_pcb);	
+			return NULL;
+		}	
+		else{
+			applicant->t_pcb->pgm_mgr = s;
+			msgsend(SSI,&s->t_s);			
+			return s;
+		}
+	}
+	else return NULL;
 }
+
 
 
 
