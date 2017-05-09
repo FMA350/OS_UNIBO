@@ -114,7 +114,8 @@ int msgq_add(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
 
 /* same as msgq_add, except from the fact that the message is added in the head */
 int msgq_add_head(struct tcb_t *sender, struct tcb_t *destination, uintptr_t value);
-
+int msg_free(struct msg_t *oldmsg);
+struct msg_t *msg_qhead(struct list_head *queue) ;
 /* retrieve a message from a message queue */
 /* -> if sender == NULL: get a message from any sender
 	 -> if sender != NULL && *sender == NULL: get a message from any sender and store

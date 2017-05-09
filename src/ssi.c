@@ -8,13 +8,19 @@
 
 
 static int _get_errno();
-static struct pcb_t *_create_process(state_t initial_state);
-static struct tcb_t *_create_thread(state_t initial_state, struct pcb_t *process);
+static struct pcb_t *_create_process(state_t *initial_state);
+static struct tcb_t *_create_thread(state_t *initial_state, struct pcb_t *process);
 static int _terminate_process(struct pcb_t *processtodelete);
 static int _terminate_thread(struct tcb_t *threadtodelete);
-static int _setpgmmgr(struct tcb_t* thread);
+static struct tcb_t * _setpgmmgr(struct tcb_t* thread);
+static struct tcb_t * _settlbmgr(/*args*/);
+static struct tcb_t * _setsysmgr(/*args*/);
 static unsigned int _getcputime(struct tcb_t * thread);
+static unsigned int _wait_for_clock(/*args*/);
+// static /*status*/ _do_io(/*args*/);
 static struct pcb_t *_get_processid(struct tcb_t * thread);
+static struct pcb_t *_get_mythreadid(struct tcb_t *mythread);
+static struct pcb_t *_get_parentprocid(struct pcb_t*thread);
 
 static tcb_t *applicant;
 
@@ -23,12 +29,13 @@ struct tcb_t *ssi;
 struct tcb_t *ssi_thread_init() {
     static struct tcb_t _ssi;
 
-    ssi.t_pcb = NULL;
-    ssi.t_status = T_STATUS_READY;
-    ssi.t_wait4sender = NULL;
-    INIT_LIST_HEAD(&ssi.t_next);
-    INIT_LIST_HEAD(&ssi.t_sched);
-    INIT_LIST_HEAD(&ssi.t_msgq);
+    _ssi.t_pcb = NULL;
+    _ssi.t_status = T_STATUS_READY;
+    _ssi.t_wait4sender = NULL;
+
+    INIT_LIST_HEAD(&_ssi.t_next);
+    INIT_LIST_HEAD(&_ssi.t_sched);
+    INIT_LIST_HEAD(&_ssi.t_msgq);
 
     return(ssi = &_ssi);
 }
@@ -109,12 +116,12 @@ void SSI(){
 
 /***********SERVICES*****************/
 
-int _get_errno(){
+static int _get_errno(){
   return errorNumber;
 }
 
 /* FIXME: passing a pointer as an argument is more efficient */
-struct pcb_t * _create_process(state_t initial_state){
+static struct pcb_t * _create_process(state_t *initial_state){
   struct pcb_t * new_process = proc_alloc(NULL);    // mnalli: proc_alloc(NULL) ?
   if(!new_process){
     //TODO: throw an error, no more space availeable
@@ -130,7 +137,7 @@ struct pcb_t * _create_process(state_t initial_state){
   return new_process;
 }
 
-struct tcb_t * _create_thread(state_t initial_state, struct pcb_t * process){
+static struct tcb_t * _create_thread(state_t initial_state, struct pcb_t * process){
   struct tcb_t * new_thread = thread_alloc(process);
   if(!new_thread){
     //TODO: throw an error, no more space availeable
@@ -141,34 +148,42 @@ struct tcb_t * _create_thread(state_t initial_state, struct pcb_t * process){
   return new_thread;
 }
 
-int _terminate_process(struct pcb_t *processToDelete){
+static int _terminate_process(struct pcb_t *processToDelete){
   if(!processToDelete) return -1;
   struct tcb_t * threadToDelete;
-  while(threadToDelete = thread_dequeue(&processToDelete->p_threads)){
-    if(thread_free(threadToDelete)==-1){
+  while(threadToDelete = thread_qhead(&processToDelete->p_threads)){
+	while (!list_empty(&threadToDelete->t_msgq)) {
+		//cancello tutti i messaggi se ce ne sono
+		msg_free(msg_qhead(&threadToDelete->t_msgq))
+    	}
+	thread_free(threadToDelete);
+
       //could not close a specific thread since
       //some messages are still in the queue.
       //FIXME: should it stop like now or should it keep going?
-      return -1;
+	//direi che cancelliamo i messaggi i messaggi e via
+
     }
+
   }
   return proc_delete(processToDelete);
 }
 
-int _terminate_thread(struct tcb_t *threadToDelete){
+static int _terminate_thread(struct tcb_t *threadToDelete){
   if(!threadToDelete) return -1;
 
-  if(!(thread_qhead(&threadToDelete->t_next))){
+  if(thread_qhead(&threadToDelete->t_next)==NULL){
     //only if this thread does not have any siblings
-      return TERMINATE_PROCESS(threadToDelete->t_pcb);
+      return _terminate_process(threadToDelete->t_pcb);
   }
-  else{
+  /*else{ //non ho capito a cosa serva questa parte :')
     struct list_head *temp = &threadToDelete->t_pcb->p_threads;
     while(temp!=threadToDelete){
       list_next(temp);
     }
     thread_dequeue(temp);
-  }
+  }*/
+
   return thread_free(threadToDelete);
 }
 
@@ -176,12 +191,12 @@ int _terminate_thread(struct tcb_t *threadToDelete){
 stuff
 */
 
-unsigned int _getcputime(struct tcb_t * thread){
+static unsigned int _getcputime(struct tcb_t * thread){
     //FIXME
     return 0;
 }
 
-static tcb_t _setpgmmgr(struct tcb_t *s){
+static struct tcb_t *_setpgmmgr(struct tcb_t *s){
     //come controllo che la chiamata sia stata fatta una sola volta?
 
     msgsend(SSI,&s->t_s);
@@ -190,7 +205,10 @@ static tcb_t _setpgmmgr(struct tcb_t *s){
 
 }
 
-struct pcb_t *_get_processid(struct tcb_t *thread){
+
+
+static struct pcb_t *_get_processid(struct tcb_t * thread){
+>>>>>>> e3800a8c01ad8101e0ad16d5bdffcb70a3a71dab
   return thread->t_pcb; //TODO: What do they really want? Documentation isn't clear.
   msgsend(SSI,&s->t_s);
 }
