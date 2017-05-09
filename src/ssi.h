@@ -13,7 +13,7 @@
 #include <mikabooq.h>
 
 /* SSI's thread */
-extern struct tcb_t *ssi;
+extern struct tcb_t *SSI;
 
 /* SSI daemon */
 // void SSI();

@@ -24,20 +24,20 @@ static struct pcb_t *_get_parentprocid(struct pcb_t*thread);
 
 static struct tcb_t *applicant;
 
-struct tcb_t *ssi;
+struct tcb_t *SSI;
 
 struct tcb_t *ssi_thread_init() {
-    static struct tcb_t _ssi;
+    static struct tcb_t _SSI;
 
-    _ssi.t_pcb = NULL;
-    _ssi.t_status = T_STATUS_READY;
-    _ssi.t_wait4sender = NULL;
+    _SSI.t_pcb = NULL;
+    _SSI.t_status = T_STATUS_READY;
+    _SSI.t_wait4sender = NULL;
 
-    INIT_LIST_HEAD(&_ssi.t_next);
-    INIT_LIST_HEAD(&_ssi.t_sched);
-    INIT_LIST_HEAD(&_ssi.t_msgq);
+    INIT_LIST_HEAD(&_SSI.t_next);
+    INIT_LIST_HEAD(&_SSI.t_sched);
+    INIT_LIST_HEAD(&_SSI.t_msgq);
 
-    return(ssi = &_ssi);
+    return(SSI = &_SSI);
 }
 
 
@@ -95,8 +95,7 @@ static inline uintptr_t DISPATCH(uintptr_t msg) {
 }
 
 
-void SSI(){
-    tprint("SSI started\n");
+void ssi(){
     while (1) {
         uintptr_t msg, reply;
         //struct tcb_t *

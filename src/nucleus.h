@@ -5,6 +5,7 @@
 #include "mikabooq.h"
 
 /* Syscall mnemonic values */
+#define SYS_ERR     0
 #define SYS_SEND    1
 #define SYS_RECV    2
 
@@ -28,7 +29,7 @@ typedef uintptr_t memaddr;
 typedef uintptr_t cputime;
 typedef uintptr_t devaddr;
 
-extern void* SSI;
+extern struct tcb_t* SSI;
 
 #define msgsend(dest, payload) (SYSCALL(SYS_SEND,(unsigned int) (dest),(unsigned int) (payload),0))
 
