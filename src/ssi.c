@@ -115,7 +115,8 @@ void ssi(){
 
 /***********SERVICES*****************/
 
-#if 0
+
+
 static int _get_errno(){
   return errorNumber;
 }
@@ -131,19 +132,19 @@ static struct pcb_t * _create_process(state_t *initial_state){
   if(!first_thread){
     //TODO: throw an error, no more space availeable
   }
-  first_thread->t_s = initial_state; //memcpy
+  first_thread->t_s = *initial_state; //memcpy
   thread_enqueue(first_thread, &new_process->p_threads);
   //all good
   return new_process;
 }
 
-static struct tcb_t * _create_thread(state_t initial_state, struct pcb_t * process){
+static struct tcb_t * _create_thread(state_t * initial_state, struct pcb_t * process){
   struct tcb_t * new_thread = thread_alloc(process);
   if(!new_thread){
     //TODO: throw an error, no more space availeable
     return NULL;
   }
-  new_thread->t_s = initial_state; //memcpy
+  new_thread->t_s = *initial_state; //memcpy
   //all good
   return new_thread;
 }
@@ -154,7 +155,7 @@ static int _terminate_process(struct pcb_t *processToDelete){
   while(threadToDelete = thread_qhead(&processToDelete->p_threads)){
 	while (!list_empty(&threadToDelete->t_msgq)) {
 		//cancello tutti i messaggi se ce ne sono
-		msg_free(msg_qhead(&threadToDelete->t_msgq))
+		msg_free(msg_qhead(&threadToDelete->t_msgq));
     	}
 	thread_free(threadToDelete);
 
@@ -165,7 +166,7 @@ static int _terminate_process(struct pcb_t *processToDelete){
 
     }
 
-  }
+  
   return proc_delete(processToDelete);
 }
 
@@ -200,16 +201,13 @@ static struct tcb_t *_setpgmmgr(struct tcb_t *s){
     //come controllo che la chiamata sia stata fatta una sola volta?
 
     msgsend(SSI,&s->t_s);
-
-
-
 }
 
 
 
-static struct pcb_t *_get_processid(struct tcb_t * thread){
->>>>>>> e3800a8c01ad8101e0ad16d5bdffcb70a3a71dab
-  return thread->t_pcb; //TODO: What do they really want? Documentation isn't clear.
+static struct pcb_t *_get_processid(struct tcb_t * s){
+//>>>>>>> e3800a8c01ad8101e0ad16d5bdffcb70a3a71dab
+  return s->t_pcb; //TODO: What do they really want? Documentation isn't clear.
   msgsend(SSI,&s->t_s);
 }
-#endif
+
