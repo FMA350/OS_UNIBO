@@ -16,6 +16,7 @@ static int _setpgmmgr(struct tcb_t* thread);
 static unsigned int _getcputime(struct tcb_t * thread);
 static struct pcb_t *_get_processid(struct tcb_t * thread);
 
+static tcb_t *applicant;
 
 struct tcb_t *ssi;
 
@@ -91,7 +92,8 @@ void SSI(){
     tprint("SSI started\n");
     while (1) {
         uintptr_t msg, reply;
-        struct tcb_t *applicant = msgrecv(NULL, &msg);
+        //struct tcb_t *
+        applicant = msgrecv(NULL, &msg);
 
         reply = DISPATCH(msg);
 
@@ -188,8 +190,7 @@ static tcb_t _setpgmmgr(struct tcb_t *s){
 
 }
 
-
-
-struct pcb_t *_get_processid(struct tcb_t * thread){
+struct pcb_t *_get_processid(struct tcb_t *thread){
   return thread->t_pcb; //TODO: What do they really want? Documentation isn't clear.
+  msgsend(SSI,&s->t_s);
 }
