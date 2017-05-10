@@ -13,6 +13,7 @@ static struct msg_t message[MAXMSG];
 static LIST_HEAD(message_h);
 
 
+static inline clean_mgr(struct pcb_t *proc);
 
 struct pcb_t *proc_init(void) {
 
@@ -21,6 +22,7 @@ struct pcb_t *proc_init(void) {
     INIT_LIST_HEAD(&process[0].p_threads);
     INIT_LIST_HEAD(&process[0].p_children);
     INIT_LIST_HEAD(&process[0].p_siblings);
+    clean_mgr(process);
 
     size_t i;
     for (i = 1; i < MAXPROC; i++) {
@@ -29,6 +31,7 @@ struct pcb_t *proc_init(void) {
         process[i].p_parent = NULL;
         INIT_LIST_HEAD(&process[i].p_threads);
         INIT_LIST_HEAD(&process[i].p_children);
+        clean_mgr(process + i);
     }
     return process;
 }
@@ -63,6 +66,7 @@ int proc_delete(struct pcb_t *oldproc){
         oldproc->p_parent = NULL;
         list_del(&oldproc->p_siblings);
         list_add_tail(&oldproc->p_siblings, &(process[0].p_siblings));
+        clean_mgr(oldproc);
 
         return 0;
     }
@@ -92,20 +96,23 @@ inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
         return NULL;
 }
 
+static inline clean_mgr(struct pcb_t *proc) {
+    proc->pgm_mgr = proc->tlb_mgr = proc->sys_mgr = NULL;
+}
 
 /****************************************** THREAD ALLOCATION ****************/
 
+static inline clean_thread_data(struct tcb_t *thread);
 
 void thread_init(void) {
     size_t i;
     for (i = 0; i < MAXTHREAD; i++) {
-        thread[i].t_pcb = NULL;
-        thread[i].t_status = T_STATUS_NONE;
-        thread[i].t_wait4sender = NULL;
+        clean_thread_data(thread + i);
 
         list_add_tail(&thread[i].t_next, &thread_h); //collego i vari elementi della lista libera
-        INIT_LIST_HEAD(&thread[i].t_sched);
+        // INIT_LIST_HEAD(&thread[i].t_sched);
         INIT_LIST_HEAD(&thread[i].t_msgq);
+        INIT_LIST_HEAD(&thread[i].t_wait4me);
     }
 }
 
@@ -127,21 +134,31 @@ struct tcb_t *thread_alloc(struct pcb_t *process) {
 }
 
 int thread_free(struct tcb_t *oldthread) {
-    //check that no messages are left in the queue.
-    if(!list_empty(&oldthread->t_msgq)) {
+
+    if(!list_empty(&oldthread->t_msgq))
+    // the thread shouldn't have message
         return -1; //there are messsages left in the queue.
-    }
+    if (!list_empty(&oldthread->t_wait4me))
+    // the thread shouldn't have other threads waiting for him
+        return -2;
+
+    clean_thread_data(oldthread);
+
     //remove the thread from the process queue.
     list_del(&oldthread->t_next);
-    oldthread->t_pcb = NULL;
-    oldthread->t_status = T_STATUS_NONE;
-    oldthread->t_wait4sender = NULL;
+    //t_msgq and t_wait4me are already empty.
 
-
-    //t_msgq is already empty.
     /*adding oldthread to the free list*/
-    list_add_tail(&oldthread->t_next, &(thread_h));
+    list_add_tail(&oldthread->t_next, &thread_h);
     return 0;
+}
+
+static inline clean_thread_data(struct tcb_t *thread) {
+    thread->t_pcb = NULL;
+    thread->t_status = T_STATUS_NONE;
+    thread->t_wait4sender = NULL;
+
+    thread->run_time = thread->errno = 0;
 }
 
 /*************************** THREAD QUEUE ************************/

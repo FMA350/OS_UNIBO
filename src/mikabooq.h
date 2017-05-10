@@ -28,20 +28,17 @@ struct tcb_t {
 	state_t t_s; /* processor state */
 
 	int t_status;
+	// TODO: should run_time be 64 bit?
 	unsigned int run_time; //milliseconds of CPU time used. check scheduler.c for the accounting function
-	//TODO: initialize for each thread run_time to zero.
-
 	int errno; /* error status of the thread */
-	// TODO: initialize to 0
 
 	struct tcb_t *t_wait4sender; /* expected sender (if t_status == T_STATUS_W4MSG), NULL means accept msg from anybody */
 	struct list_head t_next; /* link the other elements of the list of threads in the same process */
 	struct list_head t_sched; /* link the other elements on the same scheduling list */
 	struct list_head t_msgq; /* list of pending messages for the current thread */
 
-
 	struct list_head t_wait4me; /* list of threads waiting for a message from the current thread */
-	struct list_head t_wait4same; /* list of threads used to link the current thread to the t_wait4me list of the thread the current thread is waiting for */
+	struct list_head t_wait4same; /* link the other element on the same t_wait4me list */
 };
 
 struct msg_t {
@@ -85,7 +82,9 @@ struct tcb_t *thread_alloc(struct pcb_t *process);
 
 /* Deallocate a tcb (unregistering it from the list of threads of
 	 its process) */
-/* it fails if the message queue is not empty (returning -1) */
+/* it fails if:
+	 the message queue is not empty (returning -1)
+	 the list of threads waiting for the current thread is not empty (returning -2)*/
 int thread_free(struct tcb_t *oldthread);
 
 /*************************** THREAD QUEUE ************************/
@@ -137,8 +136,7 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
 
 /*************************** WAITING4MSG LIST *************************************/
 
-// TODO: documentation
-// 		 for trouble shooting ask michele
+
 /* add a tcb to dest's t_wait4me list */
 static inline paused_add(struct tcb_t *dest, struct tcb_t *waiting) {
 	list_add_tail(&dest->t_wait4me, &waiting->t_wait4same);

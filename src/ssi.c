@@ -194,12 +194,12 @@ static unsigned int _getcputime(struct tcb_t * thread){
 static struct tcb_t *_setpgmmgr(struct tcb_t *s, struct tcb_t *applicant){
 	if (s!=NULL){
 		if(&applicant->t_pcb->pgm_mgr != NULL) {//controllo che la chiamata sia stata fatta una sola volta
-			_terminate_process(&applicant->t_pcb);	
+			_terminate_process(&applicant->t_pcb);
 			return NULL;
-		}	
+		}
 		else{
 			applicant->t_pcb->pgm_mgr = s;
-			msgsend(SSI,&s->t_s);			
+			msgsend(SSI,&s->t_s);
 			return s;
 		}
 	}
