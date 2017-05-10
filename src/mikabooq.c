@@ -155,7 +155,7 @@ int thread_free(struct tcb_t *oldthread) {
 
 
 /* add a tcb to the scheduling queue */
-inline void thread_enqueue(struct tcb_t *new, struct list_head *queue) { //chopperEdit
+void thread_enqueue(struct tcb_t *new, struct list_head *queue) { //chopperEdit
     list_add_tail(&new->t_sched, queue);
 }
 

@@ -7,7 +7,7 @@
 #include <nucleus.h>
 
 
-static int _get_errno();
+static inline int _get_errno();
 static struct pcb_t *_create_process(state_t *initial_state);
 static struct tcb_t *_create_thread(state_t *initial_state, struct pcb_t *process);
 static int _terminate_process(struct pcb_t *processtodelete);
@@ -41,6 +41,7 @@ struct tcb_t *ssi_thread_init() {
 
 static inline uintptr_t dispatch(uintptr_t msg, struct tcb_t *applicant) {
 
+    // ((uintptr_t *) msg)[0] is the reqtag
     switch (((uintptr_t *) msg)[0]) {
         case GET_ERRNO:
             return _get_errno(applicant);
@@ -109,8 +110,6 @@ void ssi(){
 
 
 /***********SERVICES*****************/
-
-
 
 static inline int _get_errno(struct tcb_t *applicant){
   return applicant->errno;

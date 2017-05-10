@@ -20,6 +20,9 @@ struct pcb_t {
 #define T_STATUS_READY 1
 #define T_STATUS_W4MSG 4
 
+// TODO: update initialization of threads
+// FIXME: not every INIT_LIST_HEAD(...) we have placed is necessary during initialization
+
 struct tcb_t {
 	struct pcb_t *t_pcb; /* pointer to the process */
 	state_t t_s; /* processor state */
@@ -36,7 +39,9 @@ struct tcb_t {
 	struct list_head t_sched; /* link the other elements on the same scheduling list */
 	struct list_head t_msgq; /* list of pending messages for the current thread */
 
-	struct list_head t_waiting4msg; /* list of threads waiting for a message from the current thread */
+
+	struct list_head t_wait4me; /* list of threads waiting for a message from the current thread */
+	struct list_head t_wait4same; /* list of threads used to link the current thread to the t_wait4me list of the thread the current thread is waiting for */
 };
 
 struct msg_t {
@@ -132,6 +137,17 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
 
 /*************************** WAITING4MSG LIST *************************************/
 
+// TODO: documentation
+// 		 for trouble shooting ask michele
+/* add a tcb to dest's t_wait4me list */
+static inline paused_add(struct tcb_t *dest, struct tcb_t *waiting) {
+	list_add_tail(&dest->t_wait4me, &waiting->t_wait4same);
+}
 
+/* remove this from the list of threads waiting for the same he was waiting to:
+   should be used when resuming a thread */
+static inline void resume(struct tcb_t *this) {
+	list_del(&this->t_wait4same);
+}
 
 #endif
