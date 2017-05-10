@@ -147,20 +147,8 @@ static int _terminate_process(struct pcb_t *processToDelete){
   if(!processToDelete) return -1;
   struct tcb_t * threadToDelete;
   while(threadToDelete = thread_qhead(&processToDelete->p_threads)){
-	while (!list_empty(&threadToDelete->t_msgq)) {
-		//cancello tutti i messaggi se ce ne sono
-		msg_free(msg_qhead(&threadToDelete->t_msgq));
-    	}
-	thread_free(threadToDelete);
-
-      //could not close a specific thread since
-      //some messages are still in the queue.
-      //FIXME: should it stop like now or should it keep going?
-	//direi che cancelliamo i messaggi i messaggi e via
-
+	 _terminate_thread(threadToDelete);
     }
-
-
   return proc_delete(processToDelete);
 }
 
@@ -178,7 +166,11 @@ static int _terminate_thread(struct tcb_t *threadToDelete){
     }
     thread_dequeue(temp);
   }*/
-
+	while (!list_empty(&threadToDelete->t_msgq)) {
+		//cancello tutti i messaggi se ce ne sono
+		msg_free(msg_qhead(&threadToDelete->t_msgq));
+   	}
+		
   return thread_free(threadToDelete);
 }
 

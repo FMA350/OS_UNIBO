@@ -139,7 +139,7 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
 
 /* add a tcb to dest's t_wait4me list */
 static inline paused_add(struct tcb_t *dest, struct tcb_t *waiting) {
-	list_add_tail(&dest->t_wait4me, &waiting->t_wait4same);
+	list_add_tail(&waiting->t_wait4same, &dest->t_wait4me);
 }
 
 /* remove this from the list of threads waiting for the same he was waiting to:

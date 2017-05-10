@@ -35,7 +35,7 @@ static inline void __list_add(struct list_head *new, struct list_head *prev, str
 	prev->next = new;
 }
 
-static inline void list_add(struct list_head *new, struct list_head *head){
+static inline void list_add(struct list_head *new, struct list_head *head){//inserisce new tra head e head->next
 	__list_add(new, head, head->next);
 }
 

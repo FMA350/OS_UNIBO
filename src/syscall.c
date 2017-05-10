@@ -61,7 +61,10 @@ static inline void send(struct tcb_t *dest, uintptr_t msg){
             if (dest->t_wait4sender == current_thread || dest->t_wait4sender == NULL) {
             /* il thread di destinazione aspetta un messaggio da
                 parte del processo corrente o da qualsiasi processo (non ha messaggi) */
-
+				
+				//se effettivamente dest stava aspettando un messaggio da me(current thread) devo eliminare dst dalla 
+				//mia lista di thread che aspettano messaggi da me
+				resume(dest);
                 // il messaggio è consegnato con priorità
                 DELIVER_DIRECTLY(dest, msg, current_thread);
                 ST_RVAL(SEND_SUCCESS);
@@ -97,7 +100,8 @@ static inline void recv(struct tcb_t *src, uintptr_t *pmsg){
         // changing thread status
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = src;
-
+        //aggiunge il processo corrente alla lista dei processi che aspettano src (di src)
+		paused_add(current_thread, src);		
         // Inserimento del processo nella coda dei processi in attesa di messaggi
         thread_enqueue(current_thread, &blockedq);
         scheduler();
