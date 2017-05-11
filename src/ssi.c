@@ -9,10 +9,10 @@
 
 
 static inline int _get_errno(struct tcb_t *applicant);
-static struct tcb_t *_create_process(state_t *initial_state, struct tcb_t *applicant);
-static struct tcb_t *_create_thread(state_t *initial_state, struct pcb_t *process);
-// static int _terminate_process(struct tcb_t *applicant);
-// static int _terminate_thread(struct tcb_t *applicant);
+static struct tcb_t * _create_process(state_t *initial_state, struct tcb_t *applicant);
+static struct tcb_t * _create_thread(state_t *initial_state, struct tcb_t *process);
+static void _terminate_process(struct tcb_t *applicant);
+static void _terminate_thread(struct tcb_t *applicant);
 static struct tcb_t * _setpgmmgr(struct tcb_t* thread, struct tcb_t *applicant);
 static struct tcb_t * _settlbmgr(/*args*/);
 static struct tcb_t * _setsysmgr(/*args*/);
@@ -117,12 +117,12 @@ static inline struct tcb_t *_create_process(state_t *initial_state, struct tcb_t
         return NULL;
     }
     first_thread->t_s = *initial_state; //memcpy
-    thread_enqueue(first_thread, readyq);
+    thread_enqueue(first_thread, &readyq);
 
     return first_thread;
 }
 
-static inline struct tcb_t *_create_thread(state_t * initial_state, struct tcb_t *applicant){
+static inline struct tcb_t * _create_thread(state_t * initial_state, struct tcb_t *applicant){
 
     struct tcb_t * new_thread = thread_alloc(_get_processid(applicant));
     if(!new_thread)
@@ -132,22 +132,29 @@ static inline struct tcb_t *_create_thread(state_t * initial_state, struct tcb_t
     return new_thread;
 }
 
-static int _terminate_process(struct pcb_t *processToDelete){
+static void _terminate_process(struct tcb_t *processToDelete){
   if(!processToDelete) return -1;
   struct tcb_t * threadToDelete;
-  while(threadToDelete = thread_qhead(&processToDelete->p_threads)){
+  while(threadToDelete = thread_qhead(&processToDelete->t_next)){
 	 _terminate_thread(threadToDelete);
     }
   return proc_delete(processToDelete);
 }
 
-static inline int _terminate_thread(struct tcb_t *threadToDelete){
-  if(!threadToDelete) return -1;
-
-  if(thread_qhead(&threadToDelete->t_next)==NULL){
+static void _terminate_thread(struct tcb_t *applicant){
+	while (!list_empty(&applicant->t_msgq)) {
+		//cancello tutti i messaggi se ce ne sono
+		msg_free(msg_qhead(&applicant->t_msgq));
+   	}
+	//TODO:sbloccare i processi in attesa di messaggi da applicant
+  
+  if(thread_qhead(&applicant->t_next)==NULL){
     //only if this thread does not have any siblings
-      return _terminate_process(threadToDelete->t_pcb);
+      thread_free(applicant);
+      _terminate_process(applicant->t_pcb);
   }
+  thread_free(applicant);
+  
   /*else{ //non ho capito a cosa serva questa parte :')
     struct list_head *temp = &threadToDelete->t_pcb->p_threads;
     while(temp!=threadToDelete){
@@ -155,17 +162,9 @@ static inline int _terminate_thread(struct tcb_t *threadToDelete){
     }
     thread_dequeue(temp);
   }*/
-	while (!list_empty(&threadToDelete->t_msgq)) {
-		//cancello tutti i messaggi se ce ne sono
-		msg_free(msg_qhead(&threadToDelete->t_msgq));
-   	}
-
-  return thread_free(threadToDelete);
+	
+  
 }
-
-/*
-stuff
-*/
 
 static inline unsigned int _getcputime(struct tcb_t *applicant){
     return applicant->run_time;

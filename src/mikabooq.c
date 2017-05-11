@@ -146,6 +146,7 @@ int thread_free(struct tcb_t *oldthread) {
 
     //remove the thread from the process queue.
     list_del(&oldthread->t_next);
+    list_del(&oldthread->t_sched);
     //t_msgq and t_wait4me are already empty.
 
     /*adding oldthread to the free list*/
