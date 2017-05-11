@@ -5,7 +5,7 @@
 #include <uARMtypes.h>
 
 struct pcb_t {
-	struct pcb_t * p_parent ; /* pointer to parent */
+	struct pcb_t *p_parent ; /* pointer to parent */
 	struct list_head p_threads; /* list of threads */
 
 	struct list_head p_children; /* list of children (hierarchy of processes) */
@@ -28,7 +28,6 @@ struct tcb_t {
 	state_t t_s; /* processor state */
 
 	int t_status;
-	// TODO: should run_time be 64 bit?
 	unsigned int run_time; //milliseconds of CPU time used. check scheduler.c for the accounting function
 	int errno; /* error status of the thread */
 
@@ -55,6 +54,7 @@ struct pcb_t *proc_init(void);
 
 /* alloc a new empty pcb (as a child of p_parent) */
 /* p_parent cannot be NULL */
+/* return NULL if p_parent == NULL or there are no more element free */
 struct pcb_t *proc_alloc(struct pcb_t *p_parent);
 
 
