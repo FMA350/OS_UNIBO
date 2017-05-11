@@ -130,7 +130,7 @@ static inline struct tcb_t * _create_thread(state_t * initial_state, struct tcb_
 
     new_thread->t_s = *initial_state; //memcpy
     return new_thread;
-}
+}GI
 
 static void _terminate_process(struct tcb_t *processToDelete){
   if(!processToDelete) return -1;
