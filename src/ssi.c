@@ -6,7 +6,11 @@
 #include <mikabooq.h>
 #include <nucleus.h>
 #include <scheduler.h>
-
+#define TERM0ADDR       0x24C
+#define PRINTADDR       0x1c0
+#define NETADDR         0x140
+#define TAPEADDR        0x0C0
+#define DISKADDR        0x040
 
 static inline int _get_errno(struct tcb_t *applicant);
 static struct tcb_t * _create_process(state_t *initial_state, struct tcb_t *applicant);
@@ -18,7 +22,7 @@ static struct tcb_t * _settlbmgr(/*args*/);
 static struct tcb_t * _setsysmgr(/*args*/);
 static unsigned int _getcputime(struct tcb_t *applicant);
 static unsigned int _wait_for_clock(/*args*/);
-// static /*status*/ _do_io(/*args*/);
+static unsigned int _do_io(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2);
 static struct pcb_t *_get_processid(struct tcb_t *thread);
 static struct tcb_t *_get_mythreadid(struct tcb_t *applicant);
 static struct pcb_t *_get_parentprocid(struct pcb_t *proc);
@@ -48,51 +52,51 @@ void ssi(){
 
         switch (req_field(msg, 0)) {
             case GET_ERRNO:
-                msgsend(applicant, (uintptr_t) _get_errno(applicant));
-                break;
+            msgsend(applicant, (uintptr_t) _get_errno(applicant));
+            break;
             case CREATE_PROCESS:
-                msgsend(applicant, (uintptr_t) _create_process(req_field(msg, 1), applicant));
-                break;
+            msgsend(applicant, (uintptr_t) _create_process(req_field(msg, 1), applicant));
+            break;
             case CREATE_THREAD:
-                msgsend(applicant, (uintptr_t) _create_thread(req_field(msg, 1), applicant));
-                break;
+            msgsend(applicant, (uintptr_t) _create_thread(req_field(msg, 1), applicant));
+            break;
             case TERMINATE_PROCESS:
-                /* code */
-                break;
+            /* code */
+            break;
             case TERMINATE_THREAD:
-                /* code */
-                break;
+            /* code */
+            break;
             case SETPGMMGR:
-                /* code */
-                break;
+            /* code */
+            break;
             case SETTLBMGR:
-                /* code */
-                break;
+            /* code */
+            break;
             case SETSYSMGR:
-                /* code */
-                break;
+            /* code */
+            break;
             case GET_CPUTIME:
-                msgsend(applicant, (uintptr_t) _getcputime(applicant));
-                break;
+            msgsend(applicant, (uintptr_t) _getcputime(applicant));
+            break;
             case WAIT_FOR_CLOCK:
-                /* code */
-                break;
+            /* code */
+            break;
             case DO_IO:
-                /* code */
-                break;
+            /* code */
+            break;
             case GET_PROCESSID:
-                msgsend(applicant, (uintptr_t) _get_processid((struct tcb_t *) req_field(msg, 1)));
-                break;
+            msgsend(applicant, (uintptr_t) _get_processid((struct tcb_t *) req_field(msg, 1)));
+            break;
             case GET_PARENTPROCID:
-                msgsend(applicant, (uintptr_t) _get_parentprocid((struct tcb_t *) req_field(msg, 1)));
-                break;
+            msgsend(applicant, (uintptr_t) _get_parentprocid((struct tcb_t *) req_field(msg, 1)));
+            break;
             case GET_MYTHREADID:
-                msgsend(applicant, (uintptr_t) _get_mythreadid(applicant));
-                break;
+            msgsend(applicant, (uintptr_t) _get_mythreadid(applicant));
+            break;
             default:
             // TODO: se il messaggio è diverso dai codici noti
             //       rispondere con errore e settare errno
-                break;
+            break;
         }
     }
 }
@@ -101,18 +105,18 @@ void ssi(){
 /***********SERVICES*****************/
 
 static inline int _get_errno(struct tcb_t *applicant){
-  return applicant->errno;
+    return applicant->errno;
 }
 
 static inline struct tcb_t *_create_process(state_t *initial_state, struct tcb_t *applicant){
     struct pcb_t *new_process = proc_alloc(_get_processid(applicant));
 
     if(new_process == NULL)
-        return NULL;
+    return NULL;
 
     struct tcb_t *first_thread = thread_alloc(new_process);
     if(!first_thread){
-    // throw an error, no more space availeable
+        // throw an error, no more space availeable
         proc_delete(new_process);
         return NULL;
     }
@@ -126,44 +130,44 @@ static inline struct tcb_t * _create_thread(state_t * initial_state, struct tcb_
 
     struct tcb_t * new_thread = thread_alloc(_get_processid(applicant));
     if(!new_thread)
-        return NULL;
+    return NULL;
 
     new_thread->t_s = *initial_state; //memcpy
     return new_thread;
 }GI
 
 static void _terminate_process(struct tcb_t *processToDelete){
-  if(!processToDelete) return -1;
-  struct tcb_t * threadToDelete;
-  while(threadToDelete = thread_qhead(&processToDelete->t_next)){
-	 _terminate_thread(threadToDelete);
+    if(!processToDelete) return -1;
+    struct tcb_t * threadToDelete;
+    while(threadToDelete = thread_qhead(&processToDelete->t_next)){
+        _terminate_thread(threadToDelete);
     }
-  return proc_delete(processToDelete);
+    return proc_delete(processToDelete);
 }
 
 static void _terminate_thread(struct tcb_t *applicant){
-	while (!list_empty(&applicant->t_msgq)) {
-		//cancello tutti i messaggi se ce ne sono
-		msg_free(msg_qhead(&applicant->t_msgq));
-   	}
-	//TODO:sbloccare i processi in attesa di messaggi da applicant
-  
-  if(thread_qhead(&applicant->t_next)==NULL){
-    //only if this thread does not have any siblings
-      thread_free(applicant);
-      _terminate_process(applicant->t_pcb);
-  }
-  thread_free(applicant);
-  
-  /*else{ //non ho capito a cosa serva questa parte :')
+    while (!list_empty(&applicant->t_msgq)) {
+        //cancello tutti i messaggi se ce ne sono
+        msg_free(msg_qhead(&applicant->t_msgq));
+    }
+    //TODO:sbloccare i processi in attesa di messaggi da applicant
+
+    if(thread_qhead(&applicant->t_next)==NULL){
+        //only if this thread does not have any siblings
+        thread_free(applicant);
+        _terminate_process(applicant->t_pcb);
+    }
+    thread_free(applicant);
+
+    /*else{ //non ho capito a cosa serva questa parte :')
     struct list_head *temp = &threadToDelete->t_pcb->p_threads;
     while(temp!=threadToDelete){
-      list_next(temp);
-    }
-    thread_dequeue(temp);
-  }*/
-	
-  
+    list_next(temp);
+}
+thread_dequeue(temp);
+}*/
+
+
 }
 
 static inline unsigned int _getcputime(struct tcb_t *applicant){
@@ -171,18 +175,36 @@ static inline unsigned int _getcputime(struct tcb_t *applicant){
 }
 
 static inline struct tcb_t *_setpgmmgr(struct tcb_t *s, struct tcb_t *applicant){
-	if (s!=NULL){
-		if(&applicant->t_pcb->pgm_mgr != NULL) {//controllo che la chiamata sia stata fatta una sola volta
-			_terminate_process(&applicant->t_pcb);
-			return NULL;
-		}
-		else{
-			applicant->t_pcb->pgm_mgr = s;
-			msgsend(SSI,&s->t_s);
-			return s;
-		}
-	}
-	else return NULL;
+    if (s!=NULL){
+        if(&applicant->t_pcb->pgm_mgr != NULL) {//controllo che la chiamata sia stata fatta una sola volta
+            _terminate_process(&applicant->t_pcb);
+            return NULL;
+        }
+        else{
+            applicant->t_pcb->pgm_mgr = s;
+            msgsend(SSI,&s->t_s);
+            return s;
+        }
+    }
+    else return NULL;
+}
+
+static unsigned int _do_io(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2){
+    switch (device) {
+        case TERM0ADDR://il device e' un terminale
+            
+            break;
+        case PRINTADDR:
+            break;
+        case NETADDR:
+            break;
+        case TAPEADDR:
+            break;
+        case DISKADDR:
+            break;
+        default: return -1;
+    }
+
 }
 
 static inline struct pcb_t *_get_processid(struct tcb_t *thread){
