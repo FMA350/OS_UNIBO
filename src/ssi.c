@@ -9,6 +9,13 @@
 #include <syscall.h>
 
 
+#define TERM0ADDR       0x24C
+#define PRINTADDR       0x1c0
+#define NETADDR         0x140
+#define TAPEADDR        0x0C0
+#define DISKADDR        0x040
+
+
 static inline int get_errno_s(struct tcb_t *applicant);
 
 static inline struct tcb_t *create_process_s(state_t *initial_state, struct tcb_t *applicant);
@@ -27,6 +34,7 @@ static inline unsigned int wait_for_clock_s(/*args*/);
 
 static inline struct pcb_t *get_processid_s(struct tcb_t *thread);
 static inline struct pcb_t *get_parentprocid_s(struct pcb_t *proc);
+
 
 struct tcb_t *SSI;
 
@@ -86,6 +94,7 @@ void ssi(){
             case GET_CPUTIME:
                 msgsend(applicant, (uintptr_t) getcputime_s(applicant));
                 break;
+
             case WAIT_FOR_CLOCK:
                 /* code */
                 break;
@@ -104,7 +113,7 @@ void ssi(){
             default:
             // TODO: se il messaggio è diverso dai codici noti
             //       rispondere con errore e settare errno
-                break;
+            break;
         }
     }
 }
@@ -112,6 +121,7 @@ void ssi(){
 
 /***********SERVICES*****************/
 
+<<<<<<< HEAD
 static inline int get_errno_s(struct tcb_t *applicant){
   return applicant->errno;
 }
@@ -120,11 +130,11 @@ static inline struct tcb_t *create_process_s(state_t *initial_state, struct tcb_
     struct pcb_t *new_process = proc_alloc(get_processid_s(applicant));
 
     if(new_process == NULL)
-        return NULL;
+    return NULL;
 
     struct tcb_t *first_thread = thread_alloc(new_process);
     if(!first_thread){
-    // throw an error, no more space availeable
+        // throw an error, no more space availeable
         proc_delete(new_process);
         return NULL;
     }
@@ -138,7 +148,7 @@ static inline struct tcb_t * create_thread_s(state_t * initial_state, struct tcb
 
     struct tcb_t * new_thread = thread_alloc(get_processid_s(applicant));
     if(!new_thread)
-        return NULL;
+    return NULL;
 
     new_thread->t_s = *initial_state; //memcpy
     return new_thread;
@@ -200,7 +210,6 @@ static inline unsigned int getcputime_s(struct tcb_t *applicant){
     return applicant->run_time;
 }
 
-
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
 static inline struct tcb_t *
 __setmgr(struct tcb_t *thread, struct tcb_t *applicant,
@@ -218,6 +227,22 @@ __setmgr(struct tcb_t *thread, struct tcb_t *applicant,
     // se il manager non è mai stato settato
         *send_back = 1;
 		return *mgr = thread;
+    }
+
+static unsigned int _do_io(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2){
+    switch (device) {
+        case TERM0ADDR://il device e' un terminale
+
+            break;
+        case PRINTADDR:
+            break;
+        case NETADDR:
+            break;
+        case TAPEADDR:
+            break;
+        case DISKADDR:
+            break;
+        default: return -1;
     }
 }
 

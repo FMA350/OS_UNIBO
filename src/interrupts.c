@@ -28,17 +28,17 @@ void interrupt_h() {
     interval_timer_h();
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
-    void * p = (void *)0x00006fe0;
-    unsigned int i = 0;
-    while (i < 5){
-        if (*((unsigned int *)p)>0) {
+    //void * p = (void *)0x00006fe0;
+    //unsigned int i = 0;
+    //while (i < 5){
+    //    if (*((unsigned int *)p)>0) {
             //mi serve sapere quale dei 7 device di ogni tipo ha richiesto l'interr? volendo comunque lo si fa facilmente
             io_request(i);
-            break;
-        }
-        p++;
-        i++;
-    }
+    //        break;
+//        }
+//        p++;
+//        i++;
+//    }
 
 }
 
