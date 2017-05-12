@@ -17,24 +17,24 @@
 #define DISKADDR        0x040
 
 
-static inline int get_errno_s(struct tcb_t *applicant);
+static inline int get_errno_s(const struct tcb_t *applicant);
 
-static inline struct tcb_t *create_process_s(state_t *initial_state, struct tcb_t *applicant);
-static inline struct tcb_t *create_thread_s(state_t *initial_state, struct tcb_t *process);
+static inline struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *applicant);
+static inline struct tcb_t *create_thread_s(const state_t *initial_state, struct tcb_t *process);
 
 static inline void terminate_process_s(struct pcb_t *proc);
 static inline void terminate_thread_s(struct tcb_t *thread);
 
-static inline struct tcb_t *setpgmmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back);
-static inline struct tcb_t *settlbmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back);
-static inline struct tcb_t *setsysmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back);
+static inline struct tcb_t *setpgmmgr_s(struct tcb_t *thread, struct tcb_t *applicant, int *send_back);
+static inline struct tcb_t *settlbmgr_s(struct tcb_t *thread, struct tcb_t *applicant, int *send_back);
+static inline struct tcb_t *setsysmgr_s(struct tcb_t *thread, struct tcb_t *applicant, int *send_back);
 
-static inline unsigned int getcputime_s(struct tcb_t *applicant);
+static inline unsigned int getcputime_s(const struct tcb_t *applicant);
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant);
 static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2);
 
-static inline struct pcb_t *get_processid_s(struct tcb_t *thread);
-static inline struct pcb_t *get_parentprocid_s(struct pcb_t *proc);
+static inline struct pcb_t *get_processid_s(const struct tcb_t *thread);
+static inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc);
 
 
 struct tcb_t *SSI;
@@ -62,6 +62,7 @@ void ssi(){
         uintptr_t msg, reply;
         int send_back;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
+        tprintf("SSI request received: applicant == %p\n", applicant);
 
         switch (req_field(msg, 0)) {
             case GET_ERRNO:
@@ -123,15 +124,15 @@ void ssi(){
 
 /***********SERVICES*****************/
 
-static inline int get_errno_s(struct tcb_t *applicant){
+static inline int get_errno_s(const struct tcb_t *applicant){
   return applicant->errno;
 }
 
-static inline struct tcb_t *create_process_s(state_t *initial_state, struct tcb_t *applicant){
+static inline struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *applicant){
     struct pcb_t *new_process = proc_alloc(get_processid_s(applicant));
 
     if(new_process == NULL)
-    return NULL;
+        return NULL;
 
     struct tcb_t *first_thread = thread_alloc(new_process);
     if(!first_thread){
@@ -145,11 +146,11 @@ static inline struct tcb_t *create_process_s(state_t *initial_state, struct tcb_
     return first_thread;
 }
 
-static inline struct tcb_t * create_thread_s(state_t * initial_state, struct tcb_t *applicant){
+static inline struct tcb_t * create_thread_s(const state_t *initial_state, struct tcb_t *applicant){
 
     struct tcb_t * new_thread = thread_alloc(get_processid_s(applicant));
     if(!new_thread)
-    return NULL;
+        return NULL;
 
     new_thread->t_s = *initial_state; //memcpy
     return new_thread;
@@ -161,42 +162,59 @@ static inline void __terminate_thread_s(struct tcb_t *thread);
 
 /* Preconditions: process != NULL */
 static inline void terminate_process_s(struct pcb_t *proc){
+    tprint("terminate process started\n");
 
     // eliminiamo tutti i thread
-    struct tcb_t *thread_iter;
-    // FIXME: structure changes as we iterate. Dovrebbero funzionare, ma per sbaglio (michele)
-    // si può fare con un while che estrae tutto
-    list_for_each_entry(thread_iter, &proc->p_threads, t_next)
-        __terminate_thread_s(thread_iter);
+    struct tcb_t *thread_term;
+    while (thread_term = proc_firstthread(proc))
+        // terminate thread changes the structure
+        __terminate_thread_s(thread_term);
 
     // eliminiamo i figli del processo ricorsivamente
-    struct pcb_t *proc_iter;
-    // FIXME: structure changes as we iterate. Dovrebbero funzionare, ma per sbaglio (michele)
-    list_for_each_entry(proc_iter, &proc->p_children, p_siblings)
-        terminate_process_s(proc_iter);
+    struct pcb_t *proc_term;
+    while (proc_term = proc_firstchild(proc))
+        // terminate thread changes the structure
+        terminate_process_s(proc_term);
 
+    // eliminiamo il processo
     proc_delete(proc);
 }
 
 /* terminate the thread */
 static inline void __terminate_thread_s(struct tcb_t *thread) {
+    tprint("__terminate_thread_s started\n");
     while (!list_empty(&thread->t_msgq))
 		//cancello tutti i messaggi se ce ne sono
 		msg_free(msg_qhead(&thread->t_msgq));
 
     // sbloccare i processi in attesa di messaggi del thread da terminare
     struct tcb_t *to_resume;
-    // FIXME: thread_dequeue works only for list_head t_wait4me
-    while (to_resume = wait4thread_dequeue(&thread->t_wait4me))
-        resume_thread(to_resume, NULL, 0);
+    // tprintf("coda t_wait4me --> %p\n", &thread->t_wait4me);
+    // tprintf("puntatori t_wait4me: next --> %p, prev --> %p\n", thread->t_wait4me.next, thread->t_wait4me.prev);
+    // tprintf("la coda e' vuota? --> %d\n", list_empty(&thread->t_wait4me));
 
-    thread_free(thread);
+    while (to_resume = wait4thread_dequeue(&thread->t_wait4me)) {
+        // tprintf("resuming thread - %p\n", to_resume);
+        resume_thread(to_resume, NULL, 0);
+    }
+    // tprint("waiting threads resumed\n");
+
+    int err = thread_free(thread);
+    if (err == -1) {
+        tprint("ERROR - msgq\n");
+        HALT();
+    } else if (err == -2) {
+        tprint("ERROR - wait4me\n");
+        HALT();
+    }
+    tprint("ending __terminate_thread_s\n");
 }
 
 /* terminate the thread and, if it's the last one, the process too */
 static inline void terminate_thread_s(struct tcb_t *thread){
+    tprint("terminate_thread_s started\n");
 
-    if(list_is_last(&thread->t_next, &get_processid_s(thread)->p_threads))
+    if(list_is_only(&thread->t_next, &get_processid_s(thread)->p_threads))
     // se è l'unico thread del processo
         // terminiamo l'intero processo
         terminate_process_s(get_processid_s(thread));
@@ -204,9 +222,13 @@ static inline void terminate_thread_s(struct tcb_t *thread){
     // Se il ha fratelli
         // terminiamo unicamente questo thread
         __terminate_thread_s(thread);
+
+    thread_count--;
+
+    tprint("terminate_thread_s ended\n\n");
 }
 
-static inline unsigned int getcputime_s(struct tcb_t *applicant){
+static inline unsigned int getcputime_s(const struct tcb_t *applicant){
     return applicant->run_time;
 }
 
@@ -263,10 +285,10 @@ static inline struct tcb_t *setsysmgr_s(struct tcb_t* thread, struct tcb_t *appl
     return __setmgr(thread, applicant, &applicant->t_pcb->sys_mgr, send_back);
 }
 
-static inline struct pcb_t *get_processid_s(struct tcb_t *thread){
+static inline struct pcb_t *get_processid_s(const struct tcb_t *thread){
     return thread->t_pcb;
 }
 
-static inline struct pcb_t *get_parentprocid_s(struct pcb_t *proc){
+static inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc){
     return proc->p_parent;
 }

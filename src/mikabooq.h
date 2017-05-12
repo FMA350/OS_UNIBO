@@ -101,10 +101,6 @@ struct tcb_t *thread_qhead(struct list_head *queue);
 	 return NULL if the list is empty */
 struct tcb_t *thread_dequeue(struct list_head *queue);
 
-/* get the first element of a structural list of threads linked with t_next field.
-	 return NULL if the list is empty */
-struct tcb_t *thread_dequeue_struct(struct list_head *queue);
-
 static inline void thread_outqueue(struct tcb_t *this) {
 	list_del(&this->t_sched);
 }

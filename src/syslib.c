@@ -18,10 +18,11 @@ void *memcpy(void *dest, const void *source, size_t num) {
 
 static int vrprintf(const char *format, va_list ap);
 
-static inline void putchar(int c) {
+static inline int putchar(int c) {
     char s[2];
     s[0] = c; s[1] = 0;
     tprint(s);
+    return c;
 }
 
 //writes the given character (as int) to the standard output it the character is not 0

@@ -57,6 +57,11 @@ static inline int list_is_last(const struct list_head *list,
 {
 	return list->next == head;
 }
+static inline int list_is_only(const struct list_head *link,
+		const struct list_head *head)
+{
+	return link->next == head && link->prev == head;
+}
 static inline int list_empty(const struct list_head *head)
 {
 	return head->next == head;

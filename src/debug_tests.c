@@ -86,7 +86,7 @@ void test_succed_msg_send() {
 
     // stop the process
     uintptr_t store;
-    msgrecv(NULL, &store);
+    msgrecv(NULL, NULL);
 }
 
 
@@ -96,11 +96,60 @@ void test_succed_msg_init(struct pcb_t *root) {
     sender = thread_alloc(root);
     receiver = thread_alloc(root);
 
-    init_and_load(receiver, test_succed_msg_recv, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
     init_and_load(sender, test_succed_msg_send, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+    init_and_load(receiver, test_succed_msg_recv, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
 
     tprint("test_succed_msg_init ended\n\n");
 }
 
 
 /*********************************************************************************/
+
+struct tcb_t *first, *second, *third;
+
+void t1() {
+    msgsend(second, 1);
+    int msg;
+    if (msgrecv(third, &msg) == NULL)
+        tprint("thread 1: error receiving from thread 3\n");
+    else
+        tprintf("thread 1 (%p) received from thread 3 (%p) msg --> %d\n", first, third, msg);
+
+    terminate_thread();
+}
+
+void t2() {
+    msgsend(third, 2);
+    int msg;
+    if(msgrecv(first, &msg) == NULL)
+        tprint("thread 2: error receiving from thread 1\n");
+    else
+        tprintf("thread 2 (%p) received from thread 1 (%p) msg --> %d\n", second, first, msg);
+    terminate_thread();
+}
+
+void t3() {
+    msgsend(first, 3);
+    int msg;
+    if(msgrecv(second, &msg) == NULL)
+        tprint("thread 3: error receiving from thread 2\n");
+    else
+        tprintf("thread 3 (%p) received from thread 2 (%p) msg --> %d\n", third, second, msg);
+    terminate_thread();
+}
+
+void triangle_init(struct pcb_t *root) {
+    tprint("triangle_init started\n");
+
+    first = thread_alloc(root);
+    second = thread_alloc(root);
+    third = thread_alloc(root);
+
+
+    init_and_load(first, t1, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+    init_and_load(second, t2, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+    init_and_load(third, t3, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+
+
+    tprint("triangle_init ended\n\n");
+}

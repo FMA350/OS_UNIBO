@@ -20,9 +20,9 @@ static LIST_HEAD(blockedq);
     (((state_t *) SYSBK_OLDAREA)->cpsr & STATUS_SYS_MODE == STATUS_SYS_MODE)
 
 
-static inline void DELIVER_MSG(struct tcb_t *DEST, uintptr_t MSG) {
+static inline void DELIVER_MSG(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg) {
     // TODO: forse è da modificare con gli interrupt dei devices msgq_add
-    if (msgq_add(current_thread, DEST, MSG) == 0)
+    if (msgq_add(sender, dest, msg) == 0)
     /* Se la consegna del messaggio è andata a buon fine */
         ST_RVAL(SEND_SUCCESS);
     else
@@ -61,15 +61,15 @@ inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintp
 }
 
 // TODO: cosa fare se il thread si reincarna?
-static inline void send(struct tcb_t *dest, uintptr_t msg){
+static inline void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
-            DELIVER_MSG(dest, msg);
+            DELIVER_MSG(dest, sender, msg);
             break;
         case T_STATUS_W4MSG:
         /* Se il thread destinazione è in attesa di un messaggio */
-            if (dest->t_wait4sender == current_thread || dest->t_wait4sender == NULL) {
+            if (dest->t_wait4sender == sender || dest->t_wait4sender == NULL) {
             /* il thread di destinazione aspetta un messaggio da
                 parte del processo corrente o da qualsiasi processo (non ha messaggi) */
 
@@ -78,13 +78,12 @@ static inline void send(struct tcb_t *dest, uintptr_t msg){
                 if (dest->t_wait4sender)
                     wait4thread_del(dest);
 
-				resume_thread(dest, current_thread, msg);
+				resume_thread(dest, sender, msg);
 
                 ST_RVAL(SEND_SUCCESS);
             }
             else
-                DELIVER_MSG(dest, msg);
-
+                DELIVER_MSG(dest, sender, msg);
             break;
         case T_STATUS_NONE:
             ST_RVAL(SEND_FAILURE);
@@ -111,7 +110,7 @@ static inline void recv(struct tcb_t *src, uintptr_t *pmsg){
         // se current_thread aspetta un messaggio da un thread preciso
         if (src)
         //aggiunge il processo corrente alla lista dei processi che aspettano src (di src)
-            wait4thread_add(current_thread, src);
+            wait4thread_add(src, current_thread);
         // Inserimento del processo nella coda dei processi in attesa di messaggi
         thread_enqueue(current_thread, &blockedq);
         scheduler();
@@ -129,7 +128,7 @@ static inline void recv(struct tcb_t *src, uintptr_t *pmsg){
 
 static inline void send_kernel(struct tcb_t *dest, uintptr_t msg) {
     if (IS_KERNEL_MODE)
-        send(dest, msg);
+        send(dest, current_thread, msg);
     else {
         ST_RVAL(SEND_FAILURE);
         // TODO: set error number

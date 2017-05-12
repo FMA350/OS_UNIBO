@@ -23,17 +23,12 @@ static inline clean_mgr(struct pcb_t *proc);
 
 
 /* member è il campo con cui la lista è collegata */
-#define __dequeue(queue, type, member) ({                                  \
+#define __dequeue(queue, type, member) ({                                      \
     struct list_head *new_head = list_next(queue);                          \
-    new_head ? ({ list_del(new_head);                                       \
+    new_head ? ({list_del(new_head);                                       \
                 container_of(new_head, type, member);}) : NULL;     \
 })
 
-
-#define __first(queue, type, member) ({                                    \
-    struct list_head *first_child = list_next(queue);                      \
-    first_child ? container_of(first_child, type, member) : NULL;          \
-})
 
 struct pcb_t *proc_init(void) {
 
@@ -117,7 +112,7 @@ inline struct pcb_t *proc_firstchild(struct pcb_t *proc) {
 }
 */
 inline struct pcb_t *proc_firstchild(struct pcb_t *proc) {
-    return __first(&proc->p_children, struct pcb_t, p_siblings);
+    return __qhead(&proc->p_children, struct pcb_t, p_siblings);
 }
 /*
 inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
@@ -131,7 +126,7 @@ inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
 }*/
 
 inline struct tcb_t *proc_firstthread(struct pcb_t *proc) {
-    return __first(&proc->p_threads, struct tcb_t, t_next);
+    return __qhead(&proc->p_threads, struct tcb_t, t_next);
 }
 
 static inline clean_mgr(struct pcb_t *proc) {
@@ -239,10 +234,6 @@ struct tcb_t *thread_dequeue(struct list_head *queue) {
 */
 struct tcb_t *thread_dequeue(struct list_head *queue) {
     return __dequeue(queue, struct tcb_t, t_sched);
-}
-
-struct tcb_t *thread_dequeue_struct(struct list_head *queue) {
-    return __dequeue(queue, struct tcb_t, t_next);
 }
 
 /*************************** MSG QUEUE ************************/
