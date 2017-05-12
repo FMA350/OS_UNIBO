@@ -6,22 +6,27 @@
 #include <mikabooq.h>
 #include <nucleus.h>
 #include <scheduler.h>
+#include <syscall.h>
 
 
-static inline int _get_errno(struct tcb_t *applicant);
-static struct tcb_t * _create_process(state_t *initial_state, struct tcb_t *applicant);
-static struct tcb_t * _create_thread(state_t *initial_state, struct tcb_t *process);
-static void _terminate_process(struct tcb_t *applicant);
-static void _terminate_thread(struct tcb_t *applicant);
-static struct tcb_t * _setpgmmgr(struct tcb_t* thread, struct tcb_t *applicant);
-static struct tcb_t * _settlbmgr(/*args*/);
-static struct tcb_t * _setsysmgr(/*args*/);
-static unsigned int _getcputime(struct tcb_t *applicant);
-static unsigned int _wait_for_clock(/*args*/);
+static inline int get_errno_s(struct tcb_t *applicant);
+
+static inline struct tcb_t *create_process_s(state_t *initial_state, struct tcb_t *applicant);
+static inline struct tcb_t *create_thread_s(state_t *initial_state, struct tcb_t *process);
+
+static inline void terminate_process_s(struct pcb_t *proc);
+static inline void terminate_thread_s(struct tcb_t *thread);
+
+static inline struct tcb_t *setpgmmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back);
+static inline struct tcb_t *settlbmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back);
+static inline struct tcb_t *setsysmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back);
+
+static inline unsigned int getcputime_s(struct tcb_t *applicant);
+static inline unsigned int wait_for_clock_s(/*args*/);
 // static /*status*/ _do_io(/*args*/);
-static struct pcb_t *_get_processid(struct tcb_t *thread);
-static struct tcb_t *_get_mythreadid(struct tcb_t *applicant);
-static struct pcb_t *_get_parentprocid(struct pcb_t *proc);
+
+static inline struct pcb_t *get_processid_s(struct tcb_t *thread);
+static inline struct pcb_t *get_parentprocid_s(struct pcb_t *proc);
 
 struct tcb_t *SSI;
 
@@ -43,36 +48,43 @@ static inline uintptr_t req_field(uintptr_t request, int i) {
 
 void ssi(){
     while (1) {
-        uintptr_t msg;
+        uintptr_t msg, reply;
+        int send_back;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
 
         switch (req_field(msg, 0)) {
             case GET_ERRNO:
-                msgsend(applicant, (uintptr_t) _get_errno(applicant));
+                msgsend(applicant, (uintptr_t) get_errno_s(applicant));
                 break;
             case CREATE_PROCESS:
-                msgsend(applicant, (uintptr_t) _create_process(req_field(msg, 1), applicant));
+                msgsend(applicant, (uintptr_t) create_process_s((state_t *) req_field(msg, 1), applicant));
                 break;
             case CREATE_THREAD:
-                msgsend(applicant, (uintptr_t) _create_thread(req_field(msg, 1), applicant));
+                msgsend(applicant, (uintptr_t) create_thread_s((state_t *) req_field(msg, 1), applicant));
                 break;
             case TERMINATE_PROCESS:
-                /* code */
+                terminate_process_s(get_processid_s(applicant));
                 break;
             case TERMINATE_THREAD:
-                /* code */
+                terminate_thread_s(applicant);
                 break;
             case SETPGMMGR:
-                /* code */
+                reply = (uintptr_t) setpgmmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                if (send_back)
+                    msgsend(applicant, reply);
                 break;
             case SETTLBMGR:
-                /* code */
+                reply = (uintptr_t) settlbmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                if (send_back)
+                    msgsend(applicant, reply);
                 break;
             case SETSYSMGR:
-                /* code */
+                reply = (uintptr_t) setsysmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                if (send_back)
+                    msgsend(applicant, reply);
                 break;
             case GET_CPUTIME:
-                msgsend(applicant, (uintptr_t) _getcputime(applicant));
+                msgsend(applicant, (uintptr_t) getcputime_s(applicant));
                 break;
             case WAIT_FOR_CLOCK:
                 /* code */
@@ -81,13 +93,13 @@ void ssi(){
                 /* code */
                 break;
             case GET_PROCESSID:
-                msgsend(applicant, (uintptr_t) _get_processid((struct tcb_t *) req_field(msg, 1)));
+                msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
                 break;
             case GET_PARENTPROCID:
-                msgsend(applicant, (uintptr_t) _get_parentprocid((struct tcb_t *) req_field(msg, 1)));
+                msgsend(applicant, (uintptr_t) get_parentprocid_s((struct pcb_t *) req_field(msg, 1)));
                 break;
             case GET_MYTHREADID:
-                msgsend(applicant, (uintptr_t) _get_mythreadid(applicant));
+                msgsend(applicant, (uintptr_t) applicant);
                 break;
             default:
             // TODO: se il messaggio è diverso dai codici noti
@@ -100,12 +112,12 @@ void ssi(){
 
 /***********SERVICES*****************/
 
-static inline int _get_errno(struct tcb_t *applicant){
+static inline int get_errno_s(struct tcb_t *applicant){
   return applicant->errno;
 }
 
-static inline struct tcb_t *_create_process(state_t *initial_state, struct tcb_t *applicant){
-    struct pcb_t *new_process = proc_alloc(_get_processid(applicant));
+static inline struct tcb_t *create_process_s(state_t *initial_state, struct tcb_t *applicant){
+    struct pcb_t *new_process = proc_alloc(get_processid_s(applicant));
 
     if(new_process == NULL)
         return NULL;
@@ -122,77 +134,109 @@ static inline struct tcb_t *_create_process(state_t *initial_state, struct tcb_t
     return first_thread;
 }
 
-static inline struct tcb_t * _create_thread(state_t * initial_state, struct tcb_t *applicant){
+static inline struct tcb_t * create_thread_s(state_t * initial_state, struct tcb_t *applicant){
 
-    struct tcb_t * new_thread = thread_alloc(_get_processid(applicant));
+    struct tcb_t * new_thread = thread_alloc(get_processid_s(applicant));
     if(!new_thread)
         return NULL;
 
     new_thread->t_s = *initial_state; //memcpy
     return new_thread;
-}GI
-
-static void _terminate_process(struct tcb_t *processToDelete){
-  if(!processToDelete) return -1;
-  struct tcb_t * threadToDelete;
-  while(threadToDelete = thread_qhead(&processToDelete->t_next)){
-	 _terminate_thread(threadToDelete);
-    }
-  return proc_delete(processToDelete);
 }
 
-static void _terminate_thread(struct tcb_t *applicant){
-	while (!list_empty(&applicant->t_msgq)) {
+
+static inline void __terminate_thread_s(struct tcb_t *thread);
+
+
+/* Preconditions: process != NULL */
+static inline void terminate_process_s(struct pcb_t *proc){
+
+    // eliminiamo tutti i thread
+    struct tcb_t *thread_iter;
+    // FIXME: structure changes as we iterate. Dovrebbero funzionare, ma per sbaglio (michele)
+    // si può fare con un while che estrae tutto
+    list_for_each_entry(thread_iter, &proc->p_threads, t_next)
+        __terminate_thread_s(thread_iter);
+
+    // eliminiamo i figli del processo ricorsivamente
+    struct pcb_t *proc_iter;
+    // FIXME: structure changes as we iterate. Dovrebbero funzionare, ma per sbaglio (michele)
+    list_for_each_entry(proc_iter, &proc->p_children, p_siblings)
+        terminate_process_s(proc_iter);
+
+    proc_delete(proc);
+}
+
+/* terminate the thread */
+static inline void __terminate_thread_s(struct tcb_t *thread) {
+    while (!list_empty(&thread->t_msgq))
 		//cancello tutti i messaggi se ce ne sono
-		msg_free(msg_qhead(&applicant->t_msgq));
-   	}
-	//TODO:sbloccare i processi in attesa di messaggi da applicant
-  
-  if(thread_qhead(&applicant->t_next)==NULL){
-    //only if this thread does not have any siblings
-      thread_free(applicant);
-      _terminate_process(applicant->t_pcb);
-  }
-  thread_free(applicant);
-  
-  /*else{ //non ho capito a cosa serva questa parte :')
-    struct list_head *temp = &threadToDelete->t_pcb->p_threads;
-    while(temp!=threadToDelete){
-      list_next(temp);
-    }
-    thread_dequeue(temp);
-  }*/
-	
-  
+		msg_free(msg_qhead(&thread->t_msgq));
+
+    // sbloccare i processi in attesa di messaggi del thread da terminare
+    struct tcb_t *to_resume;
+    // FIXME: thread_dequeue works only for list_head t_wait4me
+    while (to_resume = wait4thread_dequeue(&thread->t_wait4me))
+        resume_thread(to_resume, NULL, 0);
+
+
+    thread_free(thread);
 }
 
-static inline unsigned int _getcputime(struct tcb_t *applicant){
+/* terminate the thread and, if it's the last one, the process too */
+static inline void terminate_thread_s(struct tcb_t *thread){
+
+    if(list_is_last(&thread->t_next, &get_processid_s(thread)->p_threads))
+    // se è l'unico thread del processo
+        // terminiamo anche il processo
+        terminate_process_s(get_processid_s(thread));
+    else
+    // Se il ha fratelli
+        // terminiamo unicamente questo thread
+        __terminate_thread_s(thread);
+}
+
+static inline unsigned int getcputime_s(struct tcb_t *applicant){
     return applicant->run_time;
 }
 
-static inline struct tcb_t *_setpgmmgr(struct tcb_t *s, struct tcb_t *applicant){
-	if (s!=NULL){
-		if(&applicant->t_pcb->pgm_mgr != NULL) {//controllo che la chiamata sia stata fatta una sola volta
-			_terminate_process(&applicant->t_pcb);
-			return NULL;
-		}
-		else{
-			applicant->t_pcb->pgm_mgr = s;
-			msgsend(SSI,&s->t_s);
-			return s;
-		}
-	}
-	else return NULL;
+
+/* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
+static inline struct tcb_t *
+__setmgr(struct tcb_t *thread, struct tcb_t *applicant,
+         struct tcb_t **mgr, int *send_back) {
+    if (thread) {
+        *send_back = 1;
+        return NULL;
+    }
+	if(*mgr) {
+    // se il manager è già settato
+        *send_back = 0;
+		terminate_process_s(get_processid_s(applicant));
+		return NULL;
+	} else {
+    // se il manager non è mai stato settato
+        *send_back = 1;
+		return *mgr = thread;
+    }
 }
 
-static inline struct pcb_t *_get_processid(struct tcb_t *thread){
+static inline struct tcb_t *setpgmmgr_s(struct tcb_t *thread, struct tcb_t *applicant, int *send_back) {
+	return __setmgr(thread, applicant, &applicant->t_pcb->pgm_mgr, send_back);
+}
+
+static inline struct tcb_t *settlbmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back) {
+    return __setmgr(thread, applicant, &applicant->t_pcb->tlb_mgr, send_back);
+}
+
+static inline struct tcb_t *setsysmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back) {
+    return __setmgr(thread, applicant, &applicant->t_pcb->sys_mgr, send_back);
+}
+
+static inline struct pcb_t *get_processid_s(struct tcb_t *thread){
     return thread->t_pcb;
 }
 
-static inline struct tcb_t *_get_mythreadid(struct tcb_t *applicant) {
-    return applicant;
-}
-
-static inline struct pcb_t *_get_parentprocid(struct pcb_t *proc){
+static inline struct pcb_t *get_parentprocid_s(struct pcb_t *proc){
     return proc->p_parent;
 }

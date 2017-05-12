@@ -8,9 +8,6 @@
 // sentinella della coda dei processi in attesa di ricevere un messaggio
 static LIST_HEAD(blockedq);
 
-
-
-
 #define ST_RVAL(RVAL)   \
     (((state_t *) SYSBK_OLDAREA)->a1 = (unsigned int) (RVAL))
 
@@ -39,16 +36,29 @@ static inline void DELIVER_MSG(struct tcb_t *DEST, uintptr_t MSG) {
  * Preconditions:
  * dest is currently in the blocked queue. It's waiting for a message from the
  * thread that calls this function (current thread) or from any thread.
- * if we want to return an
  */
-static inline void DELIVER_DIRECTLY(struct tcb_t *dest, uintptr_t msg, struct tcb_t *sender) {
-    dest->t_s.a1 = (unsigned int) sender;
-    // FIXME: WARNING - if recv is called with pmsg == NULL this shouldn't work
+static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval, uintptr_t msg) {
+    dest->t_s.a1 = (unsigned int) recv_rval;
+    // check that recv has been called with pmsg != NULL
     if (((uintptr_t *) (dest->t_s.a3)) != NULL)
         *((uintptr_t *) (dest->t_s.a3)) = msg;
 }
 
-// send ritorna 0 in caso di successo, -1 in caso di fallimento
+
+inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
+
+    // il messaggio è consegnato con priorità
+    DELIVER_DIRECTLY(resuming, recv_rval, msg);
+
+    resuming->t_status = T_STATUS_READY;
+    resuming->t_wait4sender = NULL;
+
+    // dest è rimosso dai processi in attesa
+    thread_outqueue(resuming);
+    // e reinserito nella coda ready
+    thread_enqueue(resuming, &readyq);
+}
+
 // TODO: cosa fare se il thread si reincarna?
 static inline void send(struct tcb_t *dest, uintptr_t msg){
     switch (dest->t_status) {
@@ -61,19 +71,15 @@ static inline void send(struct tcb_t *dest, uintptr_t msg){
             if (dest->t_wait4sender == current_thread || dest->t_wait4sender == NULL) {
             /* il thread di destinazione aspetta un messaggio da
                 parte del processo corrente o da qualsiasi processo (non ha messaggi) */
-				
-				//se effettivamente dest stava aspettando un messaggio da me(current thread) devo eliminare dst dalla 
-				//mia lista di thread che aspettano messaggi da me
-				resume(dest);
-                // il messaggio è consegnato con priorità
-                DELIVER_DIRECTLY(dest, msg, current_thread);
+
+                //se effettivamente dest stava aspettando un messaggio da me(current thread) devo eliminare dst dalla
+                //mia lista di thread che aspettano messaggi da me
+                if (dest->t_wait4sender)
+                    wait4thread_del(dest);
+
+				resume_thread(dest, current_thread, msg);
+
                 ST_RVAL(SEND_SUCCESS);
-                dest->t_status = T_STATUS_READY;
-                dest->t_wait4sender = NULL; // necessario? secondo me no (michele)
-                // dest è rimosso dai processi in attesa
-                thread_outqueue(dest);
-                // e reinserito nella coda ready
-                thread_enqueue(dest, &readyq);
             }
             else
                 DELIVER_MSG(dest, msg);
@@ -101,7 +107,7 @@ static inline void recv(struct tcb_t *src, uintptr_t *pmsg){
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = src;
         //aggiunge il processo corrente alla lista dei processi che aspettano src (di src)
-		paused_add(current_thread, src);		
+		wait4thread_add(current_thread, src);
         // Inserimento del processo nella coda dei processi in attesa di messaggi
         thread_enqueue(current_thread, &blockedq);
         scheduler();

@@ -15,6 +15,26 @@ static LIST_HEAD(message_h);
 
 static inline clean_mgr(struct pcb_t *proc);
 
+
+#define __qhead(queue, type, member) ({                         \
+    struct list_head *new_head = list_next(queue);              \
+    new_head ? container_of(new_head, type, member) : NULL;     \
+})
+
+
+/* member è il campo con cui la lista è collegata */
+#define __dequeue(queue, type, member) ({                                  \
+    struct list_head *new_head = list_next(queue);                          \
+    new_head ? ({ list_del(new_head);                                       \
+                container_of(new_head, type, member);}) : NULL;     \
+})
+
+
+#define __first(queue, type, member) ({                                    \
+    struct list_head *first_child = list_next(queue);                      \
+    first_child ? container_of(first_child, type, member) : NULL;          \
+})
+
 struct pcb_t *proc_init(void) {
 
     /* process[0] is the root process */
@@ -36,6 +56,10 @@ struct pcb_t *proc_init(void) {
     return process;
 }
 
+static inline void proc_enqueue(struct pcb_t *new, struct list_head *queue) {
+    list_add_tail(&new->p_siblings, queue);
+}
+
 struct pcb_t *proc_alloc(struct pcb_t *p_parent) {
     /* We extract the space from the free list */
     struct list_head *new_space = list_next(&(process[0].p_siblings));
@@ -47,7 +71,7 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent) {
     list_del(new_space);
     struct pcb_t *new_proc = container_of(new_space, struct pcb_t, p_siblings);
     new_proc->p_parent = p_parent;
-    list_add_tail(new_space, &(p_parent->p_children));
+    proc_enqueue(new_proc, &p_parent->p_children);
 
     return new_proc;
 }
@@ -73,6 +97,7 @@ int proc_delete(struct pcb_t *oldproc){
 }
 
 /* return the pointer to the first child (NULL if the process has no children) */
+/*
 inline struct pcb_t *proc_firstchild(struct pcb_t *proc) {
 
     struct list_head *first_child = list_next(&proc->p_children);
@@ -85,7 +110,11 @@ inline struct pcb_t *proc_firstchild(struct pcb_t *proc) {
         //if p_parent doesn't have any child
         return NULL;
 }
-
+*/
+inline struct pcb_t *proc_firstchild(struct pcb_t *proc) {
+    return __first(&proc->p_children, struct pcb_t, p_siblings);
+}
+/*
 inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
     struct list_head *first_thread = list_next(&proc->p_threads);
 
@@ -94,6 +123,14 @@ inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
         return container_of(first_thread, struct tcb_t, t_next);
     else
         return NULL;
+}*/
+
+inline struct tcb_t *proc_firstthread(struct pcb_t *proc) {
+    return __first(&proc->p_threads, struct tcb_t, t_next);
+}
+
+struct pcb_t *proc_dequeue(struct list_head *queue) {
+    return __dequeue(queue, struct pcb_t, p_siblings);
 }
 
 static inline clean_mgr(struct pcb_t *proc) {
@@ -144,7 +181,7 @@ int thread_free(struct tcb_t *oldthread) {
 
     clean_thread_data(oldthread);
 
-    //remove the thread from the process queue.
+    //remove the thread from the process queue
     list_del(&oldthread->t_next);
     list_del(&oldthread->t_sched);
     //t_msgq and t_wait4me are already empty.
@@ -173,18 +210,22 @@ void thread_enqueue(struct tcb_t *new, struct list_head *queue) { //chopperEdit
 /* return the head element of a scheduling queue.
 	 (this function does not dequeues the element)
 	 return NULL if the list is empty */
-struct tcb_t *thread_qhead(struct list_head *queue) { //chopperEdit
-    struct list_head *new_head = list_next(queue);
-    if(new_head == NULL)
-        return NULL;
-    else
-        /* t_next ---> t_sched */
-        return container_of(new_head, struct tcb_t, t_sched);
-}
+// struct tcb_t *thread_qhead(struct list_head *queue) { //chopperEdit
+//     struct list_head *new_head = list_next(queue);
+//     if(new_head == NULL)
+//         return NULL;
+//     else
+//         /* t_next ---> t_sched */
+//         return container_of(new_head, struct tcb_t, t_sched);
+// }
 
+struct tcb_t *thread_qhead(struct list_head *queue) {
+    return __qhead(queue, struct tcb_t, t_sched);
+}
 
 /* get the first element of a scheduling queue.
 	 return NULL if the list is empty */
+/*
 struct tcb_t *thread_dequeue(struct list_head *queue) {
     struct list_head *new_head = list_next(queue);
     if(new_head == NULL)
@@ -193,6 +234,14 @@ struct tcb_t *thread_dequeue(struct list_head *queue) {
         list_del(new_head);
         return container_of(new_head, struct tcb_t, t_sched);
     }
+}
+*/
+struct tcb_t *thread_dequeue(struct list_head *queue) {
+    return __dequeue(queue, struct tcb_t, t_sched);
+}
+
+struct tcb_t *thread_dequeue_struct(struct list_head *queue) {
+    return __dequeue(queue, struct tcb_t, t_next);
 }
 
 /*************************** MSG QUEUE ************************/
@@ -323,14 +372,40 @@ int msg_free(struct msg_t *oldmsg) {
     list_del(&oldmsg->m_next);
     oldmsg->m_sender = NULL;
 
-    list_add_tail(&oldmsg->m_next, &(message_h));
+    list_add_tail(&oldmsg->m_next, &message_h);
     return 0;
 }
 
+struct msg_t *msg_qhead(struct list_head *queue) {
+    return __qhead(queue, struct msg_t, m_next);
+}
+ /*
 struct msg_t *msg_qhead(struct list_head *queue) {
     struct list_head *new_head = list_next(queue);
     if(new_head == NULL)
         return NULL;
     else
         return container_of(new_head, struct msg_t, m_next);
+}
+*/
+/*************************** WAITING4MSG LIST *************************************/
+
+
+/* add a tcb to dest's t_wait4me list */
+void wait4thread_add(struct tcb_t *dest, struct tcb_t *waiting) {
+	list_add_tail(&waiting->t_wait4same, &dest->t_wait4me);
+}
+
+/* remove this from the list of threads waiting for the same he was waiting to:
+   should be used when resuming a thread */
+void wait4thread_del(struct tcb_t *this) {
+	list_del(&this->t_wait4same);
+}
+
+struct tcb_t *wait4thread_qhead(struct list_head *queue) {
+    return __qhead(queue, struct tcb_t, t_wait4same);
+}
+
+struct tcb_t *wait4thread_dequeue(struct list_head *queue) {
+    return __dequeue(queue, struct tcb_t, t_wait4same);
 }

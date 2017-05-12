@@ -11,5 +11,16 @@
 
 void syscall_h();
 
+/*
+ * This function is used to resume a thread blocked while waiting for a message
+ *
+ * Preconditions:
+ * resuming is currently in the blocked queue and it's waiting wether from a
+ * specific thread or from anyone.
+ * recv_rval is what the resuming thread will return from msgrecv (sender on
+ * success, NULL on failure)
+ */
+inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg);
+
 
 #endif
