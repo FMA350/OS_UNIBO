@@ -60,6 +60,10 @@ static inline void proc_enqueue(struct pcb_t *new, struct list_head *queue) {
     list_add_tail(&new->p_siblings, queue);
 }
 
+struct pcb_t *proc_dequeue(struct list_head *queue) {
+    return __dequeue(queue, struct pcb_t, p_siblings);
+}
+
 struct pcb_t *proc_alloc(struct pcb_t *p_parent) {
     /* We extract the space from the free list */
     struct list_head *new_space = list_next(&(process[0].p_siblings));
@@ -69,6 +73,7 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent) {
 
     /* Deleting the element from the free list */
     list_del(new_space);
+
     struct pcb_t *new_proc = container_of(new_space, struct pcb_t, p_siblings);
     new_proc->p_parent = p_parent;
     proc_enqueue(new_proc, &p_parent->p_children);
@@ -127,10 +132,6 @@ inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
 
 inline struct tcb_t *proc_firstthread(struct pcb_t *proc) {
     return __first(&proc->p_threads, struct tcb_t, t_next);
-}
-
-struct pcb_t *proc_dequeue(struct list_head *queue) {
-    return __dequeue(queue, struct pcb_t, p_siblings);
 }
 
 static inline clean_mgr(struct pcb_t *proc) {
