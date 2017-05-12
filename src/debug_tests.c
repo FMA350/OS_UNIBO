@@ -3,6 +3,7 @@
 #include <nucleus.h>
 #include <arch.h>
 #include <debug_tests.h>
+#include <scheduler.h>
 
 extern void BREAKPOINT();
 extern unsigned int thread_count;
@@ -95,24 +96,8 @@ void test_succed_msg_init(struct pcb_t *root) {
     sender = thread_alloc(root);
     receiver = thread_alloc(root);
 
-
-    receiver->t_s.pc = (unsigned int) test_succed_msg_recv;
-    // SP
-    receiver->t_s.sp = RAM_TOP - FRAME_SIZE;
-    // CPSR -> mask all interrupts and be in kernel mode
-    receiver->t_s.cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
-
-    thread_enqueue(receiver, &readyq);
-
-    sender->t_s.pc = (unsigned int) test_succed_msg_send;
-    // SP
-    sender->t_s.sp = RAM_TOP - 2*FRAME_SIZE;
-    // CPSR -> mask all interrupts and be in kernel mode
-    sender->t_s.cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
-
-    thread_enqueue(sender, &readyq);
-
-    thread_count = 2;
+    init_and_load(receiver, test_succed_msg_recv, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+    init_and_load(sender, test_succed_msg_send, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
 
     tprint("test_succed_msg_init ended\n\n");
 }

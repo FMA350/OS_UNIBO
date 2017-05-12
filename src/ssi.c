@@ -9,6 +9,7 @@
 #include <syscall.h>
 
 
+// FIXME: in arch.h ci sono già una serie di macro per gestire i devices
 #define TERM0ADDR       0x24C
 #define PRINTADDR       0x1c0
 #define NETADDR         0x140
@@ -29,7 +30,7 @@ static inline struct tcb_t *settlbmgr_s(struct tcb_t* thread, struct tcb_t *appl
 static inline struct tcb_t *setsysmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back);
 
 static inline unsigned int getcputime_s(struct tcb_t *applicant);
-static inline unsigned int wait_for_clock_s(/*args*/);
+static inline unsigned int wait_for_clock_s(struct tcb_t *applicant);
 static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2);
 
 static inline struct pcb_t *get_processid_s(struct tcb_t *thread);
@@ -46,6 +47,7 @@ struct tcb_t *ssi_thread_init() {
     _SSI.t_wait4sender = NULL;
 
     INIT_LIST_HEAD(&_SSI.t_msgq);
+    INIT_LIST_HEAD(&_SSI.t_wait4me);
 
     return(SSI = &_SSI);
 }
@@ -55,6 +57,7 @@ static inline uintptr_t req_field(uintptr_t request, int i) {
 }
 
 void ssi(){
+    tprint("SSI started\n\n");
     while (1) {
         uintptr_t msg, reply;
         int send_back;
@@ -94,7 +97,6 @@ void ssi(){
             case GET_CPUTIME:
                 msgsend(applicant, (uintptr_t) getcputime_s(applicant));
                 break;
-
             case WAIT_FOR_CLOCK:
                 /* code */
                 break;
@@ -188,7 +190,6 @@ static inline void __terminate_thread_s(struct tcb_t *thread) {
     while (to_resume = wait4thread_dequeue(&thread->t_wait4me))
         resume_thread(to_resume, NULL, 0);
 
-
     thread_free(thread);
 }
 
@@ -197,7 +198,7 @@ static inline void terminate_thread_s(struct tcb_t *thread){
 
     if(list_is_last(&thread->t_next, &get_processid_s(thread)->p_threads))
     // se è l'unico thread del processo
-        // terminiamo anche il processo
+        // terminiamo l'intero processo
         terminate_process_s(get_processid_s(thread));
     else
     // Se il ha fratelli
@@ -209,24 +210,8 @@ static inline unsigned int getcputime_s(struct tcb_t *applicant){
     return applicant->run_time;
 }
 
-/* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
-static inline struct tcb_t *
-__setmgr(struct tcb_t *thread, struct tcb_t *applicant,
-         struct tcb_t **mgr, int *send_back) {
-    if (thread) {
-        *send_back = 1;
-        return NULL;
-    }
-	if(*mgr) {
-    // se il manager è già settato
-        *send_back = 0;
-		terminate_process_s(get_processid_s(applicant));
-		return NULL;
-	} else {
-    // se il manager non è mai stato settato
-        *send_back = 1;
-		return *mgr = thread;
-    }
+static inline unsigned int wait_for_clock_s(struct tcb_t *applicant) {
+    /*code*/
 }
 
 static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2){
@@ -243,6 +228,26 @@ static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t 
         case DISKADDR:
             break;
         default: return -1;
+    }
+}
+
+/* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
+static inline struct tcb_t *
+__setmgr(struct tcb_t *thread, struct tcb_t *applicant,
+         struct tcb_t **mgr, int *send_back) {
+    if (thread) {
+        *send_back = 1;
+        return NULL;
+    }
+    if(*mgr) {
+        // se il manager è già settato
+        *send_back = 0;
+        terminate_process_s(get_processid_s(applicant));
+        return NULL;
+    } else {
+        // se il manager non è mai stato settato
+        *send_back = 1;
+        return *mgr = thread;
     }
 }
 

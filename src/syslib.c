@@ -84,6 +84,29 @@ static int vrp_string(char *s) {
     }
 }
 
+/* 0 <= n <= 15 */
+static inline char hex_cx(int n) {
+    return n < 10 ? '0' + n : 'a' + n % 10;
+}
+
+static int rvrp_pointer(uintptr_t p, int dept) {
+    if (p == 0) {
+        int i;
+        for (i = dept; i < 8; i++)
+            putcx('0');
+        return 8 - dept;
+    }
+    else  //recurvise call on the more significant digit and print the less significant
+        return rvrp_pointer(p / 16, dept + 1) + putcx(hex_cx(((uintptr_t) p) % 16));
+}
+
+
+
+static inline int vrp_pointer(void *p) {
+            // p != NULL        p == NULL
+    return p ? tprintf("0x") + rvrp_pointer((uintptr_t) p, 0) : tprintf("(null)");
+}
+
 static int vrp_percent(const char *format, va_list ap) {
     switch (*format) {
         case 0:
@@ -97,6 +120,9 @@ static int vrp_percent(const char *format, va_list ap) {
         case 's':
             //call vrp_int with the next argument of the list with type pointer to char
             return vrp_string(va_arg(ap, char *)) + vrprintf(format + 1, ap);
+        case 'p':
+            //call vrp_pointer with the next argument of the list with type pointer to void
+            return vrp_pointer(va_arg(ap, void *)) + vrprintf(format + 1, ap);
         default:
             //if the format is not recognized
             tprint("ERROR\n");

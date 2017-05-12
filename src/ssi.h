@@ -15,8 +15,8 @@
 /* SSI's thread */
 extern struct tcb_t *SSI;
 
-/* SSI daemon */
-// void SSI();
+/* SSI target function */
+void ssi();
 
 /* Returns a pointer to the ssi thread already initialized,
    extept for processor state */

@@ -11,6 +11,8 @@ void BREAKPOINT(){ }
 
 static void states_init();
 
+static void time_init();
+
 int main() {
     /* Initialization */
     struct pcb_t *root = proc_init();
@@ -20,9 +22,10 @@ int main() {
     /* Loading exceptions states vector */
     states_init();
 
+    time_init();
+
     /* Loading ready queue with system processes */
-    // load_readyq(root);
-    test_succed_msg_init(root);
+    load_readyq(root);
 
     /* Starting normal life of the system */
     scheduler();
@@ -30,6 +33,9 @@ int main() {
     return 0;
 }
 
+static void time_init() {
+    clockPerTimeslice = (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
+}
 
 /* This function is used to populate exception states vector
  * Preconditions: new_area is the address of the new state, while handler
