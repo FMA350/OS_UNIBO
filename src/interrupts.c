@@ -18,7 +18,7 @@ extern unsigned int *timeSliceLeft;
 extern struct list_head readyq;
 extern struct tcb_t *current_thread;
 
-static void io_request(unsigned int);
+static void io_request(unsigned int deviceType);
 static void interval_timer_h();
 
 
@@ -29,7 +29,7 @@ void interrupt_h() {
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
     //void * p = (void *)0x00006fe0;
-    //unsigned int i = 0;
+    unsigned int i = 0;
     //while (i < 5){
     //    if (*((unsigned int *)p)>0) {
             //mi serve sapere quale dei 7 device di ogni tipo ha richiesto l'interr? volendo comunque lo si fa facilmente
@@ -57,7 +57,7 @@ static void interval_timer_h() {
 }
 
 
-static void io_request(unsigned int deviceType){
+static inline void io_request(unsigned int deviceType){
     //serve?
     #if 0
     switch (deviceType){

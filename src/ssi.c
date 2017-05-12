@@ -30,7 +30,7 @@ static inline struct tcb_t *setsysmgr_s(struct tcb_t* thread, struct tcb_t *appl
 
 static inline unsigned int getcputime_s(struct tcb_t *applicant);
 static inline unsigned int wait_for_clock_s(/*args*/);
-// static /*status*/ _do_io(/*args*/);
+static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2);
 
 static inline struct pcb_t *get_processid_s(struct tcb_t *thread);
 static inline struct pcb_t *get_parentprocid_s(struct pcb_t *proc);
@@ -121,7 +121,6 @@ void ssi(){
 
 /***********SERVICES*****************/
 
-<<<<<<< HEAD
 static inline int get_errno_s(struct tcb_t *applicant){
   return applicant->errno;
 }
@@ -228,8 +227,9 @@ __setmgr(struct tcb_t *thread, struct tcb_t *applicant,
         *send_back = 1;
 		return *mgr = thread;
     }
+}
 
-static unsigned int _do_io(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2){
+static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2){
     switch (device) {
         case TERM0ADDR://il device e' un terminale
 
