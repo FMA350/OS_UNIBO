@@ -99,7 +99,6 @@ void load_readyq(struct pcb_t *root) {
     to_load = ssi_thread_init();
     init_and_load(to_load, ssi, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
 
-
     test_succed_msg_init(root);
 }
 
@@ -124,7 +123,7 @@ static inline void empty_readyq() {
 }
 
 void scheduler() {
-    tprint("SCHEDULER\n\n");
+    tprint("SCHEDULER\n");
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
     tprintf("current_thread == %p\n", current_thread);

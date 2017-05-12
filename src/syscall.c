@@ -21,6 +21,7 @@ static LIST_HEAD(blockedq);
 
 
 static inline void DELIVER_MSG(struct tcb_t *DEST, uintptr_t MSG) {
+    // TODO: forse è da modificare con gli interrupt dei devices msgq_add
     if (msgq_add(current_thread, DEST, MSG) == 0)
     /* Se la consegna del messaggio è andata a buon fine */
         ST_RVAL(SEND_SUCCESS);
@@ -106,8 +107,11 @@ static inline void recv(struct tcb_t *src, uintptr_t *pmsg){
         // changing thread status
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = src;
+
+        // se current_thread aspetta un messaggio da un thread preciso
+        if (src)
         //aggiunge il processo corrente alla lista dei processi che aspettano src (di src)
-		wait4thread_add(current_thread, src);
+            wait4thread_add(current_thread, src);
         // Inserimento del processo nella coda dei processi in attesa di messaggi
         thread_enqueue(current_thread, &blockedq);
         scheduler();
