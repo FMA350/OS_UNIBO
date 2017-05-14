@@ -102,7 +102,6 @@ void load_readyq(struct pcb_t *root) {
     init_and_load(to_load, ssi, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
 
     //triangle_init(root);
-    test();
 }
 
 /* This function is used to handle the case when the ready ready queue is empty
@@ -129,6 +128,7 @@ void scheduler() {
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
     // accountant();
+    tprint("scheduler started\n");  
 
     if (current_thread == NULL)
         empty_readyq();

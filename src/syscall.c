@@ -62,13 +62,18 @@ inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintp
 
 // TODO: cosa fare se il thread si reincarna?
 extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
+    tprint("send starting\n");
+
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
+
             DELIVER_MSG(dest, sender, msg);
+
             break;
         case T_STATUS_W4MSG:
         /* Se il thread destinazione è in attesa di un messaggio */
+
             if (dest->t_wait4sender == sender || dest->t_wait4sender == NULL) {
             /* il thread di destinazione aspetta un messaggio da
                 parte del processo corrente o da qualsiasi processo (non ha messaggi) */
@@ -86,10 +91,14 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
                 DELIVER_MSG(dest, sender, msg);
             break;
         case T_STATUS_NONE:
+
             ST_RVAL(SEND_FAILURE);
+            break;
     }
 
-    LDST((state_t *) SYSBK_OLDAREA);
+    LDST((state_t *) SYSBK_OLDAREA); //segment error!!!
+    //tprint("send a\n");
+
 }
 
 static inline void recv(struct tcb_t *src, uintptr_t *pmsg){

@@ -97,14 +97,14 @@ uintptr_t p5send = 0;
 extern void test(void) {
     tprint(" The test has started\n");
 
-//    ttyprintstring(TERM0ADDR, "NUCLEUS TEST: starting...\n");
+    //ttyprintstring(TERM0ADDR, "NUCLEUS TEST: starting...\n");
     STST(&tmpstate);
     tprint(" The test has started1\n");
     stackalloc = (tmpstate.sp + (QPAGE - 1)) & (~(QPAGE - 1));
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) tty0out_thread;
-    tprint("1\n");
     tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr);
+    tprint("1\n");
     printid = create_thread(&tmpstate);
     tprint("2\n");
     tty0print("NUCLEUS: first msg printed by tty0out_thread\n");
