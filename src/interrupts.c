@@ -50,7 +50,9 @@ static inline void io_handler(){
     //serve?
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
-    void * p = (void *)0x00006ff0;
+    void * p = (void *)0x00006ff0;  // non dovrebbe essere 0x00006FE0?
+    // dovrebbe funzionare a grandi linee, ma bisognerebbe vedere anche le funzioni
+    // del coprocessore (ha un registro che indica la causa degli interrupts)
     int i = 0;
     while (i < 5) {//ne controllo uno alla volta di device per gestire un interrupt alla volta
         if ((*((unsigned int *)p)%2)==1) {//device n.0 has a pending interrupt
@@ -79,7 +81,10 @@ static inline void io_handler(){
             break;
         }
         i++;
-        *((unsigned int *)p) = p + 2; //controlla se funziona!! non sono sicuro
+        *((unsigned int *)p) = (unsigned int) p + 2;
+        //controlla se funziona!! non sono sicuro
+        // non capisco come funziona (michele)
+
     }
     // salvataggio stato del processore
     //current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita

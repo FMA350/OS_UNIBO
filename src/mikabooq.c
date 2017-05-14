@@ -298,27 +298,7 @@ static inline store_val(uintptr_t *value, struct msg_t *msg) {
 }
 
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value) {
-    if(sender == NULL) {
-        /* restituisce il primo messaggio in coda qualsiasi ne sia il mittente
-         * L’indirizzo del TCB del mittente viene memorizzato in *sender */
-
-        //concatenatore del primo messaggio in coda
-        struct list_head *msg_conc = list_next(&destination->t_msgq);
-        if (msg_conc == NULL)
-            /* empty queue */
-            return -1;
-        else {
-            /* removing the message from the list */
-            list_del(msg_conc);
-            store_val(value, container_of(msg_conc, struct msg_t, m_next));
-            /* adding the element to the free list */
-            list_add_tail(msg_conc, &message_h);
-            return 0;
-        }
-
-    }
-    /* sender != NULL && *sender == NULL */
-    else if (*sender == NULL) {
+    if(sender == NULL || *sender == NULL) {
         /* restituisce il primo messaggio in coda qualsiasi ne sia il mittente
          * L’indirizzo del TCB del mittente viene memorizzato in *sender */
 
@@ -329,28 +309,24 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
             return -1;
         else {
             struct msg_t *msg = container_of(msg_conc, struct msg_t, m_next);
-            /* removing the message from the list */
-            list_del(msg_conc);
-
             store_val(value, msg);
-            *sender = msg->m_sender;
-            /* adding the element to the free list */
-            list_add_tail(msg_conc, &message_h);
-
+            if (sender)
+            /* sender != NULL && *sender == NULL */
+                /* store the sender */
+                *sender = msg->m_sender;
+            /* freeing the message */
+            msg_free(msg);
             return 0;
         }
-    }
+    } else {
     /* sender != NULL && *sender != NULL */
-    else {
-        /* restituisce il primo messaggio in coda che ha *sender come mittente */
+    /* restituisce il primo messaggio in coda che ha *sender come mittente */
         struct msg_t *pos;
         list_for_each_entry(pos, &destination->t_msgq, m_next) {
             if(pos->m_sender == *sender) {
-                /* removing the message from the list */
-                list_del(&pos->m_next);
                 store_val(value, pos);
-                /* adding the element to the free list */
-                list_add_tail(&pos->m_next, &message_h);
+                /* freeing the message */
+                msg_free(pos);
                 return 0;
             }
         }

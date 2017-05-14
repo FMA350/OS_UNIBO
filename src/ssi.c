@@ -101,13 +101,12 @@ void ssi(){
                 /* code */
                 break;
             case DO_IO:
-                if(&applicant < 0x00007000){//interrupt_h ci sta dicendo che un device ha completato
-                        msgsend(requester,status);
+                if((devaddr) applicant < (devaddr) 0x00007000){//interrupt_h ci sta dicendo che un device ha completato
+                        // msgsend(requester,status);
                     }
                 else {} //no interrupts were found
                 break;
-                }
-                do_io_s(req_field(msg,1), req_field(msg,2), NULL,NULL,&applicant);
+                do_io_s(req_field(msg,1), req_field(msg,2), (uintptr_t) NULL, (uintptr_t) NULL, applicant);
                 break;
 
             case GET_PROCESSID:
@@ -245,9 +244,9 @@ static inline unsigned int wait_for_clock_s(struct tcb_t *applicant) {
 static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2,struct tcb_t* requester){
     switch (device) {
         case TERM0ADDR://il device e' un terminale
-            if(/*device e' libero*/){
-                setdevice(0,command);
-            }
+            // if(/*device e' libero*/){
+            //     setdevice(0,command);
+            // }
             //aggiorno -> (using device)
             break;
         case PRINTADDR:
