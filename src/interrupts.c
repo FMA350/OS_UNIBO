@@ -6,6 +6,7 @@
 #include <uARMtypes.h>
 #include <syscall.h>
 #include <syslib.h>
+#include <ssi.h>
 
 
 
@@ -18,7 +19,7 @@ extern unsigned int *timeSliceLeft;
 extern struct list_head readyq;
 extern struct tcb_t *current_thread;
 
-static void io_request(unsigned int deviceType);
+static void io_handler();
 static void interval_timer_h();
 
 
@@ -26,19 +27,7 @@ static void interval_timer_h();
 void interrupt_h() {
     // TODO: check pending interrupts in priority order
     interval_timer_h();
-    //p points to bottom of the interrupt bitmap for external devices
-    //il primo byte che ha un interr pendente fa partire la gestione
-    //void * p = (void *)0x00006fe0;
-    unsigned int i = 0;
-    //while (i < 5){
-    //    if (*((unsigned int *)p)>0) {
-            //mi serve sapere quale dei 7 device di ogni tipo ha richiesto l'interr? volendo comunque lo si fa facilmente
-            io_request(i);
-    //        break;
-//        }
-//        p++;
-//        i++;
-//    }
+    io_handler();
 
 }
 
@@ -57,31 +46,44 @@ static void interval_timer_h() {
 }
 
 
-static inline void io_request(unsigned int deviceType){
+static inline void io_handler(){
     //serve?
-    #if 0
-    switch (deviceType){
-        case 0:
-            //disk handler
+    //p points to bottom of the interrupt bitmap for external devices
+    //il primo byte che ha un interr pendente fa partire la gestione
+    void * p = (void *)0x00006ff0;
+    int i = 0;
+    while (i < 5) {//ne controllo uno alla volta di device per gestire un interrupt alla volta
+        if ((*((unsigned int *)p)%2)==1) {//device n.0 has a pending interrupt
+            send(SSI,p,i);
             break;
-        case 1:
-            //tapes handler
+        }else if (((*((unsigned int *)p)>>1)%2)==1){//device n.1 has a pending interrupt
+            send(SSI,p,i);
             break;
-        case 2:
-            //Network handler
+        }else if (((*((unsigned int *)p)>>2)%2)==1){
+            send(SSI,p,i);
             break;
-        case 3:
-            //printers handler
+        }else if (((*((unsigned int *)p)>>3)%2)==1){
+            send(SSI,p,i);
             break;
-        case 4:
-            //terminal handler
+        }else if (((*((unsigned int *)p)>>4)%2)==1){
+            send(SSI,p,i);
             break;
-
+        }else if (((*((unsigned int *)p)>>5)%2)==1){
+            send(SSI,p,i);
+            break;
+        }else if (((*((unsigned int *)p)>>6)%2)==1){
+            send(SSI,p,i);
+            break;
+        }else if (((*((unsigned int *)p)>>7)%2)==1){
+            send(SSI,p,i);
+            break;
+        }
+        i++;
+        *((unsigned int *)p) = p + 2; //controlla se funziona!! non sono sicuro
     }
-    #endif
     // salvataggio stato del processore
-    current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+    //current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
     // Inserimento del processo in coda
-    thread_enqueue(current_thread, &readyq);
+    //thread_enqueue(current_thread, &readyq);
     scheduler();
 }

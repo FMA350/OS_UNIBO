@@ -11,7 +11,7 @@ extern unsigned int soft_block_count;
 
 extern unsigned int clockPerTimeslice;
 
-
+extern void init_and_load(struct tcb_t *to_load, void *target, unsigned int status);
 
 
 void load_readyq(struct pcb_t *root);

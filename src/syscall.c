@@ -61,7 +61,7 @@ inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintp
 }
 
 // TODO: cosa fare se il thread si reincarna?
-static inline void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
+extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */

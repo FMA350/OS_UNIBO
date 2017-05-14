@@ -26,8 +26,9 @@ int main() {
 
     /* Loading ready queue with system processes */
     load_readyq(root);
-
     /* Starting normal life of the system */
+    test();
+
     scheduler();
 
     return 0;

@@ -8,14 +8,12 @@
 #include <scheduler.h>
 #include <syscall.h>
 
-
-// FIXME: in arch.h ci sono già una serie di macro per gestire i devices
 #define TERM0ADDR       0x24C
-#define PRINTADDR       0x1c0
+#define PRINTADDR       0x1C0
 #define NETADDR         0x140
 #define TAPEADDR        0x0C0
 #define DISKADDR        0x040
-
+struct tcb_t* terminal0_status[8];
 
 static inline int get_errno_s(const struct tcb_t *applicant);
 
@@ -31,7 +29,8 @@ static inline struct tcb_t *setsysmgr_s(struct tcb_t *thread, struct tcb_t *appl
 
 static inline unsigned int getcputime_s(const struct tcb_t *applicant);
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant);
-static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2);
+static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2,struct tcb_t* requester);
+static inline void setdevice(unsigned int devno, uintptr_t command);
 
 static inline struct pcb_t *get_processid_s(const struct tcb_t *thread);
 static inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc);
@@ -102,8 +101,15 @@ void ssi(){
                 /* code */
                 break;
             case DO_IO:
-                /* code */
+                if(&applicant < 0x00007000){//interrupt_h ci sta dicendo che un device ha completato
+                        msgsend(requester,status);
+                    }
+                else {} //no interrupts were found
                 break;
+                }
+                do_io_s(req_field(msg,1), req_field(msg,2), NULL,NULL,&applicant);
+                break;
+
             case GET_PROCESSID:
                 msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
                 break;
@@ -236,10 +242,13 @@ static inline unsigned int wait_for_clock_s(struct tcb_t *applicant) {
     /*code*/
 }
 
-static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2){
+static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2,struct tcb_t* requester){
     switch (device) {
         case TERM0ADDR://il device e' un terminale
-
+            if(/*device e' libero*/){
+                setdevice(0,command);
+            }
+            //aggiorno -> (using device)
             break;
         case PRINTADDR:
             break;
@@ -252,10 +261,13 @@ static inline unsigned int do_io_s(devaddr device, uintptr_t command, uintptr_t 
         default: return -1;
     }
 }
+static inline void setdevice(unsigned int devno, uintptr_t command){
+    void * p = (void *)0x0000024c+((0x10)*devno);
+    *((unsigned int *)p) = command;
+}
 
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
-static inline struct tcb_t *
-__setmgr(struct tcb_t *thread, struct tcb_t *applicant,
+static inline struct tcb_t *__setmgr(struct tcb_t *thread, struct tcb_t *applicant,
          struct tcb_t **mgr, int *send_back) {
     if (thread) {
         *send_back = 1;

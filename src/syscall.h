@@ -24,7 +24,7 @@ void syscall_h();
  * recv_rval as return value. resuming will not be outqueued on his field
  * wait4same
  */
-inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg);
+extern inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg);
 
 
 #endif

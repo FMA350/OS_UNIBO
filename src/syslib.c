@@ -1,4 +1,6 @@
 #include <syslib.h>
+#include <stdarg.h>
+#include <libuarm.h>
 
 
 // TODO: Optimize memcpy
@@ -11,10 +13,6 @@ void *memcpy(void *dest, const void *source, size_t num) {
         dest8[i] = source8[i];
     return dest;
 }
-
-
-#include <stdarg.h>
-#include <libuarm.h>
 
 static int vrprintf(const char *format, va_list ap);
 

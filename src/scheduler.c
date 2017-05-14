@@ -8,6 +8,8 @@
 #include <debug_tests.h>
 #include <nucleus.h>
 #include <scheduler.h>
+#include <p2test.h>
+
 
 
 // Thread that has currently the control of the CPU
@@ -99,7 +101,8 @@ void load_readyq(struct pcb_t *root) {
     to_load = ssi_thread_init();
     init_and_load(to_load, ssi, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
 
-    triangle_init(root);
+    //triangle_init(root);
+    test();
 }
 
 /* This function is used to handle the case when the ready ready queue is empty

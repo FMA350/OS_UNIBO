@@ -17,6 +17,7 @@ extern struct tcb_t *SSI;
 
 /* SSI target function */
 void ssi();
+static inline void __terminate_thread_s(struct tcb_t *thread);
 
 /* Returns a pointer to the ssi thread already initialized,
    extept for processor state */
