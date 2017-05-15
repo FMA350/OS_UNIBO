@@ -117,6 +117,9 @@ void ssi(){
                 msgsend(request[i].requester,status);
                 request[i].val = NULL;
                 request[i].requester = NULL;
+                int i=0; //se ci sono altri in attesa sblocco il primo...
+                while (request[i].requester!=NULL && i<8) i++;
+                if(request[i].requester==NULL) do_io_s(request[i].val, request[i].requester);
             }
             else { //request from a thread
                 do_io_s(msg, applicant);
