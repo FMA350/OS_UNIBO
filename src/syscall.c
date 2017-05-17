@@ -6,7 +6,7 @@
 
 
 // sentinella della coda dei processi in attesa di ricevere un messaggio
-static LIST_HEAD(blockedq);
+LIST_HEAD(blockedq);
 
 #define ST_RVAL(RVAL)   \
     (((state_t *) SYSBK_OLDAREA)->a1 = (unsigned int) (RVAL))
