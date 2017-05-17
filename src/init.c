@@ -1,10 +1,12 @@
 #include <mikabooq.h>
 #include <listx.h>
 #include <scheduler.h>
-#include <interrupts.h>
 #include <debug_tests.h>
 #include <arch.h>
 #include <syslib.h>
+#include <interrupts.h>
+#include <syscall.h>
+#include <trap.h>
 
 
 void BREAKPOINT(){ }
