@@ -36,8 +36,7 @@ struct tcb_t {
 	struct list_head t_sched; /* link the other elements on the same scheduling list */
 	struct list_head t_msgq; /* list of pending messages for the current thread */
 
-	struct list_head t_wait4me; /* list of threads waiting for a message from the current thread */
-	struct list_head t_wait4same; /* link the other element on the same t_wait4me list */
+	struct list_head t_wait4me; /* list of threads waiting for a message from the current thread (linked with )*/
 };
 
 struct msg_t {
@@ -133,22 +132,5 @@ struct msg_t *msg_qhead(struct list_head *queue) ;
 /* return -1 if there are no messages in the queue matching the request.
 	 return 0 and store the message payload in *value otherwise. */
 int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value);
-
-/*************************** WAITING4MSG LIST *************************************/
-
-
-/* add a tcb to dest's t_wait4me list */
-void wait4thread_add(struct tcb_t *dest, struct tcb_t *waiting);
-
-/* remove this from the list of threads waiting for the same he was waiting to:
-   should be used when resuming a thread */
-void wait4thread_del(struct tcb_t *this);
-
-
-struct tcb_t *wait4thread_qhead(struct list_head *queue);
-
-struct tcb_t *wait4thread_dequeue(struct list_head *queue);
-
-
 
 #endif

@@ -25,7 +25,7 @@ static inline int get_errno_s(const struct tcb_t *applicant);
 static inline struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *applicant);
 static inline struct tcb_t *create_thread_s(const state_t *initial_state, struct tcb_t *process);
 
-static inline void terminate_process_s(struct pcb_t *proc);
+static inline void terminate_process_s(struct tcb_t *applicant);
 static inline void terminate_thread_s(struct tcb_t *thread);
 
 static inline struct tcb_t *setpgmmgr_s(struct tcb_t *thread, struct tcb_t *applicant, int *send_back);
@@ -52,8 +52,8 @@ struct tcb_t *ssi_thread_init() {
 
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
-
-    for (int i=0; i<8; i++) request[i].requester=NULL;
+    int i;
+    for (i=0; i<8; i++) request[i].requester=NULL;
     tprint("SSI initialized\n\n");
 
     return(SSI = &_SSI);
@@ -82,7 +82,7 @@ void ssi(){
             msgsend(applicant, (uintptr_t) create_thread_s((state_t *) req_field(msg, 1), applicant));
             break;
             case TERMINATE_PROCESS:
-            terminate_process_s(get_processid_s(applicant));
+            terminate_process_s(applicant);
             break;
             case TERMINATE_THREAD:
             terminate_thread_s(applicant);
@@ -115,11 +115,8 @@ void ssi(){
                 void * p = (void *)0x0000240;
                 int status = *((int *)p);
                 msgsend(request[i].requester,status);
-                request[i].val = NULL;
+                request[i].val = (uintptr_t) NULL;
                 request[i].requester = NULL;
-                int i=0; //se ci sono altri in attesa sblocco il primo...
-                while (request[i].requester!=NULL && i<8) i++;
-                if(request[i].requester==NULL) do_io_s(request[i].val, request[i].requester);
             }
             else { //request from a thread
                 do_io_s(msg, applicant);
@@ -162,7 +159,7 @@ static inline struct tcb_t *create_process_s(const state_t *initial_state, struc
         return NULL;
     }
 
-    struct tcb_t *first_thread = __create_thread_s(initial_state, get_processid_s(applicant));
+    struct tcb_t *first_thread = __create_thread_s(initial_state, new_process);
 
     if(!first_thread){
         // throw an error, no more space availeable
@@ -182,6 +179,8 @@ static inline struct tcb_t *__create_thread_s(const state_t *initial_state, stru
     }
 
     new_thread->t_s = *initial_state; //memcpy
+
+    thread_count++;
     return new_thread;
 }
 
@@ -190,12 +189,36 @@ static inline struct tcb_t * create_thread_s(const state_t *initial_state, struc
     return __create_thread_s(initial_state, get_processid_s(applicant));
 }
 
+/************************* TERMINATION *************************************/
 
 static inline void __terminate_thread_s(struct tcb_t *thread);
 
+/* Cleans the eventual messages sent to managers and SSI
+   Preconditions: the thread is waiting
 
-/* Preconditions: process != NULL */
-static inline void terminate_process_s(struct pcb_t *proc){
+   sys_mgr e pgm_mgr sono gli unici thread di sistema oltre all'SSI
+   nei confronti dei quali è possibile fare la recv (syscall_other) */
+static inline void clean_sys_msg(struct tcb_t *terminating)
+{
+    if (terminating->t_wait4sender == SSI) {
+        // msgq_get should always succeed
+        msgq_get(&terminating, SSI, NULL);
+    } else if (terminating->t_wait4sender == get_processid_s(terminating)->sys_mgr) {
+        msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
+    } else if (terminating->t_wait4sender == get_processid_s(terminating)->pgm_mgr) {
+        msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
+    }
+}
+
+
+/*
+ * Terminate the process and all his progeny
+ *
+ * Preconditions: process != NULL, applicant is the requestor of the service
+ *
+ */
+static inline void __terminate_process_s(struct pcb_t *proc, struct tcb_t *applicant)
+{
     // TODO: eliminare dalla coda dei messaggi dell'SSI eventuali messaggi
     // provenienti dai thread dei processi figli che saranno terminati
     tprint("terminate process started\n");
@@ -204,22 +227,32 @@ static inline void terminate_process_s(struct pcb_t *proc){
     struct tcb_t *thread_term;
     while (thread_term = proc_firstthread(proc)) {
         // terminate thread changes the structure
+        if (thread_term != applicant && thread_term->t_status == T_STATUS_W4MSG) {
+        // Se il thread non è quello che ha richiesto il servizio e sta aspettando
+            clean_sys_msg(thread_term);
+        }
         __terminate_thread_s(thread_term);
     }
 
     // eliminiamo i figli del processo ricorsivamente
     struct pcb_t *proc_term;
     while (proc_term = proc_firstchild(proc)) {
-        // terminate thread changes the structure
-        terminate_process_s(proc_term);
+        __terminate_process_s(proc_term, NULL);
     }
 
     // eliminiamo il processo
     proc_delete(proc);
 }
 
-/* terminate the thread. thread != NULL*/
-static inline void __terminate_thread_s(struct tcb_t *thread) {
+static inline void terminate_process_s(struct tcb_t *applicant)
+{
+    __terminate_process_s(get_processid_s(applicant), applicant);
+}
+
+/* terminate the thread. thread != NULL
+   the process is also removed from the scheduling queue he's in (device queue also)*/
+static inline void __terminate_thread_s(struct tcb_t *thread)
+{
     tprint("__terminate_thread_s started\n");
     while (!list_empty(&thread->t_msgq))
     //cancello tutti i messaggi se ce ne sono
@@ -231,50 +264,57 @@ static inline void __terminate_thread_s(struct tcb_t *thread) {
     // tprintf("puntatori t_wait4me: next --> %p, prev --> %p\n", thread->t_wait4me.next, thread->t_wait4me.prev);
     // tprintf("la coda e' vuota? --> %d\n", list_empty(&thread->t_wait4me));
 
-    while (to_resume = wait4thread_dequeue(&thread->t_wait4me)) {
+    while (to_resume = thread_qhead(&thread->t_wait4me)) {
         // tprintf("resuming thread - %p\n", to_resume);
         resume_thread(to_resume, NULL, 0);
     }
     // tprint("waiting threads resumed\n");
 
     int err = thread_free(thread);
-    if (err == -1) {
-        tprint("ERROR - msgq\n");
-        HALT();
-    } else if (err == -2) {
-        tprint("ERROR - wait4me\n");
-        HALT();
-    }
-    tprint("ending __terminate_thread_s\n");
+    // if (err == -1) {
+    //     tprint("ERROR - msgq\n");
+    //     HALT();
+    // } else if (err == -2) {
+    //     tprint("ERROR - wait4me\n");
+    //     HALT();
+    // }
+    // tprint("ending __terminate_thread_s\n");
 
     thread_count--;
 }
 
 /* terminate the thread and, if it's the last one, the process too */
-static inline void terminate_thread_s(struct tcb_t *thread){
+static inline void terminate_thread_s(struct tcb_t *thread)
+{
     tprint("terminate_thread_s started\n");
 
-    if(list_is_only(&thread->t_next, &get_processid_s(thread)->p_threads))
+    if(list_is_only(&thread->t_next, &get_processid_s(thread)->p_threads)) {
     // se è l'unico thread del processo
-    // terminiamo l'intero processo
-    terminate_process_s(get_processid_s(thread));
-    else
+        // terminiamo l'intero processo
+        terminate_process_s(thread);
+    } else {
     // Se il ha fratelli
-    // terminiamo unicamente questo thread
-    __terminate_thread_s(thread);
+        // terminiamo unicamente questo thread
+        __terminate_thread_s(thread);
+    }
 
     tprint("terminate_thread_s ended\n\n");
 }
 
-static inline unsigned int getcputime_s(const struct tcb_t *applicant){
+/****************************************************************************/
+
+static inline unsigned int getcputime_s(const struct tcb_t *applicant)
+{
     return applicant->run_time;
 }
 
-static inline unsigned int wait_for_clock_s(struct tcb_t *applicant) {
+static inline unsigned int wait_for_clock_s(struct tcb_t *applicant)
+{
     /*code*/
 }
 
-static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic){
+static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
+{
 /*    switch (req_field(msgg,1)) {
         case TERM0ADDR:   //il device e' un terminale*/
         int empty = 1;
@@ -324,7 +364,7 @@ static inline struct tcb_t *__setmgr(struct tcb_t *thread, struct tcb_t *applica
         if(*mgr) {
             // se il manager è già settato
             *send_back = 0;
-            terminate_process_s(get_processid_s(applicant));
+            terminate_process_s(applicant);
             return NULL;
         } else {
             // se il manager non è mai stato settato

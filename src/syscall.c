@@ -35,7 +35,7 @@ static inline void DELIVER_MSG(struct tcb_t *dest, struct tcb_t *sender, uintptr
  * queue of thread dest
  *
  * Preconditions:
- * dest is currently in the blocked queue. It's waiting for a message from the
+ * dest is currently blocked. It's waiting for a message from the
  * thread that calls this function (current thread) or from any thread.
  */
 static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval, uintptr_t msg) {
@@ -45,7 +45,10 @@ static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval,
         *((uintptr_t *) (dest->t_s.a3)) = msg;
 }
 
-
+/* Resume a thread blocked while receiving delivering msg and returning recv_rval
+ * to the thread
+ * Preconditions: resuming is blocked. resuming is in his queue.
+ */
 inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
 
     // il messaggio è consegnato con priorità
@@ -54,13 +57,14 @@ inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintp
     resuming->t_status = T_STATUS_READY;
     resuming->t_wait4sender = NULL;
 
-    // dest è rimosso dai processi in attesa
+    // dest è rimosso dai processi in attesa (blockedq se stava aspettando da
+    // chiunque sender->t_wait4me se stavamo aspettando da sender)
     thread_outqueue(resuming);
     // e reinserito nella coda ready
     thread_enqueue(resuming, &readyq);
 }
 
-// TODO: cosa fare se il thread si reincarna?
+
 extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
     tprint("send starting\n");
 
@@ -77,18 +81,13 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
             if (dest->t_wait4sender == sender || dest->t_wait4sender == NULL) {
             /* il thread di destinazione aspetta un messaggio da
                 parte del processo corrente o da qualsiasi processo (non ha messaggi) */
-
-                //se effettivamente dest stava aspettando un messaggio da me(current thread) devo eliminare dst dalla
-                //mia lista di thread che aspettano messaggi da me
-                if (dest->t_wait4sender)
-                    wait4thread_del(dest);
-
 				resume_thread(dest, sender, msg);
-
                 ST_RVAL(SEND_SUCCESS);
             }
-            else
+            else {
+            /* dest sta aspettando un messaggio da qualcun'altro */
                 DELIVER_MSG(dest, sender, msg);
+            }
             break;
         case T_STATUS_NONE:
 
@@ -98,30 +97,34 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
 
     LDST((state_t *) SYSBK_OLDAREA); //segment error!!!
     //tprint("send a\n");
-
 }
 
-static inline void recv(struct tcb_t *src, uintptr_t *pmsg){
+static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
 
-    if (msgq_get(&src, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
+    if (msgq_get(&sender, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
     /* caso non bloccante: il messaggio cercato si trova nella coda */
-        ST_RVAL(src);
+        ST_RVAL(sender);
         LDST((state_t *) SYSBK_OLDAREA);
     } else {
     /* caso bloccante */
+    /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
+       nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
+
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
-
         // changing thread status
         current_thread->t_status = T_STATUS_W4MSG;
-        current_thread->t_wait4sender = src;
+        current_thread->t_wait4sender = sender;
 
-        // se current_thread aspetta un messaggio da un thread preciso
-        if (src)
-        //aggiunge il processo corrente alla lista dei processi che aspettano src (di src)
-            wait4thread_add(src, current_thread);
-        // Inserimento del processo nella coda dei processi in attesa di messaggi
-        thread_enqueue(current_thread, &blockedq);
+        if (sender) {
+        // il thread si blocca aspettando da sender
+            // aggiunge il processo corrente alla lista dei processi che aspettano sender (di sender)
+            thread_enqueue(current_thread, &sender->t_wait4me);
+        } else {
+        // il thread si blocca aspettando da chiunque
+            // Inserimento del processo nella coda dei processi in attesa di messaggi da chiunque
+            thread_enqueue(current_thread, &blockedq);
+        }
         scheduler();
     }
 }
@@ -165,13 +168,26 @@ definito tramite SETSYSMGR se esiste altrimenti msg SETPGMMGR se
 esiste altrimenti TERMINATE_THREAD  */
 
 
-static inline void syscall_other(uintptr_t msg) {
-    // se è definito un thread tramite SETSYSMGR
-        // send(/*Thread*/, );
-    // altrimenti se esiste un thread definito tramite SETPGMMGR
-        // send(/*Thread*/, );
-    // altrimenti TERMINATE_THREAD
-        // send(/* SSI */, TERMINATE_THREAD);
+static inline void syscall_other(uintptr_t msg, uintptr_t *pmsg) {
+
+    if (current_thread->t_pcb->sys_mgr) {
+        send(current_thread->t_pcb->sys_mgr, current_thread, msg);
+        /* Questa recv è sempre bloccante */
+        recv(current_thread->t_pcb->sys_mgr, pmsg);
+    } else if (current_thread->t_pcb->pgm_mgr) {
+        send(current_thread->t_pcb->pgm_mgr, current_thread, msg);
+        /* Questa recv è sempre bloccante */
+        recv(current_thread->t_pcb->pgm_mgr, pmsg);
+    } else {
+        send(SSI, current_thread, msg);
+        /* Questa recv è sempre bloccante */
+        recv(SSI, NULL);
+        struct {
+            uintptr_t reqtag;
+        } req = {TERMINATE_PROCESS};
+        send(SSI, current_thread, (uintptr_t) &req);
+        recv(SSI, NULL);
+    }
 }
 
 /*******************************************************************************/
@@ -187,6 +203,7 @@ void syscall_h(){
         case SYS_RECV:
             recv_kernel((struct tcb_t *) SYSCALL_ARG(2), (uintptr_t *) SYSCALL_ARG(3));
         default:
-            syscall_other(SYSCALL_ARG(3));
+            ;
+            // syscall_other(SYSCALL_ARG(3));
     }
 }

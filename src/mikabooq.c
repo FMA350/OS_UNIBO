@@ -356,24 +356,3 @@ struct msg_t *msg_qhead(struct list_head *queue) {
         return container_of(new_head, struct msg_t, m_next);
 }
 */
-/*************************** WAITING4MSG LIST *************************************/
-
-
-/* add a tcb to dest's t_wait4me list */
-void wait4thread_add(struct tcb_t *dest, struct tcb_t *waiting) {
-	list_add_tail(&waiting->t_wait4same, &dest->t_wait4me);
-}
-
-/* remove this from the list of threads waiting for the same he was waiting to:
-   should be used when resuming a thread */
-void wait4thread_del(struct tcb_t *this) {
-	list_del(&this->t_wait4same);
-}
-
-struct tcb_t *wait4thread_qhead(struct list_head *queue) {
-    return __qhead(queue, struct tcb_t, t_wait4same);
-}
-
-struct tcb_t *wait4thread_dequeue(struct list_head *queue) {
-    return __dequeue(queue, struct tcb_t, t_wait4same);
-}

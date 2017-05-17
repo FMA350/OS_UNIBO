@@ -28,7 +28,7 @@ int main() {
     load_readyq(root);
     /* Starting normal life of the system */
 
-    test();
+    // test();
 
 
     scheduler();
