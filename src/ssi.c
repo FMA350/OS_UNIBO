@@ -144,35 +144,47 @@ void ssi(){
 
 /***********SERVICES*****************/
 
-static inline int get_errno_s(const struct tcb_t *applicant){
+static inline int get_errno_s(const struct tcb_t *applicant)
+{
     return applicant->errno;
 }
 
-static inline struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *applicant){
+static inline struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_t *proc);
+
+static inline struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *applicant)
+{
     struct pcb_t *new_process = proc_alloc(get_processid_s(applicant));
 
-    if(new_process == NULL)
-    return NULL;
+    if(new_process == NULL) {
+        return NULL;
+    }
 
-    struct tcb_t *first_thread = thread_alloc(new_process);
+    struct tcb_t *first_thread = __create_thread_s(initial_state, get_processid_s(applicant));
+
     if(!first_thread){
         // throw an error, no more space availeable
         proc_delete(new_process);
         return NULL;
     }
-    first_thread->t_s = *initial_state; //memcpy
-    thread_enqueue(first_thread, &readyq);
 
+    thread_enqueue(first_thread, &readyq);
     return first_thread;
 }
 
-static inline struct tcb_t * create_thread_s(const state_t *initial_state, struct tcb_t *applicant){
-
-    struct tcb_t * new_thread = thread_alloc(get_processid_s(applicant));
-    if(!new_thread) return NULL;
+static inline struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_t *proc)
+{
+    struct tcb_t *new_thread = thread_alloc(proc);
+    if(!new_thread) {
+        return NULL;
+    }
 
     new_thread->t_s = *initial_state; //memcpy
     return new_thread;
+}
+
+static inline struct tcb_t * create_thread_s(const state_t *initial_state, struct tcb_t *applicant)
+{
+    return __create_thread_s(initial_state, get_processid_s(applicant));
 }
 
 
@@ -181,25 +193,29 @@ static inline void __terminate_thread_s(struct tcb_t *thread);
 
 /* Preconditions: process != NULL */
 static inline void terminate_process_s(struct pcb_t *proc){
+    // TODO: eliminare dalla coda dei messaggi dell'SSI eventuali messaggi
+    // provenienti dai thread dei processi figli che saranno terminati
     tprint("terminate process started\n");
 
     // eliminiamo tutti i thread
     struct tcb_t *thread_term;
-    while (thread_term = proc_firstthread(proc))
-    // terminate thread changes the structure
-    __terminate_thread_s(thread_term);
+    while (thread_term = proc_firstthread(proc)) {
+        // terminate thread changes the structure
+        __terminate_thread_s(thread_term);
+    }
 
     // eliminiamo i figli del processo ricorsivamente
     struct pcb_t *proc_term;
-    while (proc_term = proc_firstchild(proc))
-    // terminate thread changes the structure
-    terminate_process_s(proc_term);
+    while (proc_term = proc_firstchild(proc)) {
+        // terminate thread changes the structure
+        terminate_process_s(proc_term);
+    }
 
     // eliminiamo il processo
     proc_delete(proc);
 }
 
-/* terminate the thread */
+/* terminate the thread. thread != NULL*/
 static inline void __terminate_thread_s(struct tcb_t *thread) {
     tprint("__terminate_thread_s started\n");
     while (!list_empty(&thread->t_msgq))
@@ -227,6 +243,8 @@ static inline void __terminate_thread_s(struct tcb_t *thread) {
         HALT();
     }
     tprint("ending __terminate_thread_s\n");
+
+    thread_count--;
 }
 
 /* terminate the thread and, if it's the last one, the process too */
@@ -241,8 +259,6 @@ static inline void terminate_thread_s(struct tcb_t *thread){
     // Se il ha fratelli
     // terminiamo unicamente questo thread
     __terminate_thread_s(thread);
-
-    thread_count--;
 
     tprint("terminate_thread_s ended\n\n");
 }
