@@ -26,8 +26,8 @@ static void interval_timer_h();
 
 void interrupt_h() {
     // TODO: check pending interrupts in priority order
-    interval_timer_h();
     io_handler();
+    interval_timer_h();
 
 }
 
@@ -50,12 +50,13 @@ static inline void io_handler(){
     //serve?
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
-    void * p = (void *)0x00006ff0;  // non dovrebbe essere 0x00006FE0?
+    void * p = (void *)0x00006ff0;
     // dovrebbe funzionare a grandi linee, ma bisognerebbe vedere anche le funzioni
     // del coprocessore (ha un registro che indica la causa degli interrupts)
     int i = 0;
     while (i < 5) {//ne controllo uno alla volta di device per gestire un interrupt alla volta
         if ((*((unsigned int *)p)%2)==1) {//device n.0 has a pending interrupt
+            tprint("\tterminal 0 raised interrupt\n");
             send(SSI,p,i);
             break;
         }else if (((*((unsigned int *)p)>>1)%2)==1){//device n.1 has a pending interrupt
@@ -90,5 +91,5 @@ static inline void io_handler(){
     //current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
     // Inserimento del processo in coda
     //thread_enqueue(current_thread, &readyq);
-    scheduler();
+    //scheduler();
 }

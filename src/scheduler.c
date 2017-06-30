@@ -100,8 +100,8 @@ void load_readyq(struct pcb_t *root) {
     struct tcb_t *to_load;
     to_load = ssi_thread_init();
     init_and_load(to_load, ssi, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
-
-    triangle_init(root);
+    //triangle_init(root);
+    p2test_init(root);
 }
 
 /* This function is used to handle the case when the ready ready queue is empty
@@ -113,12 +113,17 @@ static inline void empty_readyq() {
     /* the SSI is the only thread in the system */
     /* shutdown */
         HALT();
-    else if (soft_block_count == 0)
+#if 0
+    else if (soft_block_count == 0){ //per il momento lo tolgo
     /* all process are hard blocked (waiting for msg) */
     /* deadlock */
+        tprint("deadlock\n");
         PANIC();
+    }
+#endif
     else {
     /* processes in the system are waiting for I/O */
+        tprintf("\tprocesses waiting for IO\n");
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
     }
@@ -128,7 +133,7 @@ void scheduler() {
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
     // accountant();
-    tprint("scheduler started\n");
+    tprintf("\n\tscheduler started, current is %p\n", current_thread);
 
     if (current_thread == NULL)
         empty_readyq();

@@ -18,7 +18,7 @@ static void time_init();
 int main() {
     /* Initialization */
     struct pcb_t *root = proc_init();
-    thread_init();
+    thread_init();  
     msgq_init();
 
     /* Loading exceptions states vector */
@@ -30,7 +30,7 @@ int main() {
     load_readyq(root);
     /* Starting normal life of the system */
 
-    // test();
+    //test();
 
 
     scheduler();

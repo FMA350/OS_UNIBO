@@ -52,8 +52,8 @@ struct tcb_t *ssi_thread_init() {
 
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
-    int i;
-    for (i=0; i<8; i++) request[i].requester=NULL;
+
+    for (int i=0; i<8; i++) request[i].requester=NULL;
     tprint("SSI initialized\n\n");
 
     return(SSI = &_SSI);
@@ -64,80 +64,82 @@ static inline uintptr_t req_field(uintptr_t request, int i) {
 }
 
 void ssi(){
-    tprint("SSI started\n\n");
     while (1) {
         uintptr_t msg, reply;
         int send_back;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
-        tprintf("SSI request received: applicant == %p\n", applicant);
-
+        tprintf("\tSSI(%p) starting: request received from %p\n", SSI, applicant);
+        if(applicant == NULL){//interrupt_h ci sta dicendo che un device ha completato
+            current_thread = SSI;
+            int i=0;
+            while (request[i].requester==NULL && i<8) i++;
+            void * p = (void *)0x0000240;
+            int status = *((int *)p);
+            //tprintf("%p, %d, status:%d\n",request[i].requester,status,request[i].requester->t_status);
+            msgsend(request[i].requester,status);
+            request[i].val = (uintptr_t) NULL;
+            request[i].requester = NULL;
+            scheduler();
+        }
+        else {
         switch (req_field(msg, 0)) {
             case GET_ERRNO:
-            msgsend(applicant, (uintptr_t) get_errno_s(applicant));
+                msgsend(applicant, (uintptr_t) get_errno_s(applicant));
             break;
             case CREATE_PROCESS:
-            msgsend(applicant, (uintptr_t) create_process_s((state_t *) req_field(msg, 1), applicant));
+                msgsend(applicant, (uintptr_t) create_process_s((state_t *) req_field(msg, 1), applicant));
             break;
             case CREATE_THREAD:
-            msgsend(applicant, (uintptr_t) create_thread_s((state_t *) req_field(msg, 1), applicant));
+                msgsend(applicant, (uintptr_t) create_thread_s((state_t *) req_field(msg, 1), applicant));
             break;
             case TERMINATE_PROCESS:
-            terminate_process_s(applicant);
+                terminate_process_s(applicant);
             break;
             case TERMINATE_THREAD:
-            terminate_thread_s(applicant);
+                terminate_thread_s(applicant);
             break;
             case SETPGMMGR:
-            reply = (uintptr_t) setpgmmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
-            if (send_back)
-            msgsend(applicant, reply);
+                reply = (uintptr_t) setpgmmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                if (send_back)
+                    msgsend(applicant, reply);
             break;
             case SETTLBMGR:
-            reply = (uintptr_t) settlbmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                reply = (uintptr_t) settlbmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
             if (send_back)
-            msgsend(applicant, reply);
+                msgsend(applicant, reply);
             break;
             case SETSYSMGR:
-            reply = (uintptr_t) setsysmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                reply = (uintptr_t) setsysmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
             if (send_back)
-            msgsend(applicant, reply);
+                msgsend(applicant, reply);
             break;
             case GET_CPUTIME:
-            msgsend(applicant, (uintptr_t) getcputime_s(applicant));
+                msgsend(applicant, (uintptr_t) getcputime_s(applicant));
             break;
             case WAIT_FOR_CLOCK:
             /* code */
             break;
             case DO_IO:
-            if((devaddr) applicant < (devaddr) 0x00007000){//interrupt_h ci sta dicendo che un device ha completato
-                int i=0;
-                while (request[i].requester==NULL && i<8) i++;
-                void * p = (void *)0x0000240;
-                int status = *((int *)p);
-                msgsend(request[i].requester,status);
-                request[i].val = (uintptr_t) NULL;
-                request[i].requester = NULL;
-            }
-            else { //request from a thread
+                //request from a thread
+                //tprintf("starting IO\n");
                 do_io_s(msg, applicant);
-
-            }
             break;
 
             case GET_PROCESSID:
-            msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
+                msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
             break;
             case GET_PARENTPROCID:
-            msgsend(applicant, (uintptr_t) get_parentprocid_s((struct pcb_t *) req_field(msg, 1)));
+                msgsend(applicant, (uintptr_t) get_parentprocid_s((struct pcb_t *) req_field(msg, 1)));
             break;
             case GET_MYTHREADID:
-            msgsend(applicant, (uintptr_t) applicant);
+                msgsend(applicant, (uintptr_t) applicant);
             break;
             default:
             // TODO: se il messaggio è diverso dai codici noti
             //       rispondere con errore e settare errno
             break;
         }
+    }
     }
 }
 
@@ -350,8 +352,10 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
     }*/
 }
 static inline void setdevice(unsigned int devno, uintptr_t command){
+    //tprint("setting transmitChar command\n");
     void * p = (void *)0x0000024c+((0x10)*devno);
     *((unsigned int *)p) = command;
+    //tprint("\n..........completed transmitChar command\n");
 }
 
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */

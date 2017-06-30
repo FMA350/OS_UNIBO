@@ -32,6 +32,7 @@ static void ttyprintstring(devaddr device, char* s) {
 
     for (; *s; s++) {
         status = do_terminal_io(device, DEV_TTRS_C_TRSMCHAR | (*s << 8));
+        //tprintf("STATUS: %d\n",status);
         switch (status & 0xff) {
             case DEV_S_READY:
             case DEV_TTRS_S_CHARTRSM:
@@ -96,29 +97,38 @@ uintptr_t p5send = 0;
 
 void test(void) {
     ttyprintstring(TERM0ADDR, "NUCLEUS TEST: starting...\n");
+    tprint("test starting\n\n");
     STST(&tmpstate);
     stackalloc = (tmpstate.sp + (QPAGE - 1)) & (~(QPAGE - 1));
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) tty0out_thread;
     tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr);
+    tprint("\t1\n");
+
     printid = create_thread(&tmpstate);
-    tty0print("NUCLEUS: first msg printed by tty0out_thread\n");
+    //tty0print("NUCLEUS: first msg printed by tty0out_thread\n");
+    tprint("\t2\n");
+
     testt = get_mythreadid();
 
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) cs_thread;
     csid = create_process(&tmpstate);
-    tty0print("NUCLEUS: critical section thread started\n");
+    //tty0print("NUCLEUS: critical section thread started\n");
+    tprint("\t3\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
     CSOUT;
     tmpstate.pc = (memaddr) p2;
+
     p2t = create_process(&tmpstate);
+
     msgsend(p2t, SYNCCODE);
     msgrecv(p2t, NULL);
 
-    tty0print("p2 completed\n");
+
+    //tty0print("p2 completed\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);

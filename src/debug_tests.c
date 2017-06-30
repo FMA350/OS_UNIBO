@@ -4,6 +4,7 @@
 #include <arch.h>
 #include <debug_tests.h>
 #include <scheduler.h>
+#include <p2test.h>
 
 extern void BREAKPOINT();
 extern unsigned int thread_count;
@@ -152,4 +153,11 @@ void triangle_init(struct pcb_t *root) {
 
 
     tprint("triangle_init ended\n\n");
+}
+
+void p2test_init(struct pcb_t *root){
+    tprint("p2test_init started\n");
+    struct tcb_t *thread_test = thread_alloc(root);
+    init_and_load(thread_test, test, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+    tprint("p2test_init finished\n");
 }
