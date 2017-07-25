@@ -157,7 +157,11 @@ void triangle_init(struct pcb_t *root) {
 
 void p2test_init(struct pcb_t *root){
     tprint("p2test_init started\n");
+
+    // root process is filled with a working thread
     struct tcb_t *thread_test = thread_alloc(root);
+    // test thread is initialized and loaded
     init_and_load(thread_test, test, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+
     tprint("p2test_init finished\n");
 }

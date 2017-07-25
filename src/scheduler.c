@@ -85,21 +85,23 @@ static inline void state_init(struct tcb_t *to_load, void *target, unsigned int 
     n++;
 }
 
-/* Loads the initial thread state and loads the thread in the ready queue  */
-inline void init_and_load(struct tcb_t *to_load, void *target, unsigned int status) {
-    state_init(to_load, target, status);
-    // aggiungere il thread alla ready queue a mano
+inline void init_and_load(struct tcb_t *to_load, void *target, unsigned int cpsr) {
+    state_init(to_load, target, cpsr);
+    // Enqueuing the initialized thread into the ready queue
     thread_enqueue(to_load, &readyq);
+    // thread counter is incremented
     thread_count++;
 }
 
-/* Loads the ready queue with the threads needed by the system */
+/* Loads the ready queue with threads needed by the system */
 void load_readyq(struct pcb_t *root) {
 
-    /* Points to the thread we want to load*/
+    /* Points the thread we want to load */
     struct tcb_t *to_load;
+    // SSI deamon thread is loaded into the ready queue
     to_load = ssi_thread_init();
     init_and_load(to_load, ssi, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+
     //triangle_init(root);
     p2test_init(root);
 }
@@ -113,14 +115,14 @@ static inline void empty_readyq() {
     /* the SSI is the only thread in the system */
     /* shutdown */
         HALT();
-#if 0
+// #if 0
     else if (soft_block_count == 0){ //per il momento lo tolgo
     /* all process are hard blocked (waiting for msg) */
     /* deadlock */
         tprint("deadlock\n");
         PANIC();
     }
-#endif
+// #endif
     else {
     /* processes in the system are waiting for I/O */
         tprintf("\tprocesses waiting for IO\n");

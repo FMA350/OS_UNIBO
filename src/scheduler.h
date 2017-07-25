@@ -11,7 +11,18 @@ extern unsigned int soft_block_count;
 
 extern unsigned int clockPerTimeslice;
 
-extern void init_and_load(struct tcb_t *to_load, void *target, unsigned int status);
+/*
+ * Preconditions:
+ *  This function should only be called during initialization.
+ *  to_load is the tcb_t to be loaded in the ready queue, target is the function
+ *  the thread will execute, cpsr is the starting value of cpsr register for the
+ *  thread.
+ *
+ * Postconditions:
+ *  Initializes the thread and puts it into the ready queue.
+ *  Global thread counter is incremented.
+ */
+extern void init_and_load(struct tcb_t *to_load, void *target, unsigned int cpsr);
 
 
 void load_readyq(struct pcb_t *root);

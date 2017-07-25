@@ -53,7 +53,10 @@ struct tcb_t *ssi_thread_init() {
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
 
-    for (int i=0; i<8; i++) request[i].requester=NULL;
+    int i;
+    for (i=0; i<8; i++)
+        request[i].requester = NULL;
+
     tprint("SSI initialized\n\n");
 
     return(SSI = &_SSI);
@@ -258,7 +261,7 @@ static inline void __terminate_thread_s(struct tcb_t *thread)
     tprint("__terminate_thread_s started\n");
     while (!list_empty(&thread->t_msgq))
     //cancello tutti i messaggi se ce ne sono
-    msg_free(msg_qhead(&thread->t_msgq));
+        msg_free(msg_qhead(&thread->t_msgq));
 
     // sbloccare i processi in attesa di messaggi del thread da terminare
     struct tcb_t *to_resume;
