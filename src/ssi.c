@@ -35,7 +35,6 @@ static inline struct tcb_t *setsysmgr_s(struct tcb_t *thread, struct tcb_t *appl
 static inline unsigned int getcputime_s(const struct tcb_t *applicant);
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant);
 static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic);
-static inline void setdevice(unsigned int devno, uintptr_t command);
 
 static inline struct pcb_t *get_processid_s(const struct tcb_t *thread);
 static inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc);
@@ -57,7 +56,7 @@ struct tcb_t *ssi_thread_init() {
     for (i=0; i<8; i++)
         request[i].requester = NULL;
 
-    tprint("SSI initialized\n\n");
+    tprint("SSI initialized\n");
 
     return(SSI = &_SSI);
 }
@@ -71,18 +70,30 @@ void ssi(){
         uintptr_t msg, reply;
         int send_back;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
-        tprintf("\tSSI(%p) starting: request received from %p\n", SSI, applicant);
-        if(applicant == NULL){//interrupt_h ci sta dicendo che un device ha completato
+        tprintf("   SSI request handling:\n"
+                "       applicant == %p\n"
+                "       request number == %d\n",
+                applicant, req_field(msg, 0));
+
+        if(applicant == NULL) {
+        //interrupt_h ci sta dicendo che un device ha completato
+            // FIXME - Michele: non capisco questa parte.
             current_thread = SSI;
             int i=0;
-            while (request[i].requester==NULL && i<8) i++;
-            void * p = (void *)0x0000240;
-            int status = *((int *)p);
+            while (request[i].requester==NULL && i<8)
+                i++;
+            void *p = (void *) 0x0000240;
+            int status = *((int *) p);
             //tprintf("%p, %d, status:%d\n",request[i].requester,status,request[i].requester->t_status);
             msgsend(request[i].requester,status);
             request[i].val = (uintptr_t) NULL;
             request[i].requester = NULL;
             scheduler();
+            /*
+            FIXME - Michele: l'SSI non dovrebbe poter chiamare lo scheduler
+            direttamente. Solo l'interval timer e le syscall dovrebbero averne
+            il permesso.
+            */
         }
         else {
         switch (req_field(msg, 0)) {
@@ -123,8 +134,6 @@ void ssi(){
             /* code */
             break;
             case DO_IO:
-                //request from a thread
-                //tprintf("starting IO\n");
                 do_io_s(msg, applicant);
             break;
 
@@ -318,24 +327,43 @@ static inline unsigned int wait_for_clock_s(struct tcb_t *applicant)
     /*code*/
 }
 
+static inline void setdevice(unsigned int devno, uintptr_t command){
+    //tprint("setting transmitChar command\n");
+
+    // FIXME - Michele: Ma cosa porcoddio succede qui?
+    void *p = (void *) 0x0000024c + ((0x10)*devno);
+    *((unsigned int *)p) = command;
+
+    //tprint("\n..........completed transmitChar command\n");
+}
+
 static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
 {
+    tprint("do_io_s started\n");
 /*    switch (req_field(msgg,1)) {
         case TERM0ADDR:   //il device e' un terminale*/
         int empty = 1;
         int i;
-        while (request[i].requester==NULL && i<8) i++;
-        if (request[i].requester!=NULL) empty = 0;
+
+        while (request[i].requester==NULL && i<8)
+            i++;
+
+        if (request[i].requester!=NULL)
+            empty = 0;
+
         if(empty){
             setdevice(0,req_field(msgg,2));
-            request[0].val=msgg;
+            request[0].val = msgg;
             request[0].requester = applic;
         }
         //aggiorno -> (using device)
         else {
             i=0;
-            while(request[i].requester!=NULL && i<8) i++; //cerco il primo buco libero per salvare il messaggio
-            if (i==8) return -1; //se non ci sono piu spazi per salvare...
+            while(request[i].requester!=NULL && i<8)
+                i++; //cerco il primo buco libero per salvare il messaggio
+
+            if (i==8)
+                return -1; //se non ci sono piu spazi per salvare...
             else {
                 request[i].val=msgg;
                 request[i].requester = applic;
@@ -353,12 +381,7 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
         break;
         default: return -1;
     }*/
-}
-static inline void setdevice(unsigned int devno, uintptr_t command){
-    //tprint("setting transmitChar command\n");
-    void * p = (void *)0x0000024c+((0x10)*devno);
-    *((unsigned int *)p) = command;
-    //tprint("\n..........completed transmitChar command\n");
+    tprint("do_io_s finished\n");
 }
 
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */

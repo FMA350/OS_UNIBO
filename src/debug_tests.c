@@ -163,5 +163,7 @@ void p2test_init(struct pcb_t *root){
     // test thread is initialized and loaded
     init_and_load(thread_test, test, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
 
+    tprintf("test thread == %p\n", thread_test);
+
     tprint("p2test_init finished\n");
 }

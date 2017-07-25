@@ -95,6 +95,7 @@ inline void init_and_load(struct tcb_t *to_load, void *target, unsigned int cpsr
 
 /* Loads the ready queue with threads needed by the system */
 void load_readyq(struct pcb_t *root) {
+    tprint("load_readyq started\n");
 
     /* Points the thread we want to load */
     struct tcb_t *to_load;
@@ -102,30 +103,33 @@ void load_readyq(struct pcb_t *root) {
     to_load = ssi_thread_init();
     init_and_load(to_load, ssi, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
 
+    tprintf("SSI thread == %p\n", to_load);
+
     //triangle_init(root);
     p2test_init(root);
+
+    tprintf("Number of threads in the sistem == %d\n", thread_count);
+    tprint("load_readyq finished\n");
 }
 
 /* This function is used to handle the case when the ready ready queue is empty
  * inside the scheduler
  * Preconditions: the ready queue is empty
  */
-static inline void empty_readyq() {
+static inline void empty_readyq_h() {
     if (thread_count == 1)
     /* the SSI is the only thread in the system */
     /* shutdown */
         HALT();
-// #if 0
-    else if (soft_block_count == 0){ //per il momento lo tolgo
+    else if (soft_block_count == 0) {
     /* all process are hard blocked (waiting for msg) */
     /* deadlock */
         tprint("deadlock\n");
         PANIC();
     }
-// #endif
     else {
     /* processes in the system are waiting for I/O */
-        tprintf("\tprocesses waiting for IO\n");
+        tprintf("   processes waiting for IO\n");
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
     }
@@ -135,10 +139,10 @@ void scheduler() {
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
     // accountant();
-    tprintf("\n\tscheduler started, current is %p\n", current_thread);
+    tprintf("   scheduler started, current is %p\n", current_thread);
 
     if (current_thread == NULL)
-        empty_readyq();
+        empty_readyq_h();
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
