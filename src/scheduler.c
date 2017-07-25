@@ -124,12 +124,12 @@ static inline void empty_readyq_h() {
     else if (soft_block_count == 0) {
     /* all process are hard blocked (waiting for msg) */
     /* deadlock */
-        tprint("deadlock\n");
+        tprint("=== deadlock ===\n");
         PANIC();
     }
     else {
     /* processes in the system are waiting for I/O */
-        tprintf("   processes waiting for IO\n");
+        tprintf("=== processes waiting for IO ===\n");
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
     }
@@ -139,7 +139,7 @@ void scheduler() {
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
     // accountant();
-    tprintf("   scheduler started, current is %p\n", current_thread);
+    tprintf("scheduler started, current is %p\n", current_thread);
 
     if (current_thread == NULL)
         empty_readyq_h();

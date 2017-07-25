@@ -70,9 +70,9 @@ void ssi(){
         uintptr_t msg, reply;
         int send_back;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
-        tprintf("   SSI request handling:\n"
-                "       applicant == %p\n"
-                "       request number == %d\n",
+        tprintf("SSI request handling:\n"
+                "   applicant == %p\n"
+                "   request number == %d\n",
                 applicant, req_field(msg, 0));
 
         if(applicant == NULL) {
@@ -339,11 +339,14 @@ static inline void setdevice(unsigned int devno, uintptr_t command){
 
 static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
 {
-    tprint("do_io_s started\n");
+    tprint("    do_io_s started\n");
 /*    switch (req_field(msgg,1)) {
         case TERM0ADDR:   //il device e' un terminale*/
         int empty = 1;
         int i;
+
+        // the thread gets soft blocked
+        soft_block_count++;
 
         while (request[i].requester==NULL && i<8)
             i++;
@@ -365,7 +368,7 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
             if (i==8)
                 return -1; //se non ci sono piu spazi per salvare...
             else {
-                request[i].val=msgg;
+                request[i].val = msgg;
                 request[i].requester = applic;
             }
         }
@@ -381,7 +384,7 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
         break;
         default: return -1;
     }*/
-    tprint("do_io_s finished\n");
+    tprint("    do_io_s finished\n");
 }
 
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */

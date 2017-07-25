@@ -25,10 +25,13 @@ static void interval_timer_h();
 
 
 void interrupt_h() {
+    tprint("$$$ interrupt_h started $$$\n");
+
     // TODO: check pending interrupts in priority order
     io_handler();
     interval_timer_h();
 
+    tprint("$$$ interrupt_h finished $$$\n");
 }
 
 /* Interval timer handler without pseudoclock facilities */
@@ -38,7 +41,7 @@ static void interval_timer_h() {
     if (current_thread) {
     // se deve avvenire il context-switch
         // salvataggio stato del processore
-        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+        current_thread->t_s = *((state_t *) INT_OLDAREA);
         // Inserimento del processo in coda
         thread_enqueue(current_thread, &readyq);
     }
@@ -50,34 +53,37 @@ static inline void io_handler(){
     //serve?
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
-    void * p = (void *)0x00006ff0;
+    void * p = (void *) 0x00006ff0;
     // dovrebbe funzionare a grandi linee, ma bisognerebbe vedere anche le funzioni
     // del coprocessore (ha un registro che indica la causa degli interrupts)
     int i = 0;
-    while (i < 5) {//ne controllo uno alla volta di device per gestire un interrupt alla volta
-        if ((*((unsigned int *)p)%2)==1) {//device n.0 has a pending interrupt
-            tprint("\tterminal 0 raised interrupt\n");
+    while (i < 5) {
+    //ne controllo uno alla volta di device per gestire un interrupt alla volta
+        if ((*((unsigned int *)p)%2)==1) {
+        //device n.0 has a pending interrupt
+            tprint(">>> terminal 0 raised interrupt\n");
             send(SSI,p,i);
             break;
-        }else if (((*((unsigned int *)p)>>1)%2)==1){//device n.1 has a pending interrupt
+        } else if (((*((unsigned int *)p)>>1)%2)==1) {
+        // device n.1 has a pending interrupt
             send(SSI,p,i);
             break;
-        }else if (((*((unsigned int *)p)>>2)%2)==1){
+        } else if (((*((unsigned int *)p)>>2)%2)==1) {
             send(SSI,p,i);
             break;
-        }else if (((*((unsigned int *)p)>>3)%2)==1){
+        } else if (((*((unsigned int *)p)>>3)%2)==1) {
             send(SSI,p,i);
             break;
-        }else if (((*((unsigned int *)p)>>4)%2)==1){
+        } else if (((*((unsigned int *)p)>>4)%2)==1) {
             send(SSI,p,i);
             break;
-        }else if (((*((unsigned int *)p)>>5)%2)==1){
+        } else if (((*((unsigned int *)p)>>5)%2)==1) {
             send(SSI,p,i);
             break;
-        }else if (((*((unsigned int *)p)>>6)%2)==1){
+        } else if (((*((unsigned int *)p)>>6)%2)==1) {
             send(SSI,p,i);
             break;
-        }else if (((*((unsigned int *)p)>>7)%2)==1){
+        } else if (((*((unsigned int *)p)>>7)%2)==1) {
             send(SSI,p,i);
             break;
         }
