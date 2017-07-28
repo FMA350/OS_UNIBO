@@ -42,7 +42,7 @@ unsigned int timeSliceLeft;
 // the value in BUS_REG_TIME_SCALE is the same for the whole execution
 unsigned int clockPerTimeslice;
 
-#if 0
+
 void accountant(struct tcb_t* thread){
 /*                               _              _
                                 | |            | |
@@ -52,16 +52,20 @@ void accountant(struct tcb_t* thread){
 \__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
 
 */
-    //how many milliseconds did pass?
+    //since if timeSliceLeft goes underflow, goes back to int MaxValue
     if(timeSliceLeft >= clockPerTimeslice){
         //5 ms in total
-        thread->runTime += 5;
+        thread->run_time += 5;
+        //TODO handle the pseudoclock timer
     }
     else{
-        thread->runTime += (5-((timeSliceLeft)*5/clockPerTimeslice));
+        //if not all the time has passed
+        float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
+        tprintf("timePassed: %d",timePassed); //TODO: fma check me!
+        thread->run_time += (unsigned int)timePassed; //adds such a time to the runTime field.
     }
 }
-#endif
+
 
 /* Loads the initial thread state
  *

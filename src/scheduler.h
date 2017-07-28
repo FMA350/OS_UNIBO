@@ -27,7 +27,7 @@ extern void init_and_load(struct tcb_t *to_load, void *target, unsigned int cpsr
 
 void load_readyq(struct pcb_t *root);
 
-void experimentalClerk();
+void accountant();
 
 /* used also in debug */
 inline void init_and_load(struct tcb_t *to_load, void *target, unsigned int status);

@@ -25,6 +25,7 @@ static void interval_timer_h();
 
 
 void interrupt_h() {
+
     tprint("$$$ interrupt_h started $$$\n");
 
     // TODO: check pending interrupts in priority order
@@ -34,31 +35,35 @@ void interrupt_h() {
     tprint("$$$ interrupt_h finished $$$\n");
 }
 
-/* Interval timer handler without pseudoclock facilities */
-static void interval_timer_h() {
+/*fma: Interval timer handler without pseudoclock */
+static void interval_timer_h(){
     timeSliceLeft = (unsigned int *) getTIMER();
 
     if (current_thread) {
     // se deve avvenire il context-switch
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) INT_OLDAREA);
+        accountant(current_thread);
         // Inserimento del processo in coda
         thread_enqueue(current_thread, &readyq);
     }
+    //fma FIXME: it should jump to it. does it do that? (like a goto)
     scheduler();
 }
 
 
 static inline void io_handler(){
-    //serve?
+    // Manual section 3.1.6
     //p points to bottom of the interrupt bitmap for external devices
-    //il primo byte che ha un interr pendente fa partire la gestione
-    void * p = (void *) 0x00006ff0;
+
+    void * p = (void *) 0x00006fe0; //fma: Corretto errore, l'indirizzo da cui partire era
+                                    //settato a 0x00006ff0 (indirizzo del terminale)
     // dovrebbe funzionare a grandi linee, ma bisognerebbe vedere anche le funzioni
     // del coprocessore (ha un registro che indica la causa degli interrupts)
     int i = 0;
     while (i < 5) {
     //ne controllo uno alla volta di device per gestire un interrupt alla volta
+    //TODO: SSI is not acknowledged on which of the 8 devices of a class is throwing it.
         if ((*((unsigned int *)p)%2)==1) {
         //device n.0 has a pending interrupt
             tprint(">>> terminal 0 raised interrupt\n");

@@ -13,12 +13,14 @@
 #define NETADDR         0x140
 #define TAPEADDR        0x0C0
 #define DISKADDR        0x040
+#define MAX_REQUESTS    40
 
 struct io_req{
-    uintptr_t val;
-    struct tcb_t *requester;
+    //uintptr_t val;
+    devaddr device;
+    struct tcb_t *thread;
 };
-struct io_req request[8];
+struct io_req request[MAX_REQUESTS];
 
 static inline int get_errno_s(const struct tcb_t *applicant);
 
@@ -52,9 +54,8 @@ struct tcb_t *ssi_thread_init() {
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
 
-    int i;
-    for (i=0; i<8; i++)
-        request[i].requester = NULL;
+    for (int i=0; i<MAX_REQUESTS; i++)
+        request[i].thead = NULL;
 
     tprint("SSI initialized\n");
 
@@ -70,15 +71,17 @@ void ssi(){
         uintptr_t msg, reply;
         int send_back;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
+
         tprintf("SSI request handling:\n"
                 "   applicant == %p\n"
                 "   request number == %d\n",
                 applicant, req_field(msg, 0));
 
         if(applicant == NULL) {
+
         //interrupt_h ci sta dicendo che un device ha completato
             // FIXME - Michele: non capisco questa parte.
-            current_thread = SSI;
+            //current_thread = SSI; fma: wtf?
             int i=0;
             while (request[i].requester==NULL && i<8)
                 i++;
@@ -88,7 +91,8 @@ void ssi(){
             msgsend(request[i].requester,status);
             request[i].val = (uintptr_t) NULL;
             request[i].requester = NULL;
-            scheduler();
+
+            //scheduler(); fma: ssi will cycle back and block at msgrecv
             /*
             FIXME - Michele: l'SSI non dovrebbe poter chiamare lo scheduler
             direttamente. Solo l'interval timer e le syscall dovrebbero averne
@@ -145,6 +149,10 @@ void ssi(){
             break;
             case GET_MYTHREADID:
                 msgsend(applicant, (uintptr_t) applicant);
+            break;
+            case ACK_IO:
+                //in case a device completed Input/output
+                io_handler(msg);
             break;
             default:
             // TODO: se il messaggio è diverso dai codici noti
@@ -337,41 +345,40 @@ static inline void setdevice(unsigned int devno, uintptr_t command){
     //tprint("\n..........completed transmitChar command\n");
 }
 
-static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
-{
-    tprint("    do_io_s started\n");
+static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic){
+    //tprint("    do_io_s started\n");
 /*    switch (req_field(msgg,1)) {
         case TERM0ADDR:   //il device e' un terminale*/
-        int empty = 1;
-        int i;
+        // int empty = 1;
+        // int i=0; //fma: i has to be initialized!
 
         // the thread gets soft blocked
-        soft_block_count++;
-
-        while (request[i].requester==NULL && i<8)
-            i++;
-
-        if (request[i].requester!=NULL)
-            empty = 0;
-
-        if(empty){
-            setdevice(0,req_field(msgg,2));
-            request[0].val = msgg;
-            request[0].requester = applic;
-        }
-        //aggiorno -> (using device)
-        else {
-            i=0;
-            while(request[i].requester!=NULL && i<8)
-                i++; //cerco il primo buco libero per salvare il messaggio
-
-            if (i==8)
-                return -1; //se non ci sono piu spazi per salvare...
-            else {
-                request[i].val = msgg;
-                request[i].requester = applic;
-            }
-        }
+        // soft_block_count++;
+        //
+        // while (request[i].requester==NULL && i<8)
+        //     i++;
+        //
+        // if (request[i].requester!=NULL)
+        //     empty = 0;
+        //
+        // if(empty){
+        //     setdevice(0,req_field(msgg,2));
+        //     request[0].val = msgg;
+        //     request[0].requester = applic;
+        // }
+        // //aggiorno -> (using device)
+        // else {
+        //     i=0;
+        //     while(request[i].requester!=NULL && i<8)
+        //         i++; //cerco il primo buco libero per salvare il messaggio
+        //
+        //     if (i==8)
+        //         return -1; //se non ci sono piu spazi per salvare...
+        //     else {
+        //         request[i].val = msgg;
+        //         request[i].requester = applic;
+        //     }
+        // }
         /*break;
 
         case PRINTADDR:
@@ -384,7 +391,35 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
         break;
         default: return -1;
     }*/
-    tprint("    do_io_s finished\n");
+    // tprint("    do_io_s finished\n");
+    //*****fmacode*****
+    //fma: the ssi doesn't have to worry about having more requests
+    //on the same device at the same time. The Device Manager will
+    //take care about it.
+    soft_block_count++; //TODO: shouldn't this be moved to the msgsend DO_IO of the thread.
+    devaddr device = req_field(msgg,2);
+    uintptr_t command = req_field(msgg,3);
+    uintptr_t data1 = req_field(msgg,4);
+    uintptr_t data2 = req_field(msgg,5);
+
+
+    *device+0x40 = data1;
+    *device+0x60 = data2;
+    *device+0x20 = command; //writing the command at this location
+                            //activates the device.
+    //let's save this request in a queue so we can find it later
+    int i = 0;
+    while (request[i].thread==NULL && i<MAX_REQUESTS){
+        //look for an empty spot
+        //TODO: optimization! let's make it work like a bitmap!
+        i++;
+    }
+    request[i].thread = applic;
+    request[i].device = device; //not needed once we will have the bitmap!
+}
+
+io_handler(uintptr_t msgg){
+    soft_block_count--;
 }
 
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
