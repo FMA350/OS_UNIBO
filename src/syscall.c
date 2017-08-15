@@ -40,6 +40,7 @@ static inline void DELIVER_MSG(struct tcb_t *dest, struct tcb_t *sender, uintptr
  */
 static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval, uintptr_t msg) {
     dest->t_s.a1 = (unsigned int) recv_rval;
+
     // check that recv has been called with pmsg != NULL
     if (((uintptr_t *) (dest->t_s.a3)) != NULL)
         *((uintptr_t *) (dest->t_s.a3)) = msg;
@@ -49,7 +50,7 @@ static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval,
  * to the thread
  * Preconditions: resuming is blocked. resuming is in his queue.
  */
-inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
+extern inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
 
     // il messaggio è consegnato con priorità
     DELIVER_DIRECTLY(resuming, recv_rval, msg);
@@ -62,11 +63,13 @@ inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintp
     thread_outqueue(resuming);
     // e reinserito nella coda ready
     thread_enqueue(resuming, &readyq);
+    //tprintf("%p is ready\n", resuming);
 }
 
 
 extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
     //tprint("send starting\n");
+    //tprintf("sender: %p, dest: %p, dest->t_wait4sender: %p, dest->status: %d\n", sender, dest, dest->t_wait4sender, dest->t_status);
 
     switch (dest->t_status) {
         case T_STATUS_READY:
@@ -81,7 +84,7 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
             /* il thread di destinazione aspetta un messaggio da
                 parte del processo corrente o da qualsiasi processo (non ha messaggi) */
                 resume_thread(dest, sender, msg);
-                ST_RVAL(SEND_SUCCESS);
+                ST_RVAL(sender);
             }
             else {
             /* dest sta aspettando un messaggio da qualcun'altro */
@@ -95,27 +98,29 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
             ST_RVAL(SEND_FAILURE);
             break;
     }
-
-    LDST((state_t *) SYSBK_OLDAREA);
+    void * IO_addr = (void *) 0x00006ff0;
+    if (sender == IO_addr) //se il sender e' l'io_handler non devo caricare lo stato (che non esiste!)
+        scheduler();
+    else
+        LDST((state_t *) SYSBK_OLDAREA);
 }
 
 static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
-
     if (msgq_get(&sender, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
     /* caso non bloccante: il messaggio cercato si trova nella coda */
+
         ST_RVAL(sender);
         LDST((state_t *) SYSBK_OLDAREA);
     } else {
-
     /* caso bloccante */
     /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
        nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
-       //tprintf("%p has made a blocking recv, waitinf for: %p\n", current_thread, sender);
+       //tprintf("\t%p has made a blocking recv, waitinf for: %p\n", current_thread, sender);
 
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
-
+        //tprintf("%d\n", current_thread->t_s.pc);
         // changing thread status
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = sender;
@@ -123,6 +128,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
         // il thread si blocca aspettando da sender
             // aggiunge il processo corrente alla lista dei processi che aspettano sender (di sender)
             thread_enqueue(current_thread, &sender->t_wait4me);
+            //tprintf("%p t_wait4me head = %p\n",sender, thread_qhead(&sender->t_wait4me));
         } else {
         // il thread si blocca aspettando da chiunque
             // Inserimento del processo nella coda dei processi in attesa di messaggi da chiunque

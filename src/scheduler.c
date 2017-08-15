@@ -42,7 +42,7 @@ unsigned int timeSliceLeft;
 // the value in BUS_REG_TIME_SCALE is the same for the whole execution
 unsigned int clockPerTimeslice;
 
-
+#if 0
 void accountant(struct tcb_t* thread){
 /*                               _              _
                                 | |            | |
@@ -52,20 +52,16 @@ void accountant(struct tcb_t* thread){
 \__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
 
 */
-    //since if timeSliceLeft goes underflow, goes back to int MaxValue
+    //how many milliseconds did pass?
     if(timeSliceLeft >= clockPerTimeslice){
         //5 ms in total
-        thread->run_time += 5;
-        //TODO handle the pseudoclock timer
+        thread->runTime += 5;
     }
     else{
-        //if not all the time has passed
-        float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
-        tprintf("timePassed: %d",timePassed); //TODO: fma check me!
-        thread->run_time += (unsigned int)timePassed; //adds such a time to the runTime field.
+        thread->runTime += (5-((timeSliceLeft)*5/clockPerTimeslice));
     }
 }
-
+#endif
 
 /* Loads the initial thread state
  *
@@ -133,7 +129,7 @@ static inline void empty_readyq_h() {
     }
     else {
     /* processes in the system are waiting for I/O */
-        tprintf("=== processes waiting for IO ===\n");
+        //tprintf("=== processes waiting for IO ===\n");
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
     }
@@ -143,7 +139,7 @@ void scheduler() {
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
     // accountant();
-    tprintf("scheduler started, current is %p\n", current_thread);
+    //tprintf("scheduler started, current is %p\n", current_thread);
 
     if (current_thread == NULL)
         empty_readyq_h();

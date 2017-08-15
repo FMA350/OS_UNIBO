@@ -23,7 +23,6 @@
 #define GET_PROCESSID 11
 #define GET_MYTHREADID 12
 #define GET_PARENTPROCID 13
-#define ACK_IO 14; //fma: addition to hanlde io interrupts
 
 typedef uintptr_t memaddr;
 typedef uintptr_t cputime;
