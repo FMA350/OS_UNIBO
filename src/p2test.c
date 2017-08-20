@@ -49,7 +49,6 @@ void tty0out_thread(void) {
     struct tcb_t* sender;
 
     for (;;) {
-        //tprintf("starting\n");
         sender = msgrecv(NULL, &payload);
         ttyprintstring(TERM0ADDR, (char*) payload);
         msgsend(sender, NULL);
@@ -99,22 +98,23 @@ uintptr_t p5send = 0;
 
 void test(void) {
 
-    ttyprintstring(TERM0ADDR, "NUCLEUS TEST: starting...\n");
+    ttyprintstring(TERM0ADDR, "NUCLEUS1...\n");
     STST(&tmpstate);
     stackalloc = (tmpstate.sp + (QPAGE - 1)) & (~(QPAGE - 1));
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) tty0out_thread;
-    tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr);
+    tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr); //ATTENZIONE HO DISABILITATO
     printid = create_thread(&tmpstate);
 
-    tty0print("NUCLEUS: first msg printed by tty0out_thread\n");
+    tty0print("NUCLEUS2\n");
 
     testt = get_mythreadid();
+
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) cs_thread;
     csid = create_process(&tmpstate);
+
     tty0print("NUCLEUS: critical section thread started\n");
-    tprint("\t3\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -127,7 +127,7 @@ void test(void) {
     msgrecv(p2t, NULL);
 
 
-    //tty0print("p2 completed\n");
+    tty0print("p2 completed\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);

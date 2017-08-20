@@ -69,7 +69,7 @@ extern inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval
 
 extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
     //tprint("send starting\n");
-    //tprintf("sender: %p, dest: %p, dest->t_wait4sender: %p, dest->status: %d\n", sender, dest, dest->t_wait4sender, dest->t_status);
+//    tprintf("sender: %p, dest: %p, dest->t_wait4sender: %p, dest->status: %d\n", sender, dest, dest->t_wait4sender, dest->t_status);
 
     switch (dest->t_status) {
         case T_STATUS_READY:
@@ -108,7 +108,6 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
 static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
     if (msgq_get(&sender, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
     /* caso non bloccante: il messaggio cercato si trova nella coda */
-
         ST_RVAL(sender);
         LDST((state_t *) SYSBK_OLDAREA);
     } else {
@@ -116,7 +115,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
     /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
        nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
-       //tprintf("\t%p has made a blocking recv, waitinf for: %p\n", current_thread, sender);
+      // tprintf("\t%p has made a blocking recv, waitinf for: %p\n", current_thread, sender);
 
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
@@ -133,6 +132,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
         // il thread si blocca aspettando da chiunque
             // Inserimento del processo nella coda dei processi in attesa di messaggi da chiunque
             thread_enqueue(current_thread, &blockedq);
+        //    tprintf("current: %p, blockedqH: %p, ready:%p\n", current_thread, thread_qhead(&blockedq), thread_qhead(&readyq));
         }
 
         scheduler();

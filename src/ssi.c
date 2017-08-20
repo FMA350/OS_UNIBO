@@ -71,7 +71,7 @@ void ssi(){
         uintptr_t msg, reply;
         int send_back;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
-        // tprintf("SSI request handling:\n"
+        // tprintf("SSI request:%d\n", req_field(msg,0));
         //         "   applicant == %p\n"
         //         "   request number == %d\n"
         //         "   headOfReadyQ == %p\n",
@@ -175,7 +175,7 @@ static inline struct tcb_t *create_process_s(const state_t *initial_state, struc
         return NULL;
     }
 
-    thread_enqueue(first_thread, &readyq);
+    //thread_enqueue(first_thread, &readyq); BUG FIXED = due volte nella readyq!
     return first_thread;
 }
 
