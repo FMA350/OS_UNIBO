@@ -114,7 +114,7 @@ void test(void) {
     tmpstate.pc = (memaddr) cs_thread;
     csid = create_process(&tmpstate);
 
-    tty0print("NUCLEUS: critical section thread started\n");
+    tty0print("NUCLEUS3\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -128,15 +128,15 @@ void test(void) {
 
 
     tty0print("p2 completed\n");
-
-    CSIN();
-    tmpstate.sp = (stackalloc -= QPAGE);
-    CSOUT;
-    tmpstate.pc = (memaddr) p3;
-    p3t = create_process(&tmpstate);
-    msgrecv(p3t, NULL);
-
-    tty0print("p3 completed\n");
+    //
+    // CSIN();
+    // tmpstate.sp = (stackalloc -= QPAGE);
+    // CSOUT;
+    // tmpstate.pc = (memaddr) p3;
+    // p3t = create_process(&tmpstate);
+    // msgrecv(p3t, NULL);
+    //
+    // tty0print("p3 completed\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -220,7 +220,7 @@ void p2(void) {
         panic("p2 recv: got the wrong sender\n");
     if (get_processid(p1t) != get_parentprocid(get_processid(get_mythreadid())))
         panic("p2 get_parentprocid get_processid error\n");
-
+#if 0
     /* test: GET_CPUTIME */
 
     cpu_t1 = getcputime();
@@ -236,11 +236,13 @@ void p2(void) {
 
     msgsend(p1t, NULL);
     msgrecv(p1t, NULL);
-
+#endif
     terminate_thread();
 
     panic("p2 survived TERMINATE_THREAD\n");
 }
+
+#if 0
 
 #define PSEUDOCLOCK 100000
 #define NWAIT 10
@@ -271,6 +273,8 @@ void p3(void) {
     panic("p3 survived TERMINATE_PROCESS\n");
 }
 
+#endif
+
 void p4(void) {
     static int p4inc = 1;
     struct tcb_t* parent;
@@ -288,7 +292,6 @@ void p4(void) {
     p4inc++;
     parent = msgrecv(NULL, NULL);
     msgsend(parent, NULL);
-
     msgrecv(NULL, NULL);
     /* only the first incarnation reaches this point */
 
@@ -299,6 +302,7 @@ void p4(void) {
     p4childstate.pc = (memaddr) p4;
 
     child = create_process(&p4childstate);
+
     msgsend(child, NULL);
     msgrecv(child, NULL);
 
@@ -383,7 +387,6 @@ void p5(void) {
     CSOUT;
     mgrstate.pc = (memaddr) p5p;
     setpgmmgr(create_thread(&mgrstate));
-
     CSIN();
     mgrstate.sp = (stackalloc -= QPAGE);
     CSOUT;
@@ -398,7 +401,7 @@ void p5(void) {
     setsysmgr(create_thread(&mgrstate));
 
     /* this should me handled by p5s */
-
+    tprintf("BREAKPOINT\n");
     retval = SYSCALL(42, 42, 42, 42);
     if (retval == 42)
         tty0print("p5 syscall passup okay\n");

@@ -50,15 +50,18 @@ void accountant(struct tcb_t* thread){
  / _` |/ __/ __/ _ \| | | | '_ \| __/ _` | '_ \| __|
 | (_| | (_| (_| (_) | |_| | | | | || (_| | | | | |_
 \__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
-
 */
-    //how many milliseconds did pass?
+
     if(timeSliceLeft >= clockPerTimeslice){
         //5 ms in total
-        thread->runTime += 5;
+        thread->run_time += 5;
+        //TODO handle the pseudoclock timer
     }
     else{
-        thread->runTime += (5-((timeSliceLeft)*5/clockPerTimeslice));
+        //if not all the time has passed
+        float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
+        tprintf("timePassed: %d",timePassed); //TODO: fma check me!
+        thread->run_time += (unsigned int)timePassed; //adds such a time to the runTime field.
     }
 }
 #endif
@@ -138,7 +141,7 @@ static inline void empty_readyq_h() {
 void scheduler() {
     //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
-    // accountant();
+    //accountant();
     //tprintf("scheduler started, current is %p\n", current_thread);
 
     if (current_thread == NULL)

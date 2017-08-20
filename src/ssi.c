@@ -211,11 +211,12 @@ static inline void clean_sys_msg(struct tcb_t *terminating)
     if (terminating->t_wait4sender == SSI) {
         // msgq_get should always succeed
         msgq_get(&terminating, SSI, NULL);
-    } else if (terminating->t_wait4sender == get_processid_s(terminating)->sys_mgr) {
-        msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
+    } else if (terminating->t_wait4sender == get_processid_s(terminating)->sys_mgr){
+         msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
     } else if (terminating->t_wait4sender == get_processid_s(terminating)->pgm_mgr) {
         msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
     }
+
 }
 
 
@@ -229,7 +230,7 @@ static inline void __terminate_process_s(struct pcb_t *proc, struct tcb_t *appli
 {
     // TODO: eliminare dalla coda dei messaggi dell'SSI eventuali messaggi
     // provenienti dai thread dei processi figli che saranno terminati
-    tprint("terminate process started\n");
+    //tprint("terminate process started\n");
 
     // eliminiamo tutti i thread
     struct tcb_t *thread_term;
@@ -247,8 +248,8 @@ static inline void __terminate_process_s(struct pcb_t *proc, struct tcb_t *appli
     while (proc_term = proc_firstchild(proc)) {
         __terminate_process_s(proc_term, NULL);
     }
-
     // eliminiamo il processo
+
     proc_delete(proc);
 }
 
@@ -261,7 +262,7 @@ static inline void terminate_process_s(struct tcb_t *applicant)
    the process is also removed from the scheduling queue he's in (device queue also)*/
 static inline void __terminate_thread_s(struct tcb_t *thread)
 {
-    tprint("__terminate_thread_s started\n");
+    //tprint("__terminate_thread_s started\n");
     while (!list_empty(&thread->t_msgq))
     //cancello tutti i messaggi se ce ne sono
         msg_free(msg_qhead(&thread->t_msgq));
@@ -274,6 +275,7 @@ static inline void __terminate_thread_s(struct tcb_t *thread)
 
     while (to_resume = thread_qhead(&thread->t_wait4me)) {
         // tprintf("resuming thread - %p\n", to_resume);
+        to_resume->errno = 1; //setto errno = 1 per dire ai processi che si aspettavano un msg che il mittente e' morto
         resume_thread(to_resume, NULL, 0);
     }
     // tprint("waiting threads resumed\n");
@@ -294,7 +296,7 @@ static inline void __terminate_thread_s(struct tcb_t *thread)
 /* terminate the thread and, if it's the last one, the process too */
 static inline void terminate_thread_s(struct tcb_t *thread)
 {
-    tprint("terminate_thread_s started\n");
+    //tprint("terminate_thread_s started\n");
 
     if(list_is_only(&thread->t_next, &get_processid_s(thread)->p_threads)) {
     // se è l'unico thread del processo
@@ -306,13 +308,14 @@ static inline void terminate_thread_s(struct tcb_t *thread)
         __terminate_thread_s(thread);
     }
 
-    tprint("terminate_thread_s ended\n\n");
+    //tprint("terminate_thread_s ended\n\n");
 }
 
 /****************************************************************************/
 
 static inline unsigned int getcputime_s(const struct tcb_t *applicant)
 {
+    tprintf("%d\n",applicant->run_time);
     return applicant->run_time;
 }
 
