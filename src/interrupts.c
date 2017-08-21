@@ -19,6 +19,10 @@ extern unsigned int *timeSliceLeft;
 extern struct list_head readyq;
 extern struct tcb_t *current_thread;
 
+/*****INTERN******/
+int interrupt_flag = 0;
+state_t interrupt_t_s; //should it be initialized?
+int call_scheduler;
 static void io_handler();
 static void interval_timer_h();
 
@@ -28,27 +32,50 @@ void interrupt_h() {
 
     tprint("$$$ interrupt_h started $$$\n");
 
-    // TODO: check pending interrupts in priority order
-    io_handler();
-    interval_timer_h();
+    interval_timer_h(); //for fast-interrupts
+    io_handler();       //for interrupts
 
-    tprint("$$$ interrupt_h finished $$$\n");
+
+    if(interrupt_flag == 0){ //since the interval_timer_h has been called
+                             //while handling another interrupt
+        print("$$$ interrupt_h finished and calls scheduler(); $$$\n");
+        scheduler();
+    }
+    else{
+        interrupt_flag = 0; //reset it, all done.
+    }
+    print("$$$ interrupt_h finished $$$\n");
+    STST(&current_thread->t_s);
 }
 
 /*fma: Interval timer handler without pseudoclock */
 static void interval_timer_h(){
-    timeSliceLeft = (unsigned int *) getTIMER();
-
-    if (current_thread) {
-    // se deve avvenire il context-switch
-        // salvataggio stato del processore
-        current_thread->t_s = *((state_t *) INT_OLDAREA);
-        accountant(current_thread);
-        // Inserimento del processo in coda
-        thread_enqueue(current_thread, &readyq);
+    //timeSliceLeft = (unsigned int *) getTIMER();
+    if (interrupt_flag == 0){
+        interrupt_flag = 1;
+        current_thread->t_s = *((state_t *) INT_OLDAREA); //save processor state
+        current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
+        if(accountant(current_thread) == 0){
+            //if accountant returns 0, it means the process has consumed all its time
+            thread_enqueue(current_thread, &readyq);
+            scheduler();
+        }
+        else{
+            //it was an interrupt, let's get back to
+             //the interrupt_h().
+             return;
+        }
     }
-    //fma FIXME: it should jump to it. does it do that? (like a goto)
-    scheduler();
+    else{   //means that interrupt_flag = 1;
+            //applies when fast-interrupt blocks another interrupt
+        interrupt_t_s = *((state_t *) INT_OLDAREA);
+        interrupt_t_s.pc -= 4;
+        accountant(current_thread); //don't need to return the value, it is for sure not 0;
+        thread_enqueue(current_thread, &readyq); //puts current thread in the waiting list;
+
+        interrupt_flag = 0; //this will make the interrupt know it has to call the scheduler
+        STST(interrupt_t_s); //we just have to get back to were we left (interrupt_handler)
+    }
 }
 
 

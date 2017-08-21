@@ -37,13 +37,13 @@ extern void test_syscall();
 extern void BREAKPOINT();
 
 /*****global*****/
-unsigned int timeSliceLeft;
+unsigned int timeSliceLeft = 5000; //at 1mHz for 5 milliseconds
 
 // the value in BUS_REG_TIME_SCALE is the same for the whole execution
 unsigned int clockPerTimeslice;
 
 
-void accountant(struct tcb_t* thread){
+int accountant(struct tcb_t* thread){
 /*                               _              _
                                 | |            | |
   __ _  ___ ___ ___  _   _ _ __ | |_ __ _ _ __ | |_
@@ -57,12 +57,15 @@ void accountant(struct tcb_t* thread){
         //5 ms in total
         thread->run_time += 5;
         //TODO handle the pseudoclock timer
+        return 0; //it's done
     }
     else{
         //if not all the time has passed
-        float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
-        tprintf("timePassed: %d",timePassed); //TODO: fma check me!
-        thread->run_time += (unsigned int)timePassed; //adds such a time to the runTime field.
+        //float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
+        //tprintf("timePassed: %d",timePassed); //TODO: fma check me!
+        //thread->run_time += (unsigned int)timePassed; //adds such a time to the runTime field.
+        //TODO handle the pseudoclock timer
+        return timeSliceLeft; //it was an interrupt!
     }
 }
 
@@ -140,9 +143,7 @@ static inline void empty_readyq_h() {
 }
 
 void scheduler() {
-    //accountant(current_thread);
     current_thread = thread_dequeue(&readyq);
-    // accountant();
     tprintf("scheduler started, current is %p\n", current_thread);
 
     if (current_thread == NULL)
