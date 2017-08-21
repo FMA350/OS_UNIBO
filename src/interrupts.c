@@ -7,6 +7,7 @@
 #include <syscall.h>
 #include <syslib.h>
 #include <ssi.h>
+#include <scheduler.h>
 
 
 
@@ -29,12 +30,10 @@ static void interval_timer_h();
 
 
 void interrupt_h() {
-
-    tprint("$$$ interrupt_h started $$$\n");
+    //tprint("$$$ interrupt_h started $$$\n");
 
     interval_timer_h(); //for fast-interrupts
     io_handler();       //for interrupts
-
 
     if(interrupt_flag == 0){ //since the interval_timer_h has been called
                              //while handling another interrupt
@@ -78,23 +77,38 @@ static void interval_timer_h(){
     }
 }
 
-
 static inline void io_handler(){
-    // Manual section 3.1.6
+    //tprintf("INTERRUPT HANDLER\n");
+    //serve?
     //p points to bottom of the interrupt bitmap for external devices
+    //il primo byte che ha un interr pendente fa partire la gestione
+    if (current_thread) {
+        // salvataggio stato del processore
+        //tprintf("%p state saved\n", current_thread);
+        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+        // Inserimento del processo in coda
+        //thread_enqueue(current_thread, &readyq);
+        list_add(&current_thread->t_sched, &readyq);
+    }
+    void * p = (void *) 0x00006ff0;
 
-    void * p = (void *) 0x00006fe0; //fma: Corretto errore, l'indirizzo da cui partire era
-                                    //settato a 0x00006ff0 (indirizzo del terminale)
+    void * q = p;
     // dovrebbe funzionare a grandi linee, ma bisognerebbe vedere anche le funzioni
     // del coprocessore (ha un registro che indica la causa degli interrupts)
+    // void * rcv_cmd = (void *) 0x0000244;
+    // *(unsigned int*)rcv_cmd = 1;
+
     int i = 0;
     while (i < 5) {
     //ne controllo uno alla volta di device per gestire un interrupt alla volta
-    //TODO: SSI is not acknowledged on which of the 8 devices of a class is throwing it.
         if ((*((unsigned int *)p)%2)==1) {
         //device n.0 has a pending interrupt
-            tprint(">>> terminal 0 raised interrupt\n");
-            send(SSI,p,i);
+            //tprintf(">>>>> terminal 0 raised interrupt %p\n",thread_qhead(&blockedq));
+//            tprintf("BITMAP: %d\n", *((unsigned int *)p));
+            void * trs_cmd = (void *) 0x000024c;
+            *(unsigned int*) trs_cmd = 1;
+//            tprintf("BITMAP: %d\n", *((unsigned int *)p));
+            send(SSI,q,i);
             break;
         } else if (((*((unsigned int *)p)>>1)%2)==1) {
         // device n.1 has a pending interrupt
@@ -121,13 +135,8 @@ static inline void io_handler(){
         }
         i++;
         *((unsigned int *)p) = (unsigned int) p + 2;
-        //controlla se funziona!! non sono sicuro
-        // non capisco come funziona (michele)
-
     }
-    // salvataggio stato del processore
-    //current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
-    // Inserimento del processo in coda
-    //thread_enqueue(current_thread, &readyq);
+
+
     //scheduler();
 }

@@ -19,6 +19,7 @@
 #include <uARMconst.h>
 #include <uARMtypes.h>
 #include <libuarm.h>
+#include <scheduler.h>
 
 #include "nucleus.h"
 
@@ -96,26 +97,24 @@ uintptr_t p5sys = 0;
 uintptr_t p5send = 0;
 
 void test(void) {
-    ttyprintstring(TERM0ADDR, "NUCLEUS TEST: starting...\n");
-    tprint("test starting\n\n");
+
+    ttyprintstring(TERM0ADDR, "NUCLEUS1...\n");
     STST(&tmpstate);
     stackalloc = (tmpstate.sp + (QPAGE - 1)) & (~(QPAGE - 1));
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) tty0out_thread;
-    tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr);
-    tprint("\t1\n");
-
+    tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr); //ATTENZIONE HO DISABILITATO
     printid = create_thread(&tmpstate);
-    //tty0print("NUCLEUS: first msg printed by tty0out_thread\n");
-    tprint("\t2\n");
+
+    tty0print("NUCLEUS2\n");
 
     testt = get_mythreadid();
 
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) cs_thread;
     csid = create_process(&tmpstate);
-    //tty0print("NUCLEUS: critical section thread started\n");
-    tprint("\t3\n");
+
+    tty0print("NUCLEUS3\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -128,16 +127,16 @@ void test(void) {
     msgrecv(p2t, NULL);
 
 
-    //tty0print("p2 completed\n");
-
-    CSIN();
-    tmpstate.sp = (stackalloc -= QPAGE);
-    CSOUT;
-    tmpstate.pc = (memaddr) p3;
-    p3t = create_process(&tmpstate);
-    msgrecv(p3t, NULL);
-
-    tty0print("p3 completed\n");
+    tty0print("p2 completed\n");
+    //
+    // CSIN();
+    // tmpstate.sp = (stackalloc -= QPAGE);
+    // CSOUT;
+    // tmpstate.pc = (memaddr) p3;
+    // p3t = create_process(&tmpstate);
+    // msgrecv(p3t, NULL);
+    //
+    // tty0print("p3 completed\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -221,7 +220,7 @@ void p2(void) {
         panic("p2 recv: got the wrong sender\n");
     if (get_processid(p1t) != get_parentprocid(get_processid(get_mythreadid())))
         panic("p2 get_parentprocid get_processid error\n");
-
+#if 0
     /* test: GET_CPUTIME */
 
     cpu_t1 = getcputime();
@@ -237,11 +236,13 @@ void p2(void) {
 
     msgsend(p1t, NULL);
     msgrecv(p1t, NULL);
-
+#endif
     terminate_thread();
 
     panic("p2 survived TERMINATE_THREAD\n");
 }
+
+#if 0
 
 #define PSEUDOCLOCK 100000
 #define NWAIT 10
@@ -272,6 +273,8 @@ void p3(void) {
     panic("p3 survived TERMINATE_PROCESS\n");
 }
 
+#endif
+
 void p4(void) {
     static int p4inc = 1;
     struct tcb_t* parent;
@@ -289,7 +292,6 @@ void p4(void) {
     p4inc++;
     parent = msgrecv(NULL, NULL);
     msgsend(parent, NULL);
-
     msgrecv(NULL, NULL);
     /* only the first incarnation reaches this point */
 
@@ -300,6 +302,7 @@ void p4(void) {
     p4childstate.pc = (memaddr) p4;
 
     child = create_process(&p4childstate);
+
     msgsend(child, NULL);
     msgrecv(child, NULL);
 
@@ -384,7 +387,6 @@ void p5(void) {
     CSOUT;
     mgrstate.pc = (memaddr) p5p;
     setpgmmgr(create_thread(&mgrstate));
-
     CSIN();
     mgrstate.sp = (stackalloc -= QPAGE);
     CSOUT;
@@ -399,7 +401,7 @@ void p5(void) {
     setsysmgr(create_thread(&mgrstate));
 
     /* this should me handled by p5s */
-
+    tprintf("BREAKPOINT\n");
     retval = SYSCALL(42, 42, 42, 42);
     if (retval == 42)
         tty0print("p5 syscall passup okay\n");

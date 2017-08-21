@@ -5,6 +5,7 @@
 
 extern struct tcb_t *current_thread;
 extern struct list_head readyq;
+extern struct list_head blockedq;
 
 extern unsigned int thread_count;
 extern unsigned int soft_block_count;

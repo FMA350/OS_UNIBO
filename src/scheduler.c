@@ -42,7 +42,6 @@ unsigned int timeSliceLeft = 5000; //at 1mHz for 5 milliseconds
 // the value in BUS_REG_TIME_SCALE is the same for the whole execution
 unsigned int clockPerTimeslice;
 
-
 int accountant(struct tcb_t* thread){
 /*                               _              _
                                 | |            | |
@@ -50,9 +49,8 @@ int accountant(struct tcb_t* thread){
  / _` |/ __/ __/ _ \| | | | '_ \| __/ _` | '_ \| __|
 | (_| | (_| (_| (_) | |_| | | | | || (_| | | | | |_
 \__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
-
 */
-    //since if timeSliceLeft goes underflow, goes back to int MaxValue
+
     if(timeSliceLeft >= clockPerTimeslice){
         //5 ms in total
         thread->run_time += 5;
@@ -68,7 +66,6 @@ int accountant(struct tcb_t* thread){
         return timeSliceLeft; //it was an interrupt!
     }
 }
-
 
 /* Loads the initial thread state
  *
@@ -136,7 +133,7 @@ static inline void empty_readyq_h() {
     }
     else {
     /* processes in the system are waiting for I/O */
-        tprintf("=== processes waiting for IO ===\n");
+        //tprintf("=== processes waiting for IO ===\n");
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
     }

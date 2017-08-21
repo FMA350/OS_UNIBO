@@ -303,7 +303,9 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
          * L’indirizzo del TCB del mittente viene memorizzato in *sender */
 
         //concatenatore del primo messaggio in coda
-        struct list_head *msg_conc = list_next(&destination->t_msgq);
+        struct list_head *msg_conc = NULL;
+        if (destination != NULL)
+            msg_conc = list_next(&destination->t_msgq);
         if (msg_conc == NULL)
             /* empty queue */
             return -1;
@@ -322,12 +324,14 @@ int msgq_get(struct tcb_t **sender, struct tcb_t *destination, uintptr_t *value)
     /* sender != NULL && *sender != NULL */
     /* restituisce il primo messaggio in coda che ha *sender come mittente */
         struct msg_t *pos;
-        list_for_each_entry(pos, &destination->t_msgq, m_next) {
-            if(pos->m_sender == *sender) {
-                store_val(value, pos);
-                /* freeing the message */
-                msg_free(pos);
-                return 0;
+        if (destination != NULL){ //BUG FIXED
+            list_for_each_entry(pos, &destination->t_msgq, m_next) {
+                if(pos->m_sender == *sender) {
+                    store_val(value, pos);
+                    /* freeing the message */
+                    msg_free(pos);
+                    return 0;
+                }
             }
         }
         /* nessun massaggio da parte di sender è stato trovato */
