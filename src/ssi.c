@@ -315,13 +315,13 @@ static inline void terminate_thread_s(struct tcb_t *thread)
 
 static inline unsigned int getcputime_s(const struct tcb_t *applicant)
 {
-    tprintf("%d\n",applicant->run_time);
+    tprintf("SSI: run time requested: %d\n",applicant->run_time);
     return applicant->run_time;
 }
 
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant)
 {
-    /*code*/
+
 }
 
 static inline void setdevice(unsigned int devno, uintptr_t command){

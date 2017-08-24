@@ -28,7 +28,7 @@ extern void init_and_load(struct tcb_t *to_load, void *target, unsigned int cpsr
 
 void load_readyq(struct pcb_t *root);
 
-int accountant(struct tcb_t* thread);
+unsigned int accountant(struct tcb_t* thread);
 
 /* used also in debug */
 inline void init_and_load(struct tcb_t *to_load, void *target, unsigned int status);

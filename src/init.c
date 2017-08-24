@@ -40,6 +40,7 @@ int main() {
 
 static void time_init() {
     clockPerTimeslice = (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
+    tprintf("clockPerTimeslice = %d\n",clockPerTimeslice);
 }
 
 /* This function is used to populate exception states vector

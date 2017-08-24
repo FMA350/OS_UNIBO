@@ -1,16 +1,17 @@
-#include <mikabooq.h>
-#include <listx.h>
-#include <arch.h>
-#include <uARMconst.h>
-#include <uARMtypes.h>
-#include <libuarm.h>
-#include <ssi.h>
-#include <debug_tests.h>
-#include <nucleus.h>
-#include <scheduler.h>
+ #include <mikabooq.h>
+ #include <listx.h>
+ #include <arch.h>
+ #include <uARMconst.h>
+ #include <uARMtypes.h>
+ #include <libuarm.h>
+ #include <ssi.h>
+ #include <debug_tests.h>
+ #include <nucleus.h>
+ #include <scheduler.h>
 #include <p2test.h>
-
-
+#include <interrupts.h>
+#include <syslib.h>
+#include <math.h>
 
 // Thread that has currently the control of the CPU
 struct tcb_t *current_thread = NULL;
@@ -37,35 +38,68 @@ extern void test_syscall();
 extern void BREAKPOINT();
 
 /*****global*****/
-unsigned int timeSliceLeft = 5000; //at 1mHz for 5 milliseconds
-
+unsigned int timeSliceLeft;
 // the value in BUS_REG_TIME_SCALE is the same for the whole execution
-unsigned int clockPerTimeslice;
+unsigned int clockPerTimeslice = 5000; //at 1mHz for 5 milliseconds
 
-int accountant(struct tcb_t* thread){
+unsigned int accountant(struct tcb_t* thread){
 /*                               _              _
                                 | |            | |
   __ _  ___ ___ ___  _   _ _ __ | |_ __ _ _ __ | |_
  / _` |/ __/ __/ _ \| | | | '_ \| __/ _` | '_ \| __|
 | (_| | (_| (_| (_) | |_| | | | | || (_| | | | | |_
 \__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
-*/
 
-    if(timeSliceLeft >= clockPerTimeslice){
-        //5 ms in total
-        thread->run_time += 5;
-        //TODO handle the pseudoclock timer
-        return 0; //it's done
+returns the time passed in milliseconds. If a thread is passed as an argument,
+updates the runtime of that thread.
+*/
+    if(thread){
+        if(timeSliceLeft >= clockPerTimeslice){
+            tprint("$$$ accountant: timeSliceLeft>= clockPerTimeslice $$$\n");
+            //5 ms in total
+            thread->run_time += 5;
+            return 5; //it's done
+        }
+        else{
+            //if not all the time has passed
+            tprint("$$$ accountant: not all time has passed $$$\n");
+            //float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
+            unsigned int timePassed = clockPerTimeslice - timeSliceLeft;
+            timePassed += 500; // for rounding purpouses
+            //how many 1000 to remove before it goes in underflow?
+            unsigned int milliseconds = 0;
+            while(timePassed < clockPerTimeslice){
+                milliseconds++;
+                timePassed-=1000;
+                //equivalent to             //milliseconds = timePassed / clockPerTimeslice;
+
+            }
+            tprintf("timePassed: %d",milliseconds); //TODO: fma check me!
+            thread->run_time += milliseconds; //adds such a time to the runTime field.
+            return milliseconds;
+        }
     }
     else{
-        //if not all the time has passed
-        //float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
-        //tprintf("timePassed: %d",timePassed); //TODO: fma check me!
-        //thread->run_time += (unsigned int)timePassed; //adds such a time to the runTime field.
-        //TODO handle the pseudoclock timer
-        return timeSliceLeft; //it was an interrupt!
+        if(timeSliceLeft >= clockPerTimeslice){
+            return 5;
+        }
+        else{
+            unsigned int timePassed = clockPerTimeslice - timeSliceLeft;
+            timePassed += 500; // for rounding purpouses
+            unsigned int milliseconds = 0;
+            while(timePassed < clockPerTimeslice){
+                milliseconds++;
+                timePassed-=1000;
+                //equivalent to             //milliseconds = timePassed / clockPerTimeslice;
+
+            }
+            //timePassed = timePassed / clockPerTimeslice;
+            tprintf("timePassed: %d",milliseconds); //TODO: fma check me!
+            return milliseconds;
+        }
     }
-}
+ }
+
 
 /* Loads the initial thread state
  *
@@ -121,10 +155,12 @@ void load_readyq(struct pcb_t *root) {
  * Preconditions: the ready queue is empty
  */
 static inline void empty_readyq_h() {
-    if (thread_count == 1)
+    if (thread_count == 1){
     /* the SSI is the only thread in the system */
     /* shutdown */
+        tprint("=== Only SSI in the system ===\n");
         HALT();
+        }
     else if (soft_block_count == 0) {
     /* all process are hard blocked (waiting for msg) */
     /* deadlock */
@@ -133,7 +169,7 @@ static inline void empty_readyq_h() {
     }
     else {
     /* processes in the system are waiting for I/O */
-        //tprintf("=== processes waiting for IO ===\n");
+        tprintf("=== processes waiting for IO ===\n");
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
     }
