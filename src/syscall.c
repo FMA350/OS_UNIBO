@@ -123,7 +123,9 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
         // changing thread status
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = sender;
-        if (sender) {
+        accountant(current_thread);
+        STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
+        if (sender){
         // il thread si blocca aspettando da sender
             // aggiunge il processo corrente alla lista dei processi che aspettano sender (di sender)
             thread_enqueue(current_thread, &sender->t_wait4me);
@@ -134,7 +136,6 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
             thread_enqueue(current_thread, &blockedq);
         //    tprintf("current: %p, blockedqH: %p, ready:%p\n", current_thread, thread_qhead(&blockedq), thread_qhead(&readyq));
         }
-
         scheduler();
     }
 }

@@ -127,15 +127,15 @@ void test(void) {
 
 
     tty0print("p2 completed\n");
-    //
-    // CSIN();
-    // tmpstate.sp = (stackalloc -= QPAGE);
-    // CSOUT;
-    // tmpstate.pc = (memaddr) p3;
-    // p3t = create_process(&tmpstate);
-    // msgrecv(p3t, NULL);
-    //
-    // tty0print("p3 completed\n");
+
+    CSIN();
+    tmpstate.sp = (stackalloc -= QPAGE);
+    CSOUT;
+    tmpstate.pc = (memaddr) p3;
+    p3t = create_process(&tmpstate);
+    msgrecv(p3t, NULL);
+
+    tty0print("p3 completed\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -219,9 +219,8 @@ void p2(void) {
         panic("p2 recv: got the wrong sender\n");
     if (get_processid(p1t) != get_parentprocid(get_processid(get_mythreadid())))
         panic("p2 get_parentprocid get_processid error\n");
-#if 0
     /* test: GET_CPUTIME */
-
+    tprint("beforeCPUTIME\n");
     cpu_t1 = getcputime();
     /* delay for several milliseconds */
     for (i = 1; i < LOOPNUM; i++);
@@ -235,13 +234,12 @@ void p2(void) {
 
     msgsend(p1t, NULL);
     msgrecv(p1t, NULL);
-#endif
     terminate_thread();
 
     panic("p2 survived TERMINATE_THREAD\n");
 }
 
-#if 0
+
 
 #define PSEUDOCLOCK 100000
 #define NWAIT 10
@@ -272,7 +270,6 @@ void p3(void) {
     panic("p3 survived TERMINATE_PROCESS\n");
 }
 
-#endif
 
 void p4(void) {
     static int p4inc = 1;

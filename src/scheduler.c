@@ -74,7 +74,6 @@ updates the runtime of that thread.
                 //equivalent to             //milliseconds = timePassed / clockPerTimeslice;
 
             }
-            //tprintf("timePassed: %d\n",milliseconds); //TODO: fma check me!
             thread->run_time += milliseconds; //adds such a time to the runTime field.
             return milliseconds;
         }
@@ -93,8 +92,6 @@ updates the runtime of that thread.
                 //equivalent to             //milliseconds = tickPassed / clockPerTimeslice;
 
             }
-            //tickPassed = tickPassed / clockPerTimeslice;
-            //tprintf("milliseconds passed: %d",milliseconds); //TODO: fma check me!
             return milliseconds;
         }
     }
