@@ -39,11 +39,12 @@ void interrupt_h(){
     if(current_thread){ //a thread was being executed
         if(((int)timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
             io_handler();       //for interrupts
-            //setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
+            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
             LDST(current_thread);
         }
         else{
             interval_timer_h(); //for fast-interrupts
+            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
             thread_enqueue(current_thread, &readyq);
             scheduler();
         }
@@ -52,11 +53,12 @@ void interrupt_h(){
     else{                //no thread was being executed
         if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
             io_handler();       //for interrupts
-            //setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
+            setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         }
         else{
             // handle pseudoclock
             update_clock(accountant(NULL));
+            setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
             scheduler();
         }
     }
@@ -73,7 +75,7 @@ static void interval_timer_h(){
         //handle pseudoclock
     }
     else{
-    //    tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
+        tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
         //since the condition is checked earlier
     }
 }

@@ -8,7 +8,6 @@ extern struct list_head blockedq;
 static inline void __trap_h(struct tcb_t *mgr)
 {
     tprint("__trap_h started\n");
-
     if (mgr) {
     // se il manager è settato
         int exc_cause = getCAUSE();
