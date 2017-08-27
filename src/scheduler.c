@@ -54,47 +54,47 @@ returns the time passed in milliseconds. If a thread is passed as an argument,
 updates the runtime of that thread.
 */
     if(thread){
-        if(timeSliceLeft >= clockPerTimeslice){
-            tprint("$$$ accountant: timeSliceLeft>= clockPerTimeslice $$$\n");
+        if(timeSliceLeft < 0){
+            //tprint("$$$ accountant: timeSliceLeft < 0 $$$\n");
             //5 ms in total
             thread->run_time += 5;
             return 5; //it's done
         }
         else{
             //if not all the time has passed
-            tprint("$$$ accountant: not all time has passed $$$\n");
+            //tprint("$$$ accountant: not all time has passed $$$\n");
             //float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
-            unsigned int timePassed = clockPerTimeslice - timeSliceLeft;
+            int timePassed = clockPerTimeslice - timeSliceLeft;
             timePassed += 500; // for rounding purpouses
             //how many 1000 to remove before it goes in underflow?
             unsigned int milliseconds = 0;
-            while(timePassed < clockPerTimeslice){
+            while(timePassed > 0){
                 milliseconds++;
                 timePassed-=1000;
                 //equivalent to             //milliseconds = timePassed / clockPerTimeslice;
 
             }
-            tprintf("timePassed: %d",milliseconds); //TODO: fma check me!
+            //tprintf("timePassed: %d\n",milliseconds); //TODO: fma check me!
             thread->run_time += milliseconds; //adds such a time to the runTime field.
             return milliseconds;
         }
     }
     else{
-        if(timeSliceLeft >= clockPerTimeslice){
+        if(timeSliceLeft < 0){
             return 5;
         }
         else{
-            unsigned int timePassed = clockPerTimeslice - timeSliceLeft;
-            timePassed += 500; // for rounding purpouses
+            int tickPassed = clockPerTimeslice - timeSliceLeft;
+            tickPassed += 500; // for rounding purpouses
             unsigned int milliseconds = 0;
-            while(timePassed < clockPerTimeslice){
+            while(tickPassed > 0){
                 milliseconds++;
-                timePassed-=1000;
-                //equivalent to             //milliseconds = timePassed / clockPerTimeslice;
+                tickPassed-=1000;
+                //equivalent to             //milliseconds = tickPassed / clockPerTimeslice;
 
             }
-            //timePassed = timePassed / clockPerTimeslice;
-            tprintf("timePassed: %d",milliseconds); //TODO: fma check me!
+            //tickPassed = tickPassed / clockPerTimeslice;
+            //tprintf("milliseconds passed: %d",milliseconds); //TODO: fma check me!
             return milliseconds;
         }
     }
@@ -169,7 +169,8 @@ static inline void empty_readyq_h() {
     }
     else {
     /* processes in the system are waiting for I/O */
-        tprintf("=== processes waiting for IO ===\n");
+    //    tprintf("=== processes waiting for IO ===\n");
+        setTIMER(clockPerTimeslice); //fma350 test
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
     }
@@ -177,7 +178,7 @@ static inline void empty_readyq_h() {
 
 void scheduler() {
     current_thread = thread_dequeue(&readyq);
-    tprintf("scheduler started, current is %p\n", current_thread);
+    //tprintf("scheduler started, current is %p\n", current_thread);
 
     if (current_thread == NULL)
         empty_readyq_h();

@@ -19,6 +19,7 @@ extern struct tcb_t *SSI;
 void ssi();
 static inline void __terminate_thread_s(struct tcb_t *thread);
 
+void update_clock(unsigned int milliseconds);
 /* Returns a pointer to the ssi thread already initialized,
    extept for processor state */
 struct tcb_t *ssi_thread_init();

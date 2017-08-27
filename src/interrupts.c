@@ -10,12 +10,9 @@
 #include <scheduler.h>
 #include <libuarm.h>
 
-
-
-
-
 /*****EXTERN*****/
 extern unsigned int getTIMER();
+extern void update_clock(unsigned int milliseconds);
 extern void scheduler();
 extern unsigned int accountant(struct tcb_t* thread);
 extern unsigned int clockPerTimeslice;
@@ -35,65 +32,36 @@ static void interval_timer_h();
 
 void interrupt_h(){
     //TODO: Enhance control using CPSR (fma350)
-    tprint("$$$ interrupt_h called $$$\n");
-    timeSliceLeft = (unsigned int) getTIMER();
-    tprintf("timeSliceLeft = %d\n",timeSliceLeft);
+    //tprint("$$$ interrupt_h called $$$\n");
+    timeSliceLeft = getTIMER();
+    //tprintf("timeSliceLeft = %d\n",timeSliceLeft);
+
     if(current_thread){ //a thread was being executed
-        current_thread->t_s = *((state_t *) INT_OLDAREA);
-        current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
-        if(timeSliceLeft >= clockPerTimeslice){
-            interval_timer_h(); //for fast-interrupts
-            thread_enqueue(current_thread, &readyq);
-            //setTIMER(clockPerTimeslice);
-            scheduler();
+        if(((int)timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
+            io_handler();       //for interrupts
+            //setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
+            LDST(current_thread);
         }
         else{
-            io_handler();       //for interrupts
-            LDST(current_thread);
+            interval_timer_h(); //for fast-interrupts
+            thread_enqueue(current_thread, &readyq);
+            scheduler();
         }
 
     }
     else{                //no thread was being executed
-        if(timeSliceLeft >= clockPerTimeslice){
-            //only handle pseudoclock
-
-            setTIMER(clockPerTimeslice);
-            LDST((state_t *) INT_OLDAREA);
-            //scheduler(); //not needed, processes will wake up
-            //when IO is done
+        if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
+            io_handler();       //for interrupts
+            //setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         }
         else{
-            io_handler();       //for interrupts
-            LDST((state_t *) INT_OLDAREA);
+            // handle pseudoclock
+            update_clock(accountant(NULL));
+            scheduler();
         }
     }
 }
 
-    /*
-    if(current_thread){ //A thread was being executed
-        if(timeSliceLeft >= clockPerTimeslice){
-            interval_timer_h(); //for fast-interrupts
-        }
-        else{
-            io_handler();       //for interrupts
-        }
-
-        if(interrupt_flag == 0){ //since the interval_timer_h has been called
-                                 //while handling another interrupt
-            scheduler();
-        }
-        else{
-            interrupt_flag = 0; //reset it, all done.
-        }
-        LDST(&current_thread->t_s);
-    }
-    else{
-        //no thread was being executed
-    }
-    */
-
-
-/*fma: Interval timer handler without pseudoclock */
 static void interval_timer_h(){
 
     current_thread->t_s = *((state_t *) INT_OLDAREA); //save processor state
@@ -101,38 +69,26 @@ static void interval_timer_h(){
 
     if(accountant(current_thread) == 5){
         //if accountant returns 0, it means the process has consumed all its time
-        tprint("current_thread was updated by accountant\n");
+    //    tprint("current_thread was updated by accountant\n");
         //handle pseudoclock
     }
     else{
-        tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
+    //    tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
         //since the condition is checked earlier
     }
-        // else{
-        //     tprint("$$$ interval_timer_h has flag=1 and a new interrupt $$$\n");
-        //
-        //     interrupt_t_s = *((state_t *) INT_OLDAREA);
-        //     interrupt_t_s.pc -= 4;
-        //     accountant(current_thread); //don't need to return the value, it is for sure not 0;
-        //     thread_enqueue(current_thread, &readyq); //puts current thread in the waiting list;
-        //
-        //     interrupt_flag = 0; //this will make the interrupt know it has to call the scheduler
-        //     LDST(&interrupt_t_s); //we just have to get back to were we left (interrupt_handler)
-        // }
 }
 
 static inline void io_handler(){
-    tprint("$$$ io_handler   called $$$\n");
+//    tprint("$$$ io_handler called $$$\n");
 
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
     if (current_thread) {
-        // salvataggio stato del processore
-        //tprintf("%p state saved\n", current_thread);
-        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+        current_thread->t_s = *((state_t *) INT_OLDAREA);
+        current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
         // Inserimento del processo in coda
         //thread_enqueue(current_thread, &readyq);
-        list_add(&current_thread->t_sched, &readyq);
+        //list_add(&current_thread->t_sched, &readyq);
     }
     void * p = (void *) 0x00006ff0;
 
@@ -179,4 +135,5 @@ static inline void io_handler(){
         i++;
         *((unsigned int *)p) = (unsigned int) p + 2;
     }
+    return;
 }

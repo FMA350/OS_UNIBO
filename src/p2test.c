@@ -103,9 +103,8 @@ void test(void) {
     stackalloc = (tmpstate.sp + (QPAGE - 1)) & (~(QPAGE - 1));
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) tty0out_thread;
-    tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr); //ATTENZIONE HO DISABILITATO
+    //tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr); //ATTENZIONE HO DISABILITATO
     printid = create_thread(&tmpstate);
-
     tty0print("NUCLEUS2\n");
 
     testt = get_mythreadid();
