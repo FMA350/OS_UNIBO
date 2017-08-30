@@ -164,9 +164,9 @@ static inline void empty_readyq_h() {
         tprint("=== deadlock ===\n");
         PANIC();
     }
-    else {
+    else{
     /* processes in the system are waiting for I/O */
-    //    tprintf("=== processes waiting for IO ===\n");
+        //tprint("=== processes waiting for IO ===\n");
         setTIMER(clockPerTimeslice); //fma350 test
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
@@ -177,8 +177,11 @@ void scheduler() {
     current_thread = thread_dequeue(&readyq);
     //tprintf("scheduler started, current is %p\n", current_thread);
 
-    if (current_thread == NULL)
+    if (current_thread == NULL){
+        //tprint("in emptyrq\n");
         empty_readyq_h();
+
+    }
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO

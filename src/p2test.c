@@ -123,6 +123,7 @@ void test(void) {
     p2t = create_process(&tmpstate);
 
     msgsend(p2t, SYNCCODE);
+    tty0print("p2 message sent\n");
     msgrecv(p2t, NULL);
 
 

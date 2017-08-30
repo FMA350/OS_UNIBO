@@ -147,8 +147,9 @@ void ssi(){
                 case GET_PARENTPROCID:
                     msgsend(applicant, (uintptr_t) get_parentprocid_s((struct pcb_t *) req_field(msg, 1)));
                 break;
-                case GET_MYTHREADID:
+                case GET_MYTHREADID:{
                     msgsend(applicant, (uintptr_t) applicant);
+                }
                 break;
                 default:
                 // TODO: se il messaggio è diverso dai codici noti
