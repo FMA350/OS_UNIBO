@@ -50,7 +50,7 @@ static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval,
  * to the thread
  * Preconditions: resuming is blocked. resuming is in his queue.
  */
-extern inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
+inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
 
     // il messaggio è consegnato con priorità
     DELIVER_DIRECTLY(resuming, recv_rval, msg);
@@ -106,7 +106,9 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
 }
 
 static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
-    if (msgq_get(&sender, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
+    int rval = msgq_get(&sender, current_thread, pmsg);
+    tprintf("+++++ msgq_get rval == %d +++++\n", rval);
+    if (rval == 0) {    // in src viene memorizzato il mittente
     /* caso non bloccante: il messaggio cercato si trova nella coda */
         ST_RVAL(sender);
         LDST((state_t *) SYSBK_OLDAREA);
