@@ -68,21 +68,26 @@ void interrupt_h(){
 
 static void interval_timer_h(){
 
-    current_thread->t_s = *((state_t *) INT_OLDAREA); //save processor state
-    // current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
-    // mnalli FIXME: bisogna sottrarre 4 solo se l'ultima istruzione deve essere ripetuta (nelle trap)
+    // if(accountant(current_thread) == 5){
+    //     //if accountant returns 0, it means the process has consumed all its time
+    // //    tprint("current_thread was updated by accountant\n");
+    //     //handle pseudoclock
+    // }
+    // else {
+    //     tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
+    //     //since the condition is checked earlier
+    // }
 
-    if(accountant(current_thread) == 5){
-        //if accountant returns 0, it means the process has consumed all its time
-    //    tprint("current_thread was updated by accountant\n");
-        //handle pseudoclock
+    timeSliceLeft = (unsigned int *) getTIMER();
+
+    if (current_thread) {
+    // se deve avvenire il context-switch
+        // salvataggio stato del processore
+        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+        // Inserimento del processo in coda
+        thread_enqueue(current_thread, &readyq);
     }
-    else {
-        tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
-        //since the condition is checked earlier
-    }
-
-
+    scheduler();
 }
 
 static inline void io_handler(){
