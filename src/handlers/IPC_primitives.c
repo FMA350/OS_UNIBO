@@ -2,7 +2,6 @@
 #include <nucleus.h>
 #include <syslib.h>
 #include <scheduler.h>
-#include <syscall.h>
 
 
 // sentinella della coda dei processi in attesa di ricevere un messaggio
@@ -143,14 +142,6 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
 }
 
 /*******************************************************************************/
-extern void pgmtrap_h();
-
-// solleva una trap
-void raise_invalid_instruction(void) {
-    *((state_t *) PGMTRAP_NEWAREA) = *((state_t *) SYSBK_NEWAREA);
-    ((state_t *) PGMTRAP_NEWAREA)->CP15_Cause = EXC_RESERVEDINSTR;
-    pgmtrap_h();
-}
 /*
  * These two functions are wrappers for send and recv
  * send and recv are called only if the calling thread is in kernel mode,
@@ -162,15 +153,23 @@ void raise_invalid_instruction(void) {
 static inline void send_kernel(struct tcb_t *dest, uintptr_t msg) {
     if (IS_KERNEL_MODE)
         send(dest, current_thread, msg);
-    else
-        raise_invalid_instruction();
+    else {
+        ST_RVAL(SEND_FAILURE);
+        // TODO: set error number
+
+        LDST((state_t *) SYSBK_OLDAREA);
+    }
 }
 
 static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg) {
     if (IS_KERNEL_MODE)
         recv(src, pmsg);
-    else
-        raise_invalid_instruction();
+    else {
+        ST_RVAL(RECV_FAILURE);
+        // TODO: set error number
+
+        LDST((state_t *) SYSBK_OLDAREA);
+    }
 }
 
 /*******************************************************************************/

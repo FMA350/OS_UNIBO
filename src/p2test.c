@@ -55,7 +55,7 @@ void tty0out_thread(void) {
     }
 }
 
-static inline void tty0print(char* s) {
+inline void tty0print(char* s) {
     msgsend(printid, s);
     msgrecv(printid, NULL);
 }
@@ -210,10 +210,14 @@ void p2(void) {
     tty0print("p2 started\n");
 
     /* test: GET_MYTHREADID GET_PROCESSID GET_PARENTPROCID */
+    // TODO: se facciamo stampare anche la riga seguente il test prosegue!!!
+    tty0print("p2 about to call get_mythreadid()\n");
     if (get_mythreadid() != p2t)
         panic("p2 get_mythreadid: wrong pid returned\n");
 
     p1t = msgrecv(NULL, &value);
+    tty0print("p2 message received\n"); // mnalli
+
     if (value != SYNCCODE)
         panic("p2 recv: got the wrong value\n");
     if (p1t != testt)
@@ -221,8 +225,10 @@ void p2(void) {
     if (get_processid(p1t) != get_parentprocid(get_processid(get_mythreadid())))
         panic("p2 get_parentprocid get_processid error\n");
     /* test: GET_CPUTIME */
-    tprint("beforeCPUTIME\n");
+    tty0print("before CPUTIME\n");
     cpu_t1 = getcputime();
+
+    tty0print("after first CPUTIME\n");
     /* delay for several milliseconds */
     for (i = 1; i < LOOPNUM; i++);
 

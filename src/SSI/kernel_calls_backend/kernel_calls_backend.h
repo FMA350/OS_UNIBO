@@ -1,3 +1,5 @@
+#ifndef KERNEL_CALLS_BACKEND_H
+#define KERNEL_CALLS_BACKEND_H
 
 inline int get_errno_s(const struct tcb_t *applicant);
 
@@ -19,3 +21,6 @@ inline struct pcb_t *get_processid_s(const struct tcb_t *thread);
 inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc);
 
 void update_clock(unsigned int milliseconds);
+
+
+#endif

@@ -137,4 +137,5 @@ static inline void io_handler(){
         i++;
         *((unsigned int *)p) = (unsigned int) p + 2;
     }
+    return;
 }
