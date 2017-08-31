@@ -69,7 +69,7 @@ void interrupt_h(){
 static void interval_timer_h(){
 
     current_thread->t_s = *((state_t *) INT_OLDAREA); //save processor state
-    current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
+    // current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
     // mnalli FIXME: bisogna sottrarre 4 solo se l'ultima istruzione deve essere ripetuta (nelle trap)
 
     if(accountant(current_thread) == 5){
@@ -77,10 +77,12 @@ static void interval_timer_h(){
     //    tprint("current_thread was updated by accountant\n");
         //handle pseudoclock
     }
-    else{
+    else {
         tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
         //since the condition is checked earlier
     }
+
+
 }
 
 static inline void io_handler(){
@@ -88,13 +90,14 @@ static inline void io_handler(){
 
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
-    if (current_thread) {
-        current_thread->t_s = *((state_t *) INT_OLDAREA);
-        current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
-        // Inserimento del processo in coda
-        //thread_enqueue(current_thread, &readyq);
-        //list_add(&current_thread->t_sched, &readyq);
-    }
+    // if (current_thread) {
+    //     current_thread->t_s = *((state_t *) INT_OLDAREA);
+    //     // current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
+    //     // Inserimento del processo in coda
+    //     //thread_enqueue(current_thread, &readyq);
+    //     //list_add(&current_thread->t_sched, &readyq);
+    // }
+
     void * p = (void *) 0x00006ff0;
 
     void * q = p;

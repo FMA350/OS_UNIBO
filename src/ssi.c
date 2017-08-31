@@ -82,13 +82,13 @@ void ssi(){
         int send_back;
 
 
-        if (f) {
-            tprint("SSI: receiving message\n");
-        }
+        // if (f) {
+        //     tprint("SSI: receiving message\n");
+        // }
         struct tcb_t *applicant = msgrecv(NULL, &msg);
-        if (f) {
-            tprintf("SSI: message received - %d\n", req_field(msg, 0));
-        }
+        // if (f) {
+        //     tprintf("SSI: message received - %d\n", req_field(msg, 0));
+        // }
         // tprintf("SSI request:%d\n", req_field(msg,0));
         //         "   applicant == %p\n"
         //         "   request number == %d\n"
@@ -98,9 +98,9 @@ void ssi(){
         void * IO_addr = (void *) 0x00006ff0; //FIXME: move to a declaration.
 
         if(applicant == IO_addr) { //interrupt_h ci sta dicendo che un device ha completato
-            if (f) {
-                tprint("interrupt_h ci sta dicendo che un device ha completato\n");
-            }
+            // if (f) {
+            //     tprint("interrupt_h ci sta dicendo che un device ha completato\n");
+            // }
 
             int i = 0;
             while (request[i].requester==NULL && i<8)
@@ -339,7 +339,7 @@ static inline void terminate_thread_s(struct tcb_t *thread)
 
 static inline unsigned int getcputime_s(const struct tcb_t *applicant)
 {
-    tprintf("SSI: run time requested: %d\n",applicant->run_time);
+    // tprintf("SSI: run time requested: %d\n",applicant->run_time);
     return applicant->run_time;
 }
 

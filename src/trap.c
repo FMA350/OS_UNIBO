@@ -7,7 +7,7 @@ extern struct list_head blockedq;
 
 static inline void __trap_h(struct tcb_t *mgr, state_t *oldarea)
 {
-    tprint("__trap_h started\n");
+    // tprint("__trap_h started\n");
 
     if (mgr) {
     // se il manager è stato settato (non è NULL)
