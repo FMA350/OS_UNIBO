@@ -37,7 +37,7 @@ void interrupt_h(){
     //tprintf("timeSliceLeft = %d\n",timeSliceLeft);
 
     if(current_thread){ //a thread was being executed
-        if(((int)timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
+        if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
             io_handler();       //for interrupts
             STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
             LDST(current_thread);

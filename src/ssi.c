@@ -28,6 +28,7 @@ int pseudoclock;
 
 struct tcb_t *SSI , *IO_thread;
 
+extern inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg);
 
 static inline int get_errno_s(const struct tcb_t *applicant);
 
@@ -147,9 +148,8 @@ void ssi(){
                 case GET_PARENTPROCID:
                     msgsend(applicant, (uintptr_t) get_parentprocid_s((struct pcb_t *) req_field(msg, 1)));
                 break;
-                case GET_MYTHREADID:{
+                case GET_MYTHREADID:
                     msgsend(applicant, (uintptr_t) applicant);
-                }
                 break;
                 default:
                 // TODO: se il messaggio è diverso dai codici noti
