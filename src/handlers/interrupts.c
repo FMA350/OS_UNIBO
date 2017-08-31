@@ -37,22 +37,20 @@ void interrupt_h(){
     //tprintf("timeSliceLeft = %d\n",timeSliceLeft);
 
     if(current_thread){ //a thread was being executed
-        if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
-
+        if(((int)timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
             io_handler();       //for interrupts
-            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr); // mnalli: lo statement non ha nessun effetto
+            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
             LDST(current_thread);
         }
         else{
             interval_timer_h(); //for fast-interrupts
-            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);    // mnalli: lo statement non ha nessun effetto
+            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
             thread_enqueue(current_thread, &readyq);
             scheduler();
         }
 
     }
     else{                //no thread was being executed
-        // mnalli: timeSliceLeft è sempre > 0 perché è un unsigned int
         if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
             io_handler();       //for interrupts
             setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
@@ -68,26 +66,18 @@ void interrupt_h(){
 
 static void interval_timer_h(){
 
-    // if(accountant(current_thread) == 5){
-    //     //if accountant returns 0, it means the process has consumed all its time
-    // //    tprint("current_thread was updated by accountant\n");
-    //     //handle pseudoclock
-    // }
-    // else {
-    //     tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
-    //     //since the condition is checked earlier
-    // }
+    current_thread->t_s = *((state_t *) INT_OLDAREA); //save processor state
+    current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
 
-    timeSliceLeft = (unsigned int *) getTIMER();
-
-    if (current_thread) {
-    // se deve avvenire il context-switch
-        // salvataggio stato del processore
-        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
-        // Inserimento del processo in coda
-        thread_enqueue(current_thread, &readyq);
+    if(accountant(current_thread) == 5){
+        //if accountant returns 0, it means the process has consumed all its time
+    //    tprint("current_thread was updated by accountant\n");
+        //handle pseudoclock
     }
-    scheduler();
+    else{
+        tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
+        //since the condition is checked earlier
+    }
 }
 
 static inline void io_handler(){
@@ -95,14 +85,13 @@ static inline void io_handler(){
 
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
-    // if (current_thread) {
-    //     current_thread->t_s = *((state_t *) INT_OLDAREA);
-    //     // current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
-    //     // Inserimento del processo in coda
-    //     //thread_enqueue(current_thread, &readyq);
-    //     //list_add(&current_thread->t_sched, &readyq);
-    // }
-
+    if (current_thread) {
+        current_thread->t_s = *((state_t *) INT_OLDAREA);
+        current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
+        // Inserimento del processo in coda
+        //thread_enqueue(current_thread, &readyq);
+        //list_add(&current_thread->t_sched, &readyq);
+    }
     void * p = (void *) 0x00006ff0;
 
     void * q = p;
@@ -148,4 +137,5 @@ static inline void io_handler(){
         i++;
         *((unsigned int *)p) = (unsigned int) p + 2;
     }
+    return;
 }

@@ -1,5 +1,14 @@
-#ifndef SYSCALL_H
-#define SYSCALL_H
+#ifndef HANDLERS_H
+#define HANDLERS_H
+
+/* Devices and Interval Timer Interrupt handler */
+void interrupt_h();
+
+void syscall_h();
+
+void pgmtrap_h();
+
+void tlbtrap_h();
 
 
 #define SEND_SUCCESS    0
@@ -9,7 +18,6 @@
 #define RECV_FAILURE    NULL
 
 
-void syscall_h();
 
 /*
  * This function is used to resume a thread blocked while waiting for a message

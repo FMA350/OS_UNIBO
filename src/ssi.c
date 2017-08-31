@@ -57,7 +57,7 @@ struct tcb_t *ssi_thread_init() {
     _SSI.t_pcb = NULL;
     _SSI.t_status = T_STATUS_READY;
     _SSI.t_wait4sender = NULL;
-    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(_SSI.t_s.cpsr);
+    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
     INIT_LIST_HEAD(t_wait4clock);
@@ -77,10 +77,19 @@ static inline uintptr_t req_field(uintptr_t request, int i) {
 }
 
 void ssi(){
+    int f = 0;
     while (1) {
         uintptr_t msg, reply;
         int send_back;
+
+
+        // if (f) {
+        //     tprint("SSI: receiving message\n");
+        // }
         struct tcb_t *applicant = msgrecv(NULL, &msg);
+        // if (f) {
+        //     tprintf("SSI: message received - %d\n", req_field(msg, 0));
+        // }
         // tprintf("SSI request:%d\n", req_field(msg,0));
         //         "   applicant == %p\n"
         //         "   request number == %d\n"
@@ -90,6 +99,10 @@ void ssi(){
         void * IO_addr = (void *) 0x00006ff0; //FIXME: move to a declaration.
 
         if(applicant == IO_addr) { //interrupt_h ci sta dicendo che un device ha completato
+            // if (f) {
+            //     tprint("interrupt_h ci sta dicendo che un device ha completato\n");
+            // }
+
             int i = 0;
             while (request[i].requester==NULL && i<8)
                 i++;
@@ -124,16 +137,18 @@ void ssi(){
                 break;
                 case SETTLBMGR:
                     reply = (uintptr_t) settlbmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
-                if (send_back)
-                    msgsend(applicant, reply);
+                    if (send_back)
+                        msgsend(applicant, reply);
                 break;
                 case SETSYSMGR:
                     reply = (uintptr_t) setsysmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
-                if (send_back)
-                    msgsend(applicant, reply);
+                    if (send_back)
+                        msgsend(applicant, reply);
                 break;
                 case GET_CPUTIME:
+                    f = 1;
                     msgsend(applicant, (uintptr_t) getcputime_s(applicant));
+                    // tprint("SSI: msg sent back\n");
                 break;
                 case WAIT_FOR_CLOCK:
                     wait_for_clock_s(applicant);
@@ -141,7 +156,6 @@ void ssi(){
                 case DO_IO:
                     do_io_s(msg, applicant);
                 break;
-
                 case GET_PROCESSID:
                     msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
                 break;
@@ -152,11 +166,11 @@ void ssi(){
                     msgsend(applicant, (uintptr_t) applicant);
                 break;
                 default:
+                    HALT();
                 // TODO: se il messaggio è diverso dai codici noti
                 //       rispondere con errore e settare errno
-                break;
             }
-    }
+        }
     }
 }
 
@@ -326,7 +340,7 @@ static inline void terminate_thread_s(struct tcb_t *thread)
 
 static inline unsigned int getcputime_s(const struct tcb_t *applicant)
 {
-    tprintf("SSI: run time requested: %d\n",applicant->run_time);
+    // tprintf("SSI: run time requested: %d\n",applicant->run_time);
     return applicant->run_time;
 }
 

@@ -5,6 +5,7 @@
 #include "mikabooq.h"
 
 /* Syscall mnemonic values */
+#define SYS_ERR     0
 #define SYS_SEND    1
 #define SYS_RECV    2
 
@@ -115,13 +116,18 @@ static inline struct tcb_t* setsysmgr(struct tcb_t* s) {
     return retval;
 }
 
+extern inline void tty0print(char* s);
+
 static inline cputime getcputime(void) {
     uintptr_t retval;
     struct {
         uintptr_t reqtag;
     } req = {GET_CPUTIME};
+    // tty0print("before msgsend\n");
     msgsend(SSI, &req);
+    // tty0print("after msgsend\n");
     msgrecv(SSI, &retval);
+    // tty0print("after msgrecv\n");
     return retval;
 }
 
