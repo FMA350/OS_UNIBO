@@ -25,65 +25,26 @@ extern struct tcb_t *current_thread;
 int interrupt_flag = 0;
 state_t interrupt_t_s; //should it be initialized?
 int call_scheduler;
-static void io_handler();
-static void interval_timer_h();
 
+static inline void interval_timer_h();
+static inline void io_handler();
 
 
 void interrupt_h(){
     //TODO: Enhance control using CPSR (fma350)
-    //tprint("$$$ interrupt_h called $$$\n");
-    timeSliceLeft = getTIMER();
-    //tprintf("timeSliceLeft = %d\n",timeSliceLeft);
+    timeSliceLeft = getTIMER(); //timeSliceLeft is used by the accountant
 
-    if(current_thread){ //a thread was being executed
-        // mnalli: timeSliceLeft è sempre > 0 perché è un unsigned int
-        if(((int)timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
-            io_handler();       //for interrupts
-            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr); // mnalli: lo statement non ha nessun effetto
-            LDST(current_thread);
-        }
-        else{
-            interval_timer_h(); //for fast-interrupts
-            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);    // mnalli: lo statement non ha nessun effetto
-            thread_enqueue(current_thread, &readyq);
-            scheduler();
-        }
-
-    }
-    else{                //no thread was being executed
-        // mnalli: timeSliceLeft è sempre > 0 perché è un unsigned int
-        if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
-            io_handler();       //for interrupts
-            setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
-        }
-        else{
-            // handle pseudoclock
-            update_clock(accountant(NULL));
-            setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
-            scheduler();
-        }
+    //dispatching
+    if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
+        io_handler();       //for interrupts
+    } else {
+        interval_timer_h(); //for fast-interrupts
     }
 }
 
-static void interval_timer_h(){
-
-    // if (accountant(current_thread) == 5){
-    //     //if accountant returns 0, it means the process has consumed all its time
-    // //    tprint("current_thread was updated by accountant\n");
-    //     //handle pseudoclock
-    // }
-    // else {
-    //     tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
-    //     //since the condition is checked earlier
-    // }
-
-    // mnalli: current_thread è sempre != NULL perché nel caso in cui il
-    //         processore si metta in stato di wait gli interrupt dell'interval
-    //         timer rimangono mascherati
-    // salvataggio stato del processore
+static inline void interval_timer_h(){
+    update_clock(accountant(current_thread));
     current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
-    // Inserimento del processo in coda
     thread_enqueue(current_thread, &readyq);
     scheduler();
 }
@@ -146,4 +107,10 @@ static inline void io_handler(){
         i++;
         *((unsigned int *)p) = (unsigned int) p + 2;
     }
+
+    setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
+    if(current_thread){
+        LDST(&current_thread->t_s);
+    }
+    //fma350: otherwise return to... what?
 }

@@ -106,7 +106,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
     /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
        nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
-      // tprintf("\t%p has made a blocking recv, waitinf for: %p\n", current_thread, sender);
+       //tprintf("\t%p has made a blocking recv, waitinf for: %p\n", current_thread, sender);
 
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
@@ -115,8 +115,9 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = sender;
 
-        accountant(current_thread);
-        // STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
+        update_clock(accountant(current_thread));
+
+        STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
 
         if (sender){
         // il thread si blocca aspettando da sender

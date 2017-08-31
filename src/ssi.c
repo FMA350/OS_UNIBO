@@ -28,6 +28,7 @@ int pseudoclock;
 
 struct tcb_t *SSI , *IO_thread;
 
+extern inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg);
 
 static inline int get_errno_s(const struct tcb_t *applicant);
 
@@ -339,7 +340,7 @@ static inline void terminate_thread_s(struct tcb_t *thread)
 
 static inline unsigned int getcputime_s(const struct tcb_t *applicant)
 {
-    // tprintf("SSI: run time requested: %d\n",applicant->run_time);
+    //tprintf("SSI: run time requested: %d\n",applicant->run_time);
     return applicant->run_time;
 }
 
