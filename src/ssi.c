@@ -155,6 +155,9 @@ void ssi(){
                 case DO_IO:
                     do_io_s(msg, applicant);
                 break;
+                case ACK_IO:
+                    // ack_io_s(...);
+                break;
                 case GET_PROCESSID:
                     msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
                 break;
