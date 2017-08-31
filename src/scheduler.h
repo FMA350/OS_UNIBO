@@ -2,6 +2,7 @@
 #define SCHEDULER_H
 
 #include <stdint.h>
+#include <mikabooq.h>
 
 extern struct tcb_t *current_thread;
 extern struct list_head readyq;

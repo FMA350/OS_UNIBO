@@ -68,7 +68,7 @@ void interrupt_h(){
 
 static void interval_timer_h(){
 
-    // if(accountant(current_thread) == 5){
+    // if (accountant(current_thread) == 5){
     //     //if accountant returns 0, it means the process has consumed all its time
     // //    tprint("current_thread was updated by accountant\n");
     //     //handle pseudoclock
@@ -78,15 +78,13 @@ static void interval_timer_h(){
     //     //since the condition is checked earlier
     // }
 
-    timeSliceLeft = (unsigned int *) getTIMER();
-
-    if (current_thread) {
-    // se deve avvenire il context-switch
-        // salvataggio stato del processore
-        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
-        // Inserimento del processo in coda
-        thread_enqueue(current_thread, &readyq);
-    }
+    // mnalli: current_thread è sempre != NULL perché nel caso in cui il
+    //         processore si metta in stato di wait gli interrupt dell'interval
+    //         timer rimangono mascherati
+    // salvataggio stato del processore
+    current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+    // Inserimento del processo in coda
+    thread_enqueue(current_thread, &readyq);
     scheduler();
 }
 

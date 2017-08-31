@@ -157,18 +157,16 @@ static inline void empty_readyq_h() {
     /* shutdown */
         tprint("=== Only SSI in the system ===\n");
         HALT();
-        }
-    else if (soft_block_count == 0) {
+    } else if (soft_block_count == 0) {
     /* all process are hard blocked (waiting for msg) */
     /* deadlock */
         tprint("=== deadlock ===\n");
         PANIC();
-    }
-    else{
+    } else {
     /* processes in the system are waiting for I/O */
-        //tprint("=== processes waiting for IO ===\n");
+        // tprint("=== processes waiting for IO ===\n");
         setTIMER(clockPerTimeslice); //fma350 test
-        setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
+        setSTATUS(STATUS_ENABLE_INT(getSTATUS()));
         WAIT();
     }
 }
