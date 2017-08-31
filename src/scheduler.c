@@ -53,47 +53,30 @@ unsigned int accountant(struct tcb_t* thread){
 returns the time passed in milliseconds. If a thread is passed as an argument,
 updates the runtime of that thread.
 */
-    if(thread){
-        if(timeSliceLeft < 0){
-            //tprint("$$$ accountant: timeSliceLeft < 0 $$$\n");
-            //5 ms in total
-            thread->run_time += 5;
-            return 5; //it's done
-        }
-        else{
-            //if not all the time has passed
-            //tprint("$$$ accountant: not all time has passed $$$\n");
-            //float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
-            int timePassed = clockPerTimeslice - timeSliceLeft;
-            timePassed += 500; // for rounding purpouses
-            //how many 1000 to remove before it goes in underflow?
-            unsigned int milliseconds = 0;
-            while(timePassed > 0){
-                milliseconds++;
-                timePassed-=1000;
-                //equivalent to             //milliseconds = timePassed / clockPerTimeslice;
-
-            }
-            thread->run_time += milliseconds; //adds such a time to the runTime field.
-            return milliseconds;
-        }
+    if((timeSliceLeft < 0) && (timeSliceLeft > clockPerTimeslice)){
+        //tprint("$$$ accountant: timeSliceLeft < 0 $$$\n");
+        //5 ms in total
+        thread->run_time += 5;
+        return 5; //it's done
     }
     else{
-        if(timeSliceLeft < 0){
-            return 5;
-        }
-        else{
-            int tickPassed = clockPerTimeslice - timeSliceLeft;
-            tickPassed += 500; // for rounding purpouses
-            unsigned int milliseconds = 0;
-            while(tickPassed > 0){
-                milliseconds++;
-                tickPassed-=1000;
-                //equivalent to             //milliseconds = tickPassed / clockPerTimeslice;
+        //if not all the time has passed
+        //float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
+        int timePassed = clockPerTimeslice - timeSliceLeft;
+        timePassed -= 500; // for rounding purpouses
+        //how many 1000 to remove before it goes in underflow?
+        unsigned int milliseconds = 0;
+        while(timePassed > 0){
+            milliseconds++;
+            timePassed-=1000;
+            //equivalent to             //milliseconds = timePassed / clockPerTimeslice;
 
-            }
-            return milliseconds;
         }
+        if(thread){
+            thread->run_time += milliseconds;
+             //adds such a time to the runTime field.
+        }
+        return milliseconds;
     }
  }
 
@@ -166,8 +149,7 @@ static inline void empty_readyq_h() {
     }
     else{
     /* processes in the system are waiting for I/O */
-        //tprint("=== processes waiting for IO ===\n");
-        setTIMER(clockPerTimeslice); //fma350 test
+        setTIMER(clockPerTimeslice);
         setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
         WAIT();
     }
