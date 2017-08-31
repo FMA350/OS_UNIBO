@@ -37,20 +37,22 @@ void interrupt_h(){
     //tprintf("timeSliceLeft = %d\n",timeSliceLeft);
 
     if(current_thread){ //a thread was being executed
+        // mnalli: timeSliceLeft è sempre > 0 perché è un unsigned int
         if(((int)timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
             io_handler();       //for interrupts
-            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
+            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr); // mnalli: lo statement non ha nessun effetto
             LDST(current_thread);
         }
         else{
             interval_timer_h(); //for fast-interrupts
-            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
+            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);    // mnalli: lo statement non ha nessun effetto
             thread_enqueue(current_thread, &readyq);
             scheduler();
         }
 
     }
     else{                //no thread was being executed
+        // mnalli: timeSliceLeft è sempre > 0 perché è un unsigned int
         if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
             io_handler();       //for interrupts
             setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
@@ -68,6 +70,7 @@ static void interval_timer_h(){
 
     current_thread->t_s = *((state_t *) INT_OLDAREA); //save processor state
     current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
+    // mnalli FIXME: bisogna sottrarre 4 solo se l'ultima istruzione deve essere ripetuta (nelle trap)
 
     if(accountant(current_thread) == 5){
         //if accountant returns 0, it means the process has consumed all its time

@@ -56,7 +56,7 @@ struct tcb_t *ssi_thread_init() {
     _SSI.t_pcb = NULL;
     _SSI.t_status = T_STATUS_READY;
     _SSI.t_wait4sender = NULL;
-    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(_SSI.t_s.cpsr);
+    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
     INIT_LIST_HEAD(t_wait4clock);
@@ -154,9 +154,6 @@ void ssi(){
                 break;
                 case DO_IO:
                     do_io_s(msg, applicant);
-                break;
-                case ACK_IO:
-                    // ack_io_s(...);
                 break;
                 case GET_PROCESSID:
                     msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
