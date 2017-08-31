@@ -197,8 +197,8 @@ void test(void) {
     tty0print("IT'S ALIVE! IT'S ALIVE! THE KERNEL IS ALIVE!\n");
     HALT();
 }
-
-#define MINLOOPTIME             10000
+#define MINLOOPTIME             20 //milliseconds
+//#define MINLOOPTIME             10000
 #define LOOPNUM                 10000
 
 void p2(void) {
@@ -258,6 +258,7 @@ void p3(void) {
     int i;
     time1 = getTODLO();
     for (i = 0; i < NWAIT; i++) {
+        tty0print("waitforclock\n");
         waitforclock();
     }
     time2 = getTODLO();

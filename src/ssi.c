@@ -24,7 +24,7 @@ struct io_req{
 struct io_req request[8];
 
 struct list_head *t_wait4clock;
-int pseudoclock;
+unsigned int pseudoclock;
 
 struct tcb_t *SSI , *IO_thread;
 
@@ -351,8 +351,10 @@ static inline unsigned int wait_for_clock_s(struct tcb_t *applicant)
 }
 
 void update_clock(unsigned int milliseconds){
+//    tprintf("update pseudoclock = %d\n",pseudoclock); //BUG always 0, 5, 10 or 15....
     pseudoclock += milliseconds;
     if(pseudoclock >= PSEUDOCLOCK_TICK){
+        tprintf("update pseudoclock2 %d\n",pseudoclock);
         pseudoclock -= PSEUDOCLOCK_TICK;
         struct tcb_t *to_resume;
         while((to_resume = thread_dequeue(t_wait4clock))!=NULL){

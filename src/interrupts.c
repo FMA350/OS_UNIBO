@@ -49,7 +49,7 @@ static void interval_timer_h(){
         current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
         thread_enqueue(current_thread, &readyq);
     }
-    setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE)); //fma: needed?
+    //setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE)); //fma: needed?
     scheduler();
 }
 
@@ -113,7 +113,7 @@ static inline void io_handler(){
     }
     setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
     if(current_thread){
-        LDST(current_thread);
+        LDST(&current_thread->t_s);
     }
     //fma350: otherwise return to... what?
 }
