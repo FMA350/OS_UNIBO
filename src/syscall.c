@@ -11,15 +11,6 @@ LIST_HEAD(blockedq);
 #define ST_RVAL(RVAL)   \
     (((state_t *) SYSBK_OLDAREA)->a1 = (unsigned int) (RVAL))
 
-#define SYSCALL_ARG(N)  \
-    (((state_t *) SYSBK_OLDAREA)->a ## N)
-
-// il chiamante è in kernel mode
-// TODO: check
-#define IS_KERNEL_MODE  \
-    (((state_t *) SYSBK_OLDAREA)->cpsr & STATUS_SYS_MODE == STATUS_SYS_MODE)
-
-
 static inline void DELIVER_MSG(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg) {
     // TODO: forse è da modificare con gli interrupt dei devices msgq_add
     if (msgq_add(sender, dest, msg) == 0)
@@ -146,11 +137,17 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
 extern void pgmtrap_h();
 
 // solleva una trap
-void raise_invalid_instruction(void) {
+static inline void raise_reserved_instruction(void) {
     *((state_t *) PGMTRAP_NEWAREA) = *((state_t *) SYSBK_NEWAREA);
     ((state_t *) PGMTRAP_NEWAREA)->CP15_Cause = EXC_RESERVEDINSTR;
     pgmtrap_h();
 }
+
+// il chiamante è in kernel mode
+// TODO: check
+#define IS_KERNEL_MODE  \
+    (((state_t *) SYSBK_OLDAREA)->cpsr & STATUS_SYS_MODE == STATUS_SYS_MODE)
+
 /*
  * These two functions are wrappers for send and recv
  * send and recv are called only if the calling thread is in kernel mode,
@@ -163,14 +160,14 @@ static inline void send_kernel(struct tcb_t *dest, uintptr_t msg) {
     if (IS_KERNEL_MODE)
         send(dest, current_thread, msg);
     else
-        raise_invalid_instruction();
+        raise_reserved_instruction();
 }
 
 static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg) {
     if (IS_KERNEL_MODE)
         recv(src, pmsg);
     else
-        raise_invalid_instruction();
+        raise_reserved_instruction();
 }
 
 /*******************************************************************************/
@@ -181,42 +178,61 @@ definito tramite SETSYSMGR se esiste altrimenti msg SETPGMMGR se
 esiste altrimenti TERMINATE_THREAD  */
 
 
-static inline void syscall_other(uintptr_t msg, uintptr_t *pmsg) {
+static inline void
+syscall_other(unsigned int sysNum, unsigned int arg1,
+              unsigned int arg2, unsigned int arg3)
+{
 
-    if (current_thread->t_pcb->sys_mgr) {
-        send(current_thread->t_pcb->sys_mgr, current_thread, msg);
-        /* Questa recv è sempre bloccante */
-        recv(current_thread->t_pcb->sys_mgr, pmsg);
-    } else if (current_thread->t_pcb->pgm_mgr) {
-        send(current_thread->t_pcb->pgm_mgr, current_thread, msg);
-        /* Questa recv è sempre bloccante */
-        recv(current_thread->t_pcb->pgm_mgr, pmsg);
+    // process of the current thread
+    struct pcb_t *current_process = current_thread->t_pcb;
+
+    struct {
+        unsigned int sysNum;
+        unsigned int arg1;
+        unsigned int arg2;
+        unsigned int arg3;
+    } msg = {sysNum, arg1, arg2, arg3};
+
+    if (current_process->sys_mgr) {
+        current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
+
+        // send is used instead of msgsend for efficiency reasons
+        send(current_process->sys_mgr, current_thread, (uintptr_t) &msg);
+        thread_enqueue(current_thread, &blockedq);
+        scheduler();
+    } else if (current_process->pgm_mgr) {
+        // TODO: Decidere la codifica dei messaggi al program manager
+        //       il program manager riceve anche messaggi dalle trap
+        //       bisogna saperli distinguere
+        current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
+        current_thread->t_s.pc -= 4;    // TODO: is it correct?
+
+        // send is used instead of msgsend for efficiency reasons
+        send(current_process->pgm_mgr, current_thread, (uintptr_t) &msg);
+        thread_enqueue(current_thread, &blockedq);
+        scheduler();
     } else {
-        send(SSI, current_thread, msg);
-        /* Questa recv è sempre bloccante */
-        recv(SSI, NULL);
-        struct {
-            uintptr_t reqtag;
-        } req = {TERMINATE_PROCESS};
-        send(SSI, current_thread, (uintptr_t) &req);
-        recv(SSI, NULL);
+    // il thread chiamante deve essere terminato
+        terminate_thread();
     }
 }
 
-/*******************************************************************************/
-// Syscall Handler
-
+#define SYSCALL_ARG(N)  \
+    (((state_t *) SYSBK_OLDAREA)->a ## N)
 
 void syscall_h(){
-    // copiare old_state in thread->t_s
-    BREAKPOINT();
+
+    // BREAKPOINT();
     switch (SYSCALL_ARG(1)) {
+        case SYS_ERR:
+        // syscall 0 è da specifica sempre un errore
+            raise_reserved_instruction();
+            // FIXME: not correct; should be illegal instruction or something like that
         case SYS_SEND:
             send_kernel((struct tcb_t *) SYSCALL_ARG(2), SYSCALL_ARG(3));
         case SYS_RECV:
             recv_kernel((struct tcb_t *) SYSCALL_ARG(2), (uintptr_t *) SYSCALL_ARG(3));
         default:
-            ;
-            // syscall_other(SYSCALL_ARG(3));
+            syscall_other(SYSCALL_ARG(1), SYSCALL_ARG(2), SYSCALL_ARG(3), SYSCALL_ARG(4));
     }
 }

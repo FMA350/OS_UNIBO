@@ -5,6 +5,7 @@
 #include "mikabooq.h"
 
 /* Syscall mnemonic values */
+#define SYS_ERR     0
 #define SYS_SEND    1
 #define SYS_RECV    2
 
@@ -20,10 +21,9 @@
 #define GET_CPUTIME 8
 #define WAIT_FOR_CLOCK 9
 #define DO_IO 10
-#define ACK_IO 11
-#define GET_PROCESSID 12
-#define GET_MYTHREADID 13
-#define GET_PARENTPROCID 14
+#define GET_PROCESSID 11
+#define GET_MYTHREADID 12
+#define GET_PARENTPROCID 13
 
 typedef uintptr_t memaddr;
 typedef uintptr_t cputime;
@@ -158,14 +158,6 @@ static inline unsigned int do_io(devaddr device, uintptr_t command, uintptr_t da
 #define do_net_io(dev, cmd, d1, d2) do_io((dev),(cmd),(d1),(d2))
 #define do_printer_io(dev, cmd, d1) do_io((dev),(cmd),(d1),0)
 #define do_terminal_io(dev, cmd) do_io((dev),(cmd),0,0)
-
-static inline void ack_io(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2) {
-    uintptr_t retval;
-    struct {
-        uintptr_t reqtag;
-    } req = {ACK_IO};
-    msgsend(SSI, &req);
-}
 
 static inline struct pcb_t* get_processid(struct tcb_t* s) {
     struct pcb_t* retval;

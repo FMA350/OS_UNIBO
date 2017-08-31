@@ -56,7 +56,7 @@ struct tcb_t *ssi_thread_init() {
     _SSI.t_pcb = NULL;
     _SSI.t_status = T_STATUS_READY;
     _SSI.t_wait4sender = NULL;
-    _SSI.t_s.cpsr = STATUS_ENABLE_INT(STATUS_ENABLE_TIMER(0));
+    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(_SSI.t_s.cpsr);
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
     INIT_LIST_HEAD(t_wait4clock);
@@ -147,7 +147,7 @@ void ssi(){
                 case GET_CPUTIME:
                     f = 1;
                     msgsend(applicant, (uintptr_t) getcputime_s(applicant));
-                    tprint("SSI: msg sent back\n");
+                    // tprint("SSI: msg sent back\n");
                 break;
                 case WAIT_FOR_CLOCK:
                     wait_for_clock_s(applicant);
