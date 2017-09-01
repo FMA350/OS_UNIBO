@@ -50,35 +50,18 @@ unsigned int accountant(struct tcb_t* thread){
 | (_| | (_| (_| (_) | |_| | | | | || (_| | | | | |_
 \__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
 
-returns the time passed in milliseconds. If a thread is passed as an argument,
-updates the runtime of that thread.
+returns the time passed in milliseconds.
 */
-    if((timeSliceLeft < 0) && (timeSliceLeft > clockPerTimeslice)){
-        //tprint("$$$ accountant: timeSliceLeft < 0 $$$\n");
-        //5 ms in total
-        thread->run_time += 5;
-        return 5; //it's done
-    }
-    else{
-        //if not all the time has passed
-        //float timePassed = (float)((float)(1-(float)(timeSliceLeft/clockPerTimeslice))*5)+0.5; //calculates the time
-        int timePassed = clockPerTimeslice - timeSliceLeft;
-        timePassed -= 500; // for rounding purpouses
+    int cycles = thread->run_time;
+    int milliseconds = 0;
+        cycles -= 500; // for rounding purpouses
         //how many 1000 to remove before it goes in underflow?
-        unsigned int milliseconds = 0;
-        while(timePassed > 0){
+        while(cycles > 0){
             milliseconds++;
-            timePassed-=1000;
-            //equivalent to             //milliseconds = timePassed / clockPerTimeslice;
-
+            cycles-=1000;
         }
-        if(thread){
-            thread->run_time += milliseconds;
-             //adds such a time to the runTime field.
-        }
-        return milliseconds;
-    }
- }
+    return milliseconds;
+}
 
 
 /* Loads the initial thread state
@@ -154,7 +137,7 @@ static inline void empty_readyq_h() {
     }
 }
 
-void scheduler() {
+void scheduler(){
     current_thread = thread_dequeue(&readyq);
     //tprintf("scheduler started, current is %p\n", current_thread);
 

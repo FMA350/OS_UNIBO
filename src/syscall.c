@@ -4,7 +4,8 @@
 #include <scheduler.h>
 #include <syscall.h>
 
-
+extern unsigned int clockPerTimeslice;
+extern unsigned int timeSliceLeft;
 // sentinella della coda dei processi in attesa di ricevere un messaggio
 LIST_HEAD(blockedq);
 
@@ -102,20 +103,20 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
         ST_RVAL(sender);
         LDST((state_t *) SYSBK_OLDAREA);
     } else {
+
+
     /* caso bloccante */
     /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
        nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
-       //tprintf("\t%p has made a blocking recv, waitinf for: %p\n", current_thread, sender);
-
-        // salvataggio stato del processore
+       timeSliceLeft = getTIMER();
+            // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
-        //tprintf("%d\n", current_thread->t_s.pc);
-        // changing thread status
+            // changing thread status
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = sender;
-
-        update_clock(accountant(current_thread));
+        current_thread->run_time += timeSliceLeft; //cycles
+        update_clock(timeSliceLeft);
 
         STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
 

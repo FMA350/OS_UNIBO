@@ -1,1 +1,4 @@
 *.o
+*.elf.stab.uarm
+*.elf.core.uarm
+*.elf

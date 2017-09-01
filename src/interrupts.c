@@ -32,7 +32,7 @@ static inline void io_h();
 
 void interrupt_h(){
     //TODO: Enhance control using CPSR (fma350)
-    timeSliceLeft = getTIMER(); //timeSliceLeft is used by the accountant
+    timeSliceLeft = getTIMER();
 
     //dispatching
     if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
@@ -43,8 +43,9 @@ void interrupt_h(){
 }
 
 static inline void interval_timer_h(){
-    update_clock(accountant(current_thread));
     current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+    current_thread->run_time += clockPerTimeslice; //cycles
+    update_clock(clockPerTimeslice);
     thread_enqueue(current_thread, &readyq);
     scheduler();
 }
