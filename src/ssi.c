@@ -369,56 +369,34 @@ static inline void setdevice(unsigned int devno, uintptr_t command)
     *((uintptr_t *) TERMINAL_DEV_FIELD(devno, TRANSM_COMMAND)) = command;
 }
 
-static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
+static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applicant)
 {
-    //tprint("    do_io_s started\n");
-/*    switch (req_field(msgg,1)) {
-        case TERM0ADDR:   //il device e' un terminale */
-        int empty = 1;
-        int i;  // FIXME: variabile non inizializzata?
+    switch (req_field(msgg, 1)) {
+        case TERM0ADDR:   //il device e' un terminale
+            // the thread gets soft blocked
+            soft_block_count++;
 
-        // the thread gets soft blocked
-        soft_block_count++;
-
-        //TODO: possiamo fare una lista per ogni terminale invece che array statico
-        while (request[i].requester == NULL && i < 5) {
-            tprintf("i == %d\n", i);
-            i++;
-        }
-
-        if (request[i].requester != NULL)
-            empty = 0;
-
-        if(empty){
             setdevice(0,req_field(msgg,2));
-            request[0].val = msgg;
-            request[0].requester = applic;
-        }
-        //aggiorno -> (using device)
-        else {
-            i = 0;
-            while(request[i].requester != NULL && i < 5)
-                i++; //cerco il primo buco libero per salvare il messaggio
 
-            if (i == 8)
-                return -1; //se non ci sono piu spazi per salvare...
-            else {
-                request[i].val = msgg;
-                request[i].requester = applic;
-            }
-        }
-        /*break;
-        case PRINTADDR:
-        break;
-        case NETADDR:
-        break;
-        case TAPEADDR:
-        break;
-        case DISKADDR:
-        break;
-        default: return -1;
-    }*/
-    //tprint("    do_io_s finished\n");
+            if (request[TERMINAL_REQUESTER_INDEX].requester)
+            // Qualcun altro sta già facendo IO; non dovrebbe mai accadere
+                PANIC();
+
+            request[TERMINAL_REQUESTER_INDEX].val = msgg;
+            request[TERMINAL_REQUESTER_INDEX].requester = applicant;
+
+            break;
+        // case PRINTADDR:
+        //     break;
+        // case NETADDR:
+        //     break;
+        // case TAPEADDR:
+        //     break;
+        // case DISKADDR:
+        //     break;
+        // default:
+        //     return -1;
+    }
 }
 
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */

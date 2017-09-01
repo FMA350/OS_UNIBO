@@ -19,4 +19,6 @@ struct io_req {
 // la dichiarazione per ora è in ssi.c
 extern struct io_req request[5];
 
+#define TERMINAL_REQUESTER_INDEX    4
+
 #endif // DO_IO_S_H
