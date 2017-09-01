@@ -15,17 +15,8 @@
 #define PSEUDOCLOCK_TICK 100000 //100 ms
 
 
-<<<<<<< HEAD
 struct io_req request[5];
 
-=======
-
-struct io_req{
-    uintptr_t val;
-    struct tcb_t *requester;
-};
-struct io_req request[8];
->>>>>>> 8e93a6578a0d9a8142e79a1638e1c8b1cabfc92b
 
 struct list_head *t_wait4clock;
 int pseudoclock;
@@ -383,17 +374,19 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
     //tprint("    do_io_s started\n");
 /*    switch (req_field(msgg,1)) {
         case TERM0ADDR:   //il device e' un terminale */
-        // int empty = 1;
+        int empty = 1;
         int i;  // FIXME: variabile non inizializzata?
 
         // the thread gets soft blocked
         soft_block_count++;
 
         //TODO: possiamo fare una lista per ogni terminale invece che array statico
-        while (request[i].requester == NULL && i < 5)
+        while (request[i].requester == NULL && i < 5) {
+            tprintf("i == %d\n", i);
             i++;
+        }
 
-        if (request[i].requester!=NULL)
+        if (request[i].requester != NULL)
             empty = 0;
 
         if(empty){
@@ -404,7 +397,7 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
         //aggiorno -> (using device)
         else {
             i = 0;
-            while(request[i].requester!=NULL && i < 5)
+            while(request[i].requester != NULL && i < 5)
                 i++; //cerco il primo buco libero per salvare il messaggio
 
             if (i == 8)
