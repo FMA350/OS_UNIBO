@@ -76,7 +76,12 @@ static inline void io_h(){
         //device n.0 has a pending interrupt
             // tprintf(">>>>> terminal 0 raised interrupt %p\n",thread_qhead(&blockedq));
             // tprintf("BITMAP: %d\n", *((unsigned int *)p));
+
+            // #define TERM0ADDR       0x24C
+            tprintf("- IL_TERMINAL 0 - %p\n", DEV_REG_ADDR(IL_TERMINAL, 0));
+            // tprintf("- IDEV_BITMAP_ADDR 0 - %p\n", IDEV_BITMAP_ADDR(IL_TERMINAL));
             unsigned int *trs_cmd = (unsigned int *) 0x0000024c;
+
             *trs_cmd = DEV_C_ACK;
             // tprintf("BITMAP: %d\n", *((unsigned int *)p));
             send(SSI,p,i);
