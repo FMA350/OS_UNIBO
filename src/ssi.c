@@ -15,7 +15,7 @@
 #define TAPEADDR        0x0C0
 #define DISKADDR        0x040
 
-#define PSEUDOCLOCK_TICK 100
+#define PSEUDOCLOCK_TICK 100000 //100 ms
 
 struct io_req{
     uintptr_t val;
@@ -350,9 +350,10 @@ static inline unsigned int wait_for_clock_s(struct tcb_t *applicant)
     return;
 }
 
-void update_clock(unsigned int milliseconds){
-    pseudoclock += milliseconds;
+void update_clock(unsigned int cycles){
+    pseudoclock += cycles;
     if(pseudoclock >= PSEUDOCLOCK_TICK){
+        //tprintf("update_clock: %d\n",pseudoclock);
         pseudoclock -= PSEUDOCLOCK_TICK;
         struct tcb_t *to_resume;
         while((to_resume = thread_dequeue(t_wait4clock))!=NULL){
