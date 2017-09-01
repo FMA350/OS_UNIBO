@@ -118,7 +118,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
         current_thread->run_time += timeSliceLeft; //cycles
         update_clock(timeSliceLeft);
 
-        STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
+    //    STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
 
         if (sender){
         // il thread si blocca aspettando da sender

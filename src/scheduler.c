@@ -132,7 +132,8 @@ static inline void empty_readyq_h() {
     /* processes in the system are waiting for I/O */
         // tprint("=== processes waiting for IO ===\n");
         setTIMER(clockPerTimeslice); //fma350 test
-        setSTATUS(STATUS_ENABLE_INT(getSTATUS()));
+        setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
+        //setSTATUS(STATUS_ENABLE_INT(getSTATUS()));
         WAIT();
     }
 }

@@ -257,7 +257,7 @@ void p3(void) {
     int i;
     time1 = getTODLO();
     for (i = 0; i < NWAIT; i++) {
-        tty0print("waitforclock\n");
+        //tty0print("waitforclock\n");
         waitforclock();
     }
     time2 = getTODLO();
