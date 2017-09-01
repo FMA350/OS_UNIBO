@@ -10,6 +10,8 @@
 #include <scheduler.h>
 #include <libuarm.h>
 
+#include <nucleus.h>
+
 /*****EXTERN*****/
 extern unsigned int getTIMER();
 extern void update_clock(unsigned int milliseconds);
@@ -87,7 +89,17 @@ static inline void io_h(){
 
             *((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND)) = DEV_C_ACK;
             // tprintf("BITMAP: %d\n", *((unsigned int *)p));
-            send(SSI,p,i);
+
+            struct {
+                uintptr_t reqtag;
+                devaddr device;
+                uintptr_t command;
+                uintptr_t data1;
+                uintptr_t data2;
+            } req = {DO_IO, TERMINAL_DEV_FIELD(0, TRANSM_COMMAND), DEV_C_ACK, 0, 0};
+
+            msgsend(SSI, &req);
+
             break;
         } else if (((*p >> 1) & 1) == 1) {
         // device n.1 has a pending interrupt

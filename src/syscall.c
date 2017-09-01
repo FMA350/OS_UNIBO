@@ -90,11 +90,9 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
             ST_RVAL(SEND_FAILURE);
             break;
     }
-
     void * IO_addr = (void *) 0x00006ff0;
     if (sender == IO_addr) //se il sender e' l'io_handler non devo caricare lo stato (che non esiste!)
-        // scheduler();
-        ;
+        scheduler();
     else
         LDST((state_t *) SYSBK_OLDAREA);
 }
@@ -201,7 +199,7 @@ syscall_other(unsigned int sysNum, unsigned int arg1,
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
 
         // send is used instead of msgsend for efficiency reasons
-        send(current_process->sys_mgr, current_thread, (uintptr_t) &msg);   // FIXME: send loads old state!!!
+        send(current_process->sys_mgr, current_thread, (uintptr_t) &msg);
         thread_enqueue(current_thread, &blockedq);
         scheduler();
     } else if (current_process->pgm_mgr) {

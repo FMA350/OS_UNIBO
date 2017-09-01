@@ -211,7 +211,7 @@ void p2(void) {
 
     /* test: GET_MYTHREADID GET_PROCESSID GET_PARENTPROCID */
     // TODO: se facciamo stampare anche la riga seguente il test prosegue!!!
-    // tty0print("p2 about to call get_mythreadid()\n");
+    tty0print("p2 about to call get_mythreadid()\n");
     if (get_mythreadid() != p2t)
         panic("p2 get_mythreadid: wrong pid returned\n");
 
