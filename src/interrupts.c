@@ -43,10 +43,12 @@ void interrupt_h(){
 }
 
 static inline void interval_timer_h(){
-    current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
-    current_thread->run_time += clockPerTimeslice; //cycles
+    if(current_thread){
+        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+        current_thread->run_time += clockPerTimeslice; //cycles
+        thread_enqueue(current_thread, &readyq);
+    }
     update_clock(clockPerTimeslice);
-    thread_enqueue(current_thread, &readyq);
     scheduler();
 }
 

@@ -15,8 +15,17 @@
 #define PSEUDOCLOCK_TICK 100000 //100 ms
 
 
+<<<<<<< HEAD
 struct io_req request[5];
 
+=======
+
+struct io_req{
+    uintptr_t val;
+    struct tcb_t *requester;
+};
+struct io_req request[8];
+>>>>>>> 8e93a6578a0d9a8142e79a1638e1c8b1cabfc92b
 
 struct list_head *t_wait4clock;
 int pseudoclock;
@@ -39,6 +48,7 @@ static inline struct tcb_t *setsysmgr_s(struct tcb_t *thread, struct tcb_t *appl
 
 static inline unsigned int getcputime_s(const struct tcb_t *applicant);
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant);
+//static inline unsigned int clock_is_over_s();
 static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic);
 
 static inline struct pcb_t *get_processid_s(const struct tcb_t *thread);
@@ -141,6 +151,9 @@ void ssi(){
                 case WAIT_FOR_CLOCK:
                     wait_for_clock_s(applicant);
                 break;
+                // case PSEUDOCLOCK_OVER:
+                //     clock_is_over_s();
+                //     break;
                 case DO_IO:
                     do_io_s(msg, applicant);
                 break;
@@ -334,18 +347,28 @@ static inline unsigned int getcputime_s(const struct tcb_t *applicant)
 
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant)
 {
-    thread_enqueue(applicant, t_wait4clock);
+    thread_enqueue(applicant, &t_wait4clock);
     return;
 }
+// static inline unsigned int clock_is_over_s(){
+//     struct tcb_t *to_resume;
+//     while((to_resume = thread_dequeue(t_wait4clock))!=NULL){
+//         //tprint("resuming pseudoclock");
+//         msgsend(to_resume,NULL);
+//     }
+// }
 
 void update_clock(unsigned int cycles){
     pseudoclock += cycles;
     if(pseudoclock >= PSEUDOCLOCK_TICK){
-        //tprintf("update_clock: %d\n",pseudoclock);
         pseudoclock -= PSEUDOCLOCK_TICK;
+    //    msgsend(SSI,PSEUDOCLOCK_OVER);
         struct tcb_t *to_resume;
         while((to_resume = thread_dequeue(t_wait4clock))!=NULL){
+            tprint("resuming pseudoclock");
+        //    send(to_resume,SSI,NULL);
             msgsend(to_resume,NULL);
+            thread_enqueue(to_resume, &readyq);
         }
     }
 }
