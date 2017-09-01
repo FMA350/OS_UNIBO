@@ -27,7 +27,7 @@ state_t interrupt_t_s; //should it be initialized?
 int call_scheduler;
 
 static inline void interval_timer_h();
-static inline void io_handler();
+static inline void io_h();
 
 
 void interrupt_h(){
@@ -36,7 +36,7 @@ void interrupt_h(){
 
     //dispatching
     if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
-        io_handler();       //for interrupts
+        io_h();       //for interrupts
     } else {
         interval_timer_h(); //for fast-interrupts
     }
@@ -49,8 +49,8 @@ static inline void interval_timer_h(){
     scheduler();
 }
 
-static inline void io_handler(){
-//    tprint("$$$ io_handler called $$$\n");
+static inline void io_h(){
+//    tprint("$$$ io_h called $$$\n");
 
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
@@ -62,55 +62,53 @@ static inline void io_handler(){
     //     //list_add(&current_thread->t_sched, &readyq);
     // }
 
-    void * p = (void *) 0x00006ff0;
+    // tprintf("interval timer interrupt - %d\n", *((unsigned int *) CDEV_BITMAP_ADDR(IL_TIMER)));
 
-    void * q = p;
+    unsigned int *p = (unsigned int *) CDEV_BITMAP_ADDR(IL_TERMINAL);
+
     // dovrebbe funzionare a grandi linee, ma bisognerebbe vedere anche le funzioni
     // del coprocessore (ha un registro che indica la causa degli interrupts)
-    // void * rcv_cmd = (void *) 0x0000244;
-    // *(unsigned int*)rcv_cmd = 1;
-    int i = 0;
-    while (i < 5) {
+
+    int i;
+    for (i = 0; i < 5; i++) {
     //ne controllo uno alla volta di device per gestire un interrupt alla volta
-        if ((*((unsigned int *)p)%2)==1) {
+        if ((*p & 1) == 1) {
         //device n.0 has a pending interrupt
-            //tprintf(">>>>> terminal 0 raised interrupt %p\n",thread_qhead(&blockedq));
-//            tprintf("BITMAP: %d\n", *((unsigned int *)p));
-            void * trs_cmd = (void *) 0x000024c;
-            *(unsigned int*) trs_cmd = 1;
-//            tprintf("BITMAP: %d\n", *((unsigned int *)p));
-            send(SSI,q,i);
+            // tprintf(">>>>> terminal 0 raised interrupt %p\n",thread_qhead(&blockedq));
+            // tprintf("BITMAP: %d\n", *((unsigned int *)p));
+            unsigned int *trs_cmd = (unsigned int *) 0x0000024c;
+            *trs_cmd = DEV_C_ACK;
+            // tprintf("BITMAP: %d\n", *((unsigned int *)p));
+            send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>1)%2)==1) {
+        } else if (((*p >> 1) & 1) == 1) {
         // device n.1 has a pending interrupt
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>2)%2)==1) {
+        } else if (((*p >> 2) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>3)%2)==1) {
+        } else if (((*p >> 3) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>4)%2)==1) {
+        } else if (((*p >> 4) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>5)%2)==1) {
+        } else if (((*p >> 5) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>6)%2)==1) {
+        } else if (((*p >> 6) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>7)%2)==1) {
+        } else if (((*p >> 7) & 1) == 1) {
             send(SSI,p,i);
             break;
         }
-        i++;
-        *((unsigned int *)p) = (unsigned int) p + 2;
+
+        // FIXME: cos'è?
+        *p = (unsigned int) p + 2;
     }
 
-    setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
-    if(current_thread){
-        LDST(&current_thread->t_s);
-    }
-    //fma350: otherwise return to... what?
+    // Si restituisce il controllo al chiamante
+    LDST((state_t *) INT_OLDAREA);
 }

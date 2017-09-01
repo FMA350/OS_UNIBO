@@ -197,8 +197,8 @@ void test(void) {
     tty0print("IT'S ALIVE! IT'S ALIVE! THE KERNEL IS ALIVE!\n");
     HALT();
 }
-
-#define MINLOOPTIME             10000
+#define MINLOOPTIME             5 //milliseconds
+//#define MINLOOPTIME             10000
 #define LOOPNUM                 10000
 
 void p2(void) {
@@ -225,15 +225,13 @@ void p2(void) {
     if (get_processid(p1t) != get_parentprocid(get_processid(get_mythreadid())))
         panic("p2 get_parentprocid get_processid error\n");
     /* test: GET_CPUTIME */
-    tty0print("before CPUTIME\n");
     cpu_t1 = getcputime();
 
-    tty0print("after first CPUTIME\n");
     /* delay for several milliseconds */
     for (i = 1; i < LOOPNUM; i++);
 
     cpu_t2 = getcputime();
-    
+
     //tprintf("cpu1 = %d\n",cpu_t1);
     if ((cpu_t2 - cpu_t1) >= MINLOOPTIME)
         tty0print("p2 GET_CPUTIME sounds okay\n");
@@ -259,6 +257,7 @@ void p3(void) {
     int i;
     time1 = getTODLO();
     for (i = 0; i < NWAIT; i++) {
+        tty0print("waitforclock\n");
         waitforclock();
     }
     time2 = getTODLO();
