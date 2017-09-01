@@ -15,7 +15,7 @@
 #define PSEUDOCLOCK_TICK 100000 //100 ms
 
 
-struct io_req request[5];
+struct tcb_t *soft_blocked_thread[5];
 
 
 struct list_head *t_wait4clock;
@@ -40,7 +40,9 @@ static inline struct tcb_t *setsysmgr_s(struct tcb_t *thread, struct tcb_t *appl
 static inline unsigned int getcputime_s(const struct tcb_t *applicant);
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant);
 //static inline unsigned int clock_is_over_s();
-static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic);
+
+static inline void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
+                            uintptr_t data2, struct tcb_t* applicant);
 
 static inline struct pcb_t *get_processid_s(const struct tcb_t *thread);
 static inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc);
@@ -60,10 +62,10 @@ struct tcb_t *ssi_thread_init() {
     pseudoclock = 0;
 
     int i;
-    for (i=0; i<8; i++)
-        request[i].requester = NULL;
+    for (i = 0; i < 5; i++)
+        soft_blocked_thread[i] = NULL;
 
-    tprint("SSI initialized\n");
+    // tprint("SSI initialized\n");
 
     return(SSI = &_SSI);
 }
@@ -73,7 +75,8 @@ static inline uintptr_t req_field(uintptr_t request, int i) {
 }
 
 
-void ssi(){
+void ssi(void)
+{
     while (1) {
         uintptr_t msg, reply;
         int send_back;
@@ -89,19 +92,20 @@ void ssi(){
         if(applicant == ((void *) CDEV_BITMAP_ADDR(IL_TERMINAL))) {
         // Se il messaggio è stato inviato dal terminale (da interrupt_h)
 
-            int i = 0;
-            while (request[i].requester == NULL && i < 5)
-                i++;
+            if (soft_blocked_thread[TERMINAL_REQUESTER_INDEX]) {
+            // DEBUG: interrupt proveniente non da tprint
+                // continue;
+                // tprint("SSI: Requester is NULL\n");
+                // PANIC();
 
-            msgsend(request[i].requester,
+                msgsend(soft_blocked_thread[TERMINAL_REQUESTER_INDEX],
                     *((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_STATUS)));
 
-            // TODO: mnalli - l'ho aggiunto io, è giusto?
-            // tprintf("soft_block_count == %d\n", soft_block_count);
-            // soft_block_count--;
-
-            request[i].val = (uintptr_t) NULL;
-            request[i].requester = NULL;
+                // TODO: mnalli - l'ho aggiunto io, è giusto?
+                // tprintf("soft_block_count == %d\n", soft_block_count);
+                soft_block_count--;
+                soft_blocked_thread[TERMINAL_REQUESTER_INDEX] = NULL;
+            }
 
         } else {
             //it's a request from a thread
@@ -146,7 +150,12 @@ void ssi(){
                 //     clock_is_over_s();
                 //     break;
                 case DO_IO:
-                    do_io_s(msg, applicant);
+                    // tprintf("soft_block_count = %d\n", soft_block_count);
+                    do_io_s((devaddr) req_field(msg, 1),
+                            (uintptr_t) req_field(msg, 2),
+                            (uintptr_t) req_field(msg, 3),
+                            (uintptr_t) req_field(msg, 4), applicant);
+                    // tprintf("\nsoft_block_count = %d\n", soft_block_count);
                 break;
                 case GET_PROCESSID:
                     msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
@@ -158,6 +167,8 @@ void ssi(){
                     msgsend(applicant, (uintptr_t) applicant);
                 break;
                 default:
+                    tprint("SSI: Unknown request\n");
+                    tprintf("REQ_TAG == %d, applicant = %p\n", req_field(msg, 0), applicant);
                     PANIC();
                 // TODO: se il messaggio è diverso dai codici noti
                 //       rispondere con errore e settare errno
@@ -206,6 +217,7 @@ static inline struct tcb_t *__create_thread_s(const state_t *initial_state, stru
     //tprintf("current: %p, %p, %p \n", current_thread,  thread_qhead(&readyq),  thread_qhead(&blockedq));
     thread_enqueue(new_thread, &readyq);
     thread_count++;
+    // tprintf("__create_thread_s - new thread --> %p\n", new_thread);
     return new_thread;
 }
 
@@ -233,7 +245,6 @@ static inline void clean_sys_msg(struct tcb_t *terminating)
     } else if (terminating->t_wait4sender == get_processid_s(terminating)->pgm_mgr) {
         msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
     }
-
 }
 
 
@@ -338,7 +349,7 @@ static inline unsigned int getcputime_s(const struct tcb_t *applicant)
 
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant)
 {
-    thread_enqueue(applicant, &t_wait4clock);
+    thread_enqueue(applicant, t_wait4clock);
     return;
 }
 // static inline unsigned int clock_is_over_s(){
@@ -356,7 +367,7 @@ void update_clock(unsigned int cycles){
     //    msgsend(SSI,PSEUDOCLOCK_OVER);
         struct tcb_t *to_resume;
         while((to_resume = thread_dequeue(t_wait4clock))!=NULL){
-            tprint("resuming pseudoclock");
+            // tprint("resuming pseudoclock");
         //    send(to_resume,SSI,NULL);
             msgsend(to_resume,NULL);
             thread_enqueue(to_resume, &readyq);
@@ -364,26 +375,30 @@ void update_clock(unsigned int cycles){
     }
 }
 
-static inline void setdevice(unsigned int devno, uintptr_t command)
-{
-    *((uintptr_t *) TERMINAL_DEV_FIELD(devno, TRANSM_COMMAND)) = command;
-}
+// static inline void setdevice(unsigned int devno, uintptr_t command)
+// {
+//     *((uintptr_t *) TERMINAL_DEV_FIELD(devno, TRANSM_COMMAND)) = command;
+// }
 
-static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applicant)
+#define TERM0ADDR       0x24C
+// TERMINAL_DEV_FIELD(0, TRANSM_COMMAND)
+
+static inline void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
+                            uintptr_t data2, struct tcb_t* applicant)
 {
-    switch (req_field(msgg, 1)) {
-        case TERM0ADDR:   //il device e' un terminale
+    switch (device) {
+        case TERMINAL_DEV_FIELD(0, TRANSM_COMMAND):   //il device e' un terminale
             // the thread gets soft blocked
             soft_block_count++;
 
-            setdevice(0,req_field(msgg,2));
+            // setdevice(0, command);
+            *((uintptr_t *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND)) = command;
 
-            if (request[TERMINAL_REQUESTER_INDEX].requester)
+            if (soft_blocked_thread[TERMINAL_REQUESTER_INDEX])
             // Qualcun altro sta già facendo IO; non dovrebbe mai accadere
                 PANIC();
 
-            request[TERMINAL_REQUESTER_INDEX].val = msgg;
-            request[TERMINAL_REQUESTER_INDEX].requester = applicant;
+            soft_blocked_thread[TERMINAL_REQUESTER_INDEX] = applicant;
 
             break;
         // case PRINTADDR:
@@ -394,8 +409,9 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applicant)
         //     break;
         // case DISKADDR:
         //     break;
-        // default:
-        //     return -1;
+        default:
+            // tprint("SSI: IO ERROR\n");
+            PANIC();
     }
 }
 

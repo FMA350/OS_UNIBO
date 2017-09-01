@@ -11,13 +11,9 @@
 #define TERMINAL_DEV_FIELD(dev, field) (DEV_REG_ADDR(IL_TERMINAL, dev) + (field))
 
 
-struct io_req {
-    uintptr_t val;
-    struct tcb_t *requester;
-};
 
 // la dichiarazione per ora è in ssi.c
-extern struct io_req request[5];
+extern struct tcb_t *soft_blocked_thread[5];
 
 #define TERMINAL_REQUESTER_INDEX    4
 

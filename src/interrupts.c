@@ -42,13 +42,18 @@ void interrupt_h(){
     }
 }
 
+extern void BREAKPOINT();
+
 static inline void interval_timer_h(){
     if(current_thread){
         current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
         current_thread->run_time += clockPerTimeslice; //cycles
+
+        tprintf("IT - %p\n", current_thread);
         thread_enqueue(current_thread, &readyq);
     }
     update_clock(clockPerTimeslice);
+    // BREAKPOINT();
     scheduler();
 }
 
