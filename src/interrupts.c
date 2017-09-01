@@ -50,6 +50,8 @@ static inline void interval_timer_h(){
     scheduler();
 }
 
+#include <do_io_s.h>
+
 static inline void io_h(){
 //    tprint("$$$ io_h called $$$\n");
 
@@ -75,15 +77,8 @@ static inline void io_h(){
     //ne controllo uno alla volta di device per gestire un interrupt alla volta
         if ((*p & 1) == 1) {
         //device n.0 has a pending interrupt
-            // tprintf(">>>>> terminal 0 raised interrupt %p\n",thread_qhead(&blockedq));
-            // tprintf("BITMAP: %d\n", *((unsigned int *)p));
 
-            // #define TERM0ADDR       0x24C
-            tprintf("- IL_TERMINAL 0 - %p\n", DEV_REG_ADDR(IL_TERMINAL, 0));
-            // tprintf("- IDEV_BITMAP_ADDR 0 - %p\n", IDEV_BITMAP_ADDR(IL_TERMINAL));
-            unsigned int *trs_cmd = (unsigned int *) 0x0000024c;
-
-            *trs_cmd = DEV_C_ACK;
+            *((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND)) = DEV_C_ACK;
             // tprintf("BITMAP: %d\n", *((unsigned int *)p));
             send(SSI,p,i);
             break;
@@ -107,6 +102,7 @@ static inline void io_h(){
             send(SSI,p,i);
             break;
         } else if (((*p >> 7) & 1) == 1) {
+        //device n.8 has a pending interrupt
             send(SSI,p,i);
             break;
         }

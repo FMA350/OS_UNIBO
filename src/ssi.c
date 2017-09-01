@@ -9,19 +9,14 @@
 #include <syscall.h>
 #include <interrupts.h>
 
-#define TERM0ADDR       0x24C
-#define PRINTADDR       0x1C0
-#define NETADDR         0x140
-#define TAPEADDR        0x0C0
-#define DISKADDR        0x040
+#include <do_io_s.h>
+
 
 #define PSEUDOCLOCK_TICK 100000 //100 ms
 
-struct io_req{
-    uintptr_t val;
-    struct tcb_t *requester;
-};
-struct io_req request[8];
+
+struct io_req request[5];
+
 
 struct list_head *t_wait4clock;
 int pseudoclock;
@@ -76,43 +71,38 @@ static inline uintptr_t req_field(uintptr_t request, int i) {
     return ((uintptr_t *) request)[i];
 }
 
+
 void ssi(){
-    int f = 0;
     while (1) {
         uintptr_t msg, reply;
         int send_back;
 
-
-        // if (f) {
-        //     tprint("SSI: receiving message\n");
-        // }
         struct tcb_t *applicant = msgrecv(NULL, &msg);
-        // if (f) {
-        //     tprintf("SSI: message received - %d\n", req_field(msg, 0));
-        // }
+
         // tprintf("SSI request:%d\n", req_field(msg,0));
         //         "   applicant == %p\n"
         //         "   request number == %d\n"
         //         "   headOfReadyQ == %p\n",
         //        applicant, req_field(msg, 0), current_thread, thread_qhead(&readyq));
 
-        void * IO_addr = (void *) 0x00006ff0; //FIXME: move to a declaration.
-
-        if(applicant == IO_addr) { //interrupt_h ci sta dicendo che un device ha completato
-            // if (f) {
-            //     tprint("interrupt_h ci sta dicendo che un device ha completato\n");
-            // }
+        if(applicant == ((void *) CDEV_BITMAP_ADDR(IL_TERMINAL))) {
+        // Se il messaggio è stato inviato dal terminale (da interrupt_h)
 
             int i = 0;
-            while (request[i].requester==NULL && i<8)
+            while (request[i].requester == NULL && i < 5)
                 i++;
-            void * rcv_status = (void *) 0x0000248;
-            //tprintf("%p, %p, %p, recv status:%d, trs status:\n",current_thread, thread_qhead(&SSI->t_wait4me), request[i].requester,*(unsigned int*)rcv_status);
-            msgsend(request[i].requester,*(unsigned int*)rcv_status);
+
+            msgsend(request[i].requester,
+                    *((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_STATUS)));
+
+            // TODO: mnalli - l'ho aggiunto io, è giusto?
+            // tprintf("soft_block_count == %d\n", soft_block_count);
+            // soft_block_count--;
+
             request[i].val = (uintptr_t) NULL;
             request[i].requester = NULL;
-        }
-        else {
+
+        } else {
             //it's a request from a thread
             switch (req_field(msg, 0)) {
                 case GET_ERRNO:
@@ -146,9 +136,7 @@ void ssi(){
                         msgsend(applicant, reply);
                 break;
                 case GET_CPUTIME:
-                    f = 1;
                     msgsend(applicant, (uintptr_t) getcputime_s(applicant));
-                    // tprint("SSI: msg sent back\n");
                 break;
                 case WAIT_FOR_CLOCK:
                     wait_for_clock_s(applicant);
@@ -166,7 +154,7 @@ void ssi(){
                     msgsend(applicant, (uintptr_t) applicant);
                 break;
                 default:
-                    HALT();
+                    PANIC();
                 // TODO: se il messaggio è diverso dai codici noti
                 //       rispondere con errore e settare errno
             }
@@ -362,13 +350,9 @@ void update_clock(unsigned int cycles){
     }
 }
 
-
-
-static inline void setdevice(unsigned int devno, uintptr_t command){
-    //tprint("setting transmitChar command\n");
-    void *p = (void *) 0x0000024c + ((0x10)*devno);
-    *((unsigned int *)p) = command;
-    //tprint("\n..........completed transmitChar command\n");
+static inline void setdevice(unsigned int devno, uintptr_t command)
+{
+    *((uintptr_t *) TERMINAL_DEV_FIELD(devno, TRANSM_COMMAND)) = command;
 }
 
 static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
@@ -376,14 +360,14 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
     //tprint("    do_io_s started\n");
 /*    switch (req_field(msgg,1)) {
         case TERM0ADDR:   //il device e' un terminale */
-        int empty = 1;
-        int i;
+        // int empty = 1;
+        int i;  // FIXME: variabile non inizializzata?
 
         // the thread gets soft blocked
         soft_block_count++;
 
         //TODO: possiamo fare una lista per ogni terminale invece che array statico
-        while (request[i].requester==NULL && i<8)
+        while (request[i].requester == NULL && i < 5)
             i++;
 
         if (request[i].requester!=NULL)
@@ -396,11 +380,11 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
         }
         //aggiorno -> (using device)
         else {
-            i=0;
-            while(request[i].requester!=NULL && i<8)
+            i = 0;
+            while(request[i].requester!=NULL && i < 5)
                 i++; //cerco il primo buco libero per salvare il messaggio
 
-            if (i==8)
+            if (i == 8)
                 return -1; //se non ci sono piu spazi per salvare...
             else {
                 request[i].val = msgg;
@@ -422,40 +406,49 @@ static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
 }
 
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
-static inline struct tcb_t *__setmgr(struct tcb_t *thread, struct tcb_t *applicant,
-    struct tcb_t **mgr, int *send_back) {
-        if (thread) {
-            *send_back = 1;
-            return NULL;
-        }
-        if(*mgr) {
-            // se il manager è già settato
-            *send_back = 0;
-            terminate_process_s(applicant);
-            return NULL;
-        } else {
-            // se il manager non è mai stato settato
-            *send_back = 1;
-            return *mgr = thread;
-        }
+static inline struct tcb_t *
+__setmgr(struct tcb_t *thread, struct tcb_t *applicant,
+         struct tcb_t **mgr, int *send_back)
+{
+    if (thread) {
+        *send_back = 1;
+        return NULL;
     }
+    if(*mgr) {
+    // se il manager è già settato
+        *send_back = 0;
+        terminate_process_s(applicant);
+        return NULL;
+    } else {
+        // se il manager non è mai stato settato
+        *send_back = 1;
+        return *mgr = thread;
+    }
+}
 
-    static inline struct tcb_t *setpgmmgr_s(struct tcb_t *thread, struct tcb_t *applicant, int *send_back) {
-        return __setmgr(thread, applicant, &applicant->t_pcb->pgm_mgr, send_back);
-    }
+static inline struct tcb_t *setpgmmgr_s(struct tcb_t *thread, struct tcb_t *applicant, int *send_back)
 
-    static inline struct tcb_t *settlbmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back) {
-        return __setmgr(thread, applicant, &applicant->t_pcb->tlb_mgr, send_back);
-    }
+{
+    return __setmgr(thread, applicant, &applicant->t_pcb->pgm_mgr, send_back);
+}
 
-    static inline struct tcb_t *setsysmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back) {
-        return __setmgr(thread, applicant, &applicant->t_pcb->sys_mgr, send_back);
-    }
+static inline struct tcb_t *settlbmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back)
+{
+    return __setmgr(thread, applicant, &applicant->t_pcb->tlb_mgr, send_back);
+}
 
-    static inline struct pcb_t *get_processid_s(const struct tcb_t *thread){
-        return thread->t_pcb;
-    }
+static inline struct tcb_t *setsysmgr_s(struct tcb_t* thread, struct tcb_t *applicant, int *send_back)
+{
+    return __setmgr(thread, applicant, &applicant->t_pcb->sys_mgr, send_back);
+}
 
-    static inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc){
-        return proc->p_parent;
-    }
+
+static inline struct pcb_t *get_processid_s(const struct tcb_t *thread)
+{
+    return thread->t_pcb;
+}
+
+static inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc)
+{
+    return proc->p_parent;
+}
