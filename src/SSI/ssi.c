@@ -1,5 +1,6 @@
-#include <listx.h>
 #include <ssi.h>
+
+#include <listx.h>
 #include <uARMtypes.h>
 #include <libuarm.h>
 #include <syslib.h>
@@ -8,7 +9,6 @@
 #include <scheduler.h>
 #include <syscall.h>
 #include <interrupts.h>
-
 #include "services/services.h"
 
 #define TERM0ADDR       0x24C

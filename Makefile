@@ -1,28 +1,41 @@
 CC     	 = arm-none-eabi-gcc
-LL		   = arm-none-eabi-ld
+LL		 = arm-none-eabi-ld
 
 CFLAGS 	 = -mcpu=arm7tdmi -c
-IFLAG 	 = -include 'stdint.h' -include 'uARMtypes.h' -I $(SRCPATH) -I /usr/include/uarm -I .
+IFLAG 	 = -include 'stdint.h' -I /usr/include/uarm -I src -I src/clock -I src/handlers -I src/SSI -I src/SSI/services -I src/test -I src/uARM
+#-include $(HDRFILES)
+#-include 'uARMtypes.h'
 IBLDFLAG = -I $(BLDPATH)
 LDFLAGS  = -T /usr/include/uarm/ldscripts/elf32ltsarm.h.uarmcore.x
 
-EXEPATH  = elf-files/
-SRCPATH  = src/
-BLDPATH  = bleeding-edge/
-CFILES   = init.c p2test.c scheduler.c mikabooq.c interrupts.c ssi.c syscall.c trap.c syslib.c debug_tests.c
-SOURCES  = $(addprefix $(SRCPATH), $(CFILES))
-OBJECTS  = $(SOURCES:.c=.o) /usr/include/uarm/crtso.o /usr/include/uarm/libuarm.o
+EXEPATH  = elf-files
+SRCPATH  = src
+OBJDIR   = obj
+
+STRUCTURE := $(shell find $(SRCPATH) -type d)
+
+SRCFILES   := $(addsuffix /* , $(STRUCTURE))
+SRCFILES   := $(wildcard $(SRCFILES))
+
+CFILES 	   := $(filter %.c,$(SRCFILES))
+HDRFILES   := $(filter %.h,$(SRCFILES))
+OBJFILES   := $(subst $(SRCPATH),$(OBJDIR), $(CFILES:%.c=%.o))
+
+OBJFILES    := $(filter-out $(OBJDIR)/init.o, $(OBJFILES))
+
+# /usr/include/uarm/crtso.o /usr/include/uarm/libuarm.o
 
 EXECUTABLE = $(EXEPATH)p2test.elf
 
-all: $(EXECUTABLE)
+all: $(CFILES) $(EXECUTABLE)
 
-$(EXECUTABLE): $(OBJECTS)
-	$(LL) $(LDFLAGS) $(OBJECTS) -o $@
+$(EXECUTABLE): $(OBJFILES)
+	$(LL) $(LDFLAGS) $(OBJFILES) -o $@
 	elf2uarm -k $(EXECUTABLE)
 
-.c.o:
-		$(CC) $(CFLAGS) $(IFLAG) $< -o $@
+$(OBJFILES): $(HDRFILES)
+#	echo $(HDRFILES)
+	$(CC) $(CFLAGS) $< -o $@ $(IFLAG)
 
 clean:
-	rm $(SRCPATH)*.o $(EXEPATH)*.elf
+	rm $(OBJDIR)/*.o $(EXEPATH)*/.elf
