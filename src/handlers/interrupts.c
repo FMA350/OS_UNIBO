@@ -10,6 +10,8 @@
 #include <scheduler.h>
 #include <libuarm.h>
 
+#include <nucleus.h>
+
 /*****EXTERN*****/
 extern unsigned int getTIMER();
 extern void update_clock(unsigned int milliseconds);
@@ -25,117 +27,109 @@ extern struct tcb_t *current_thread;
 int interrupt_flag = 0;
 state_t interrupt_t_s; //should it be initialized?
 int call_scheduler;
-static void io_handler();
-static void interval_timer_h();
 
+static inline void interval_timer_h();
+static inline void io_h();
 
 
 void interrupt_h(){
     //TODO: Enhance control using CPSR (fma350)
-    //tprint("$$$ interrupt_h called $$$\n");
     timeSliceLeft = getTIMER();
-    //tprintf("timeSliceLeft = %d\n",timeSliceLeft);
 
-    if(current_thread){ //a thread was being executed
-        if(((int)timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
-            io_handler();       //for interrupts
-            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
-            LDST(current_thread);
-        }
-        else{
-            interval_timer_h(); //for fast-interrupts
-            STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
-            thread_enqueue(current_thread, &readyq);
-            scheduler();
-        }
-
-    }
-    else{                //no thread was being executed
-        if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
-            io_handler();       //for interrupts
-            setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
-        }
-        else{
-            // handle pseudoclock
-            update_clock(accountant(NULL));
-            setSTATUS(STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE));
-            scheduler();
-        }
+    //dispatching
+    if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
+        io_h();       //for interrupts
+    } else {
+        interval_timer_h(); //for fast-interrupts
     }
 }
 
-static void interval_timer_h(){
+extern void BREAKPOINT();
 
-    current_thread->t_s = *((state_t *) INT_OLDAREA); //save processor state
-    current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
+static inline void interval_timer_h(){
+    if(current_thread){
+        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+        current_thread->run_time += clockPerTimeslice; //cycles
 
-    if(accountant(current_thread) == 5){
-        //if accountant returns 0, it means the process has consumed all its time
-    //    tprint("current_thread was updated by accountant\n");
-        //handle pseudoclock
+        tprintf("IT - %p\n", current_thread);
+        thread_enqueue(current_thread, &readyq);
     }
-    else{
-        tprintf("$$$ ERROR, THIS shouldn't have happened $$$\n");
-        //since the condition is checked earlier
-    }
+    update_clock(clockPerTimeslice);
+    // BREAKPOINT();
+    scheduler();
 }
 
-static inline void io_handler(){
-//    tprint("$$$ io_handler called $$$\n");
+#include <do_io_s.h>
+
+static inline void io_h(){
+//    tprint("$$$ io_h called $$$\n");
 
     //p points to bottom of the interrupt bitmap for external devices
     //il primo byte che ha un interr pendente fa partire la gestione
-    if (current_thread) {
-        current_thread->t_s = *((state_t *) INT_OLDAREA);
-        current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
-        // Inserimento del processo in coda
-        //thread_enqueue(current_thread, &readyq);
-        //list_add(&current_thread->t_sched, &readyq);
-    }
-    void * p = (void *) 0x00006ff0;
+    // if (current_thread) {
+    //     current_thread->t_s = *((state_t *) INT_OLDAREA);
+    //     // current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
+    //     // Inserimento del processo in coda
+    //     //thread_enqueue(current_thread, &readyq);
+    //     //list_add(&current_thread->t_sched, &readyq);
+    // }
 
-    void * q = p;
+    // tprintf("interval timer interrupt - %d\n", *((unsigned int *) CDEV_BITMAP_ADDR(IL_TIMER)));
+
+    unsigned int *p = (unsigned int *) CDEV_BITMAP_ADDR(IL_TERMINAL);
+
     // dovrebbe funzionare a grandi linee, ma bisognerebbe vedere anche le funzioni
     // del coprocessore (ha un registro che indica la causa degli interrupts)
-    // void * rcv_cmd = (void *) 0x0000244;
-    // *(unsigned int*)rcv_cmd = 1;
-    int i = 0;
-    while (i < 5) {
+
+    int i;
+    for (i = 0; i < 5; i++) {
     //ne controllo uno alla volta di device per gestire un interrupt alla volta
-        if ((*((unsigned int *)p)%2)==1) {
+        if ((*p & 1) == 1) {
         //device n.0 has a pending interrupt
-            //tprintf(">>>>> terminal 0 raised interrupt %p\n",thread_qhead(&blockedq));
-//            tprintf("BITMAP: %d\n", *((unsigned int *)p));
-            void * trs_cmd = (void *) 0x000024c;
-            *(unsigned int*) trs_cmd = 1;
-//            tprintf("BITMAP: %d\n", *((unsigned int *)p));
-            send(SSI,q,i);
+
+            *((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND)) = DEV_C_ACK;
+            // tprintf("BITMAP: %d\n", *((unsigned int *)p));
+
+            struct {
+                uintptr_t reqtag;
+                devaddr device;
+                uintptr_t command;
+                uintptr_t data1;
+                uintptr_t data2;
+            } req = {DO_IO, TERMINAL_DEV_FIELD(0, TRANSM_COMMAND), DEV_C_ACK, 0, 0};
+
+            msgsend(SSI, &req);
+
             break;
-        } else if (((*((unsigned int *)p)>>1)%2)==1) {
+        } else if (((*p >> 1) & 1) == 1) {
         // device n.1 has a pending interrupt
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>2)%2)==1) {
+        } else if (((*p >> 2) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>3)%2)==1) {
+        } else if (((*p >> 3) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>4)%2)==1) {
+        } else if (((*p >> 4) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>5)%2)==1) {
+        } else if (((*p >> 5) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>6)%2)==1) {
+        } else if (((*p >> 6) & 1) == 1) {
             send(SSI,p,i);
             break;
-        } else if (((*((unsigned int *)p)>>7)%2)==1) {
+        } else if (((*p >> 7) & 1) == 1) {
+        //device n.8 has a pending interrupt
             send(SSI,p,i);
             break;
         }
-        i++;
-        *((unsigned int *)p) = (unsigned int) p + 2;
+
+        // FIXME: cos'è?
+        *p = (unsigned int) p + 2;
     }
-    return;
+
+    // Si restituisce il controllo al chiamante
+    LDST((state_t *) INT_OLDAREA);
 }
