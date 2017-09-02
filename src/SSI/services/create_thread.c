@@ -1,5 +1,5 @@
 
-struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_t *proc)
+inline struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_t *proc)
 {
     struct tcb_t *new_thread = thread_alloc(proc);
     if(!new_thread) {
@@ -13,9 +13,9 @@ struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_t *proc
 }
 
 
-extern inline struct pcb_t * get_processid_s(const struct tcb_t *thread);
+extern struct pcb_t * get_processid_s(const struct tcb_t *thread);
 
-inline struct tcb_t * create_thread_s(const state_t *initial_state, struct tcb_t *applicant)
+struct tcb_t * create_thread_s(const state_t *initial_state, struct tcb_t *applicant)
 {
     return __create_thread_s(initial_state, get_processid_s(applicant));
 }

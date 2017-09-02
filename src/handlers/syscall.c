@@ -4,11 +4,7 @@
 #include <scheduler.h>
 
 #include "handlers.h"
-
-extern unsigned int clockPerTimeslice;
-extern unsigned int timeSliceLeft;
-// sentinella della coda dei processi in attesa di ricevere un messaggio
-LIST_HEAD(blockedq);
+#include <clock/accounting.h>
 
 
 static inline void store_return_value(unsigned int rval)
@@ -99,20 +95,6 @@ unsigned int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
     }
 }
 
-static inline void
-__msgsend(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
-{
-    store_return_value(send(dest, sender, msg));
-
-    // FIXME
-    void * IO_addr = (void *) 0x00006ff0;
-    if (sender == IO_addr)
-    //se il sender e' l'io_handler non devo caricare lo stato (che non esiste!)
-        scheduler();
-    else
-        LDST((state_t *) SYSBK_OLDAREA);
-}
-
 static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
 {
     if (msgq_get(&sender, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
@@ -174,8 +156,10 @@ static inline void raise_reserved_instruction(void)
 
 static inline void send_kernel(struct tcb_t *dest, uintptr_t msg)
 {
-    if (IS_KERNEL_MODE)
-        __msgsend(dest, current_thread, msg);
+    if (IS_KERNEL_MODE) {
+        store_return_value(send(dest, current_thread, msg));
+        LDST((state_t *) SYSBK_OLDAREA);
+    }
     else
         raise_reserved_instruction();
 }

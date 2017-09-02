@@ -1,3 +1,9 @@
+
+// sentinella della coda dei processi richiedenti il servizio di attesa
+LIST_HEAD(t_wait4clock);
+
+int pseudoclock = 0;
+
 unsigned int
 wait_for_clock_s(struct tcb_t *applicant)
 {

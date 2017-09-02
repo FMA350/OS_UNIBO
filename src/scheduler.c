@@ -19,6 +19,8 @@ struct tcb_t *current_thread = NULL;
 
 // sentinella della ready queue
 LIST_HEAD(readyq);
+// sentinella della coda dei processi in attesa di ricevere un messaggio
+LIST_HEAD(blockedq);
 
 // Number of threads currently active in the system
 unsigned int thread_count = 0;
@@ -82,7 +84,11 @@ void load_readyq(struct pcb_t *root) {
     tprint("load_readyq finished\n");
 }
 
-/* This function is used to handle the case when the ready ready queue is empty
+
+int is_idle = 0;
+
+/*
+ * This function is used to handle the case when the ready ready queue is empty
  * inside the scheduler
  * Preconditions: the ready queue is empty
  */
@@ -100,6 +106,8 @@ static inline void empty_readyq_h(void) {
     } else {
     /* processes in the system are waiting for I/O */
         // tprint("=== processes waiting for IO ===\n");
+        assert(!is_idle);
+        is_idle = 1;
         setTIMER(clockPerTimeslice); //fma350 test
         setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
         //setSTATUS(STATUS_ENABLE_INT(getSTATUS()));

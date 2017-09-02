@@ -1,3 +1,6 @@
+#ifndef SSI_H
+#define SSI_H
+
 /*
    _____            __                    _____                 _              ____      __            ____
   / ___/__  _______/ /____  ____ ___     / ___/___  ______   __(_)_______     /  _/___  / /____  _____/ __/___ _________
@@ -7,23 +10,16 @@
      /____/
 */
 
-#ifndef SSI_H
-#define SSI_H
-
 #include <mikabooq.h>
 
-/* SSI's thread */
+/* SSI's thread defined in ssi.c */
 extern struct tcb_t *SSI;
 
 /* SSI target function */
-void ssi();
-static inline void __terminate_thread_s(struct tcb_t *thread);
+void ssi(void);
 
-void update_clock(unsigned int milliseconds);
 /* Returns a pointer to the ssi thread already initialized,
    extept for processor state */
-struct tcb_t *ssi_thread_init();
-
-
+struct tcb_t *ssi_thread_init(void);
 
 #endif

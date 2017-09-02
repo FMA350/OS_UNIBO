@@ -1,31 +1,17 @@
+#include "do_io.h"
+
+struct tcb_t *soft_blocked_thread[5] = { [0 ... 4] = NULL };
 
 void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
                             uintptr_t data2, struct tcb_t* applicant)
 {
-    if (command == DEV_C_ACK) {
-    // se è un acknoledgement
-        if (soft_blocked_thread[TERMINAL_REQUESTER_INDEX]) {
-        // DEBUG: interrupt proveniente non da tprint
-            // continue;
-            // tprint("SSI: Requester is NULL\n");
-            // PANIC();
-
-            msgsend(soft_blocked_thread[TERMINAL_REQUESTER_INDEX],
-                *((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_STATUS)));
-
-            // TODO: mnalli - l'ho aggiunto io, è giusto?
-            // tprintf("soft_block_count == %d\n", soft_block_count);
-            soft_block_count--;
-            soft_blocked_thread[TERMINAL_REQUESTER_INDEX] = NULL;
-        }
-    }
-
+    // Per ora funziona solamente il terminale 0
     switch (device) {
         case TERMINAL_DEV_FIELD(0, TRANSM_COMMAND):   //il device e' un terminale
             // the thread gets soft blocked
             soft_block_count++;
 
-            // setdevice(0, command);
+            // Setting command
             *((uintptr_t *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND)) = command;
 
             if (soft_blocked_thread[TERMINAL_REQUESTER_INDEX])

@@ -19,15 +19,15 @@ void BREAKPOINT();
 
 #define DEBUG   1
 
-#define assert(assertion)                       \
-#if DEBUG                                       \
-{                                               \
-    if (!(assertion)) {                         \
-        tprintf("Assertion failed\n"            \
-                "current_thread == %p\n");      \
-        PANIC();                                \
-    }                                           \
-}                                               \
-#endif  // DEBUG
+static inline void assert(int assertion)
+{
+    #if DEBUG
+    if (!(assertion)) {
+        tprintf("Assertion failed\n"
+                "current_thread == %p\n");
+        PANIC();
+    }
+    #endif // DEBUG
+}
 
 #endif // SYSLIB_H

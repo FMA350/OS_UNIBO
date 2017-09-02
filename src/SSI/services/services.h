@@ -1,6 +1,11 @@
 #ifndef SERVICES_H
 #define SERVICES_H
 
+/* definiti in wait_for_clock.c */
+extern struct list_head t_wait4clock;
+extern int pseudoclock;
+
+
 /* returns the errno of the applicant */
 int get_errno_s(const struct tcb_t *applicant);
 
