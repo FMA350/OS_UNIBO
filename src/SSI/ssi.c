@@ -138,17 +138,3 @@ void ssi(){
 }
 
 /****************************************************************************/
-
-
-#define PSEUDOCLOCK_TICK 100
-
-void update_clock(unsigned int milliseconds){
-    pseudoclock += milliseconds;
-    if(pseudoclock >= PSEUDOCLOCK_TICK){
-        pseudoclock -= PSEUDOCLOCK_TICK;
-        struct tcb_t *to_resume;
-        while((to_resume = thread_dequeue(t_wait4clock))!=NULL){
-            msgsend(to_resume,NULL);
-        }
-    }
-}

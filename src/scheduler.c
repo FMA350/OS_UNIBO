@@ -37,32 +37,6 @@ unsigned int soft_block_count = 0;
 extern void test_syscall();
 extern void BREAKPOINT();
 
-/*****global*****/
-unsigned int timeSliceLeft;
-// the value in BUS_REG_TIME_SCALE is the same for the whole execution
-unsigned int clockPerTimeslice = 5000; //at 1mHz for 5 milliseconds
-
-unsigned int accountant(struct tcb_t* thread){
-/*                               _              _
-                                | |            | |
-  __ _  ___ ___ ___  _   _ _ __ | |_ __ _ _ __ | |_
- / _` |/ __/ __/ _ \| | | | '_ \| __/ _` | '_ \| __|
-| (_| | (_| (_| (_) | |_| | | | | || (_| | | | | |_
-\__,_|\___\___\___/ \__,_|_| |_|\__\__,_|_| |_|\__|
-
-returns the time passed in milliseconds.
-*/
-    int cycles = thread->run_time;
-    int milliseconds = 0;
-        cycles -= 500; // for rounding purpouses
-        //how many 1000 to remove before it goes in underflow?
-        while(cycles > 0){
-            milliseconds++;
-            cycles-=1000;
-        }
-    return milliseconds;
-}
-
 
 /* Loads the initial thread state
  *
