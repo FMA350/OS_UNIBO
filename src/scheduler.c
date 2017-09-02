@@ -1,23 +1,26 @@
- #include <mikabooq.h>
- #include <listx.h>
- #include <arch.h>
- #include <uARMconst.h>
- #include <uARMtypes.h>
- #include <libuarm.h>
- #include <ssi.h>
- #include <debug_tests.h>
- #include <nucleus.h>
- #include <scheduler.h>
+#include <mikabooq.h>
+#include <listx.h>
+#include <arch.h>
+#include <uARMconst.h>
+#include <uARMtypes.h>
+#include <libuarm.h>
+#include <nucleus.h>
+#include <scheduler.h>
 #include <p2test.h>
-#include <interrupts.h>
 #include <syslib.h>
 #include <math.h>
+
+#include "SSI/ssi.h"
+#include "tests/debug_tests.h"
+#include "handlers/handlers.h"
 
 // Thread that has currently the control of the CPU
 struct tcb_t *current_thread = NULL;
 
 // sentinella della ready queue
 LIST_HEAD(readyq);
+// sentinella della coda dei processi in attesa di ricevere un messaggio
+LIST_HEAD(blockedq);
 
 // Number of threads currently active in the system
 unsigned int thread_count = 0;
@@ -33,10 +36,7 @@ unsigned int thread_count = 0;
 
 unsigned int soft_block_count = 0;
 
-
 extern void test_syscall();
-extern void BREAKPOINT();
-
 
 /* Loads the initial thread state
  *
@@ -49,14 +49,11 @@ static inline void state_init(struct tcb_t *to_load, void *target, unsigned int 
     static unsigned int n = 1;
 
     STST(&to_load->t_s);
-
     // PC points the thread we are starting
     to_load->t_s.pc = (unsigned int) target;
     // SP
     to_load->t_s.sp = RAM_TOP - n*FRAME_SIZE;
-
     to_load->t_s.cpsr = cpsr;
-
     n++;
 }
 
@@ -87,11 +84,15 @@ void load_readyq(struct pcb_t *root) {
     tprint("load_readyq finished\n");
 }
 
-/* This function is used to handle the case when the ready ready queue is empty
+
+int is_idle = 0;
+
+/*
+ * This function is used to handle the case when the ready ready queue is empty
  * inside the scheduler
  * Preconditions: the ready queue is empty
  */
-static inline void empty_readyq_h() {
+static inline void empty_readyq_h(void) {
     if (thread_count == 1){
     /* the SSI is the only thread in the system */
     /* shutdown */
@@ -105,6 +106,8 @@ static inline void empty_readyq_h() {
     } else {
     /* processes in the system are waiting for I/O */
         // tprint("=== processes waiting for IO ===\n");
+        assert(!is_idle);
+        is_idle = 1;
         setTIMER(clockPerTimeslice); //fma350 test
         setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
         //setSTATUS(STATUS_ENABLE_INT(getSTATUS()));
@@ -112,14 +115,13 @@ static inline void empty_readyq_h() {
     }
 }
 
-void scheduler(){
+void scheduler(void)
+{
     current_thread = thread_dequeue(&readyq);
     //tprintf("scheduler started, current is %p\n", current_thread);
 
-    if (current_thread == NULL){
-        //tprint("in emptyrq\n");
+    if (current_thread == NULL) {
         empty_readyq_h();
-
     }
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond

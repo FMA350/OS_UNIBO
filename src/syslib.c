@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <libuarm.h>
 
+void BREAKPOINT(){ }
 
 // TODO: Optimize memcpy
 void *memcpy(void *dest, const void *source, size_t num) {

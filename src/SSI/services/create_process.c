@@ -1,6 +1,6 @@
 extern inline struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_t *proc);
 
-inline struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *applicant)
+struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *applicant)
 {
     struct pcb_t *new_process = proc_alloc(get_processid_s(applicant));
 

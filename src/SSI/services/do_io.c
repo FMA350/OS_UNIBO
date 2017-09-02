@@ -1,56 +1,36 @@
-inline void setdevice(unsigned int devno, uintptr_t command){
-    //tprint("setting transmitChar command\n");
-    void *p = (void *) 0x0000024c + ((0x10)*devno);
-    *((unsigned int *)p) = command;
-    //tprint("\n..........completed transmitChar command\n");
-}
+#include "do_io.h"
 
-inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
+struct tcb_t *soft_blocked_thread[5] = { [0 ... 4] = NULL };
+
+void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
+                            uintptr_t data2, struct tcb_t* applicant)
 {
-    //tprint("    do_io_s started\n");
-/*    switch (req_field(msgg,1)) {
-        case TERM0ADDR:   //il device e' un terminale */
-        int empty = 1;
-        int i;
+    // Per ora funziona solamente il terminale 0
+    switch (device) {
+        case TERMINAL_DEV_FIELD(0, TRANSM_COMMAND):   //il device e' un terminale
+            // the thread gets soft blocked
+            soft_block_count++;
 
-        // the thread gets soft blocked
-        soft_block_count++;
+            // Setting command
+            *((uintptr_t *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND)) = command;
 
-        //TODO: possiamo fare una lista per ogni terminale invece che array statico
-        while (request[i].requester==NULL && i<8)
-            i++;
+            if (soft_blocked_thread[TERMINAL_REQUESTER_INDEX])
+            // Qualcun altro sta già facendo IO; non dovrebbe mai accadere
+                PANIC();
 
-        if (request[i].requester!=NULL)
-            empty = 0;
+            soft_blocked_thread[TERMINAL_REQUESTER_INDEX] = applicant;
 
-        if(empty){
-            setdevice(0,req_field(msgg,2));
-            request[0].val = msgg;
-            request[0].requester = applic;
-        }
-        //aggiorno -> (using device)
-        else {
-            i=0;
-            while(request[i].requester!=NULL && i<8)
-                i++; //cerco il primo buco libero per salvare il messaggio
-
-            if (i==8)
-                return -1; //se non ci sono piu spazi per salvare...
-            else {
-                request[i].val = msgg;
-                request[i].requester = applic;
-            }
-        }
-        /*break;
-        case PRINTADDR:
-        break;
-        case NETADDR:
-        break;
-        case TAPEADDR:
-        break;
-        case DISKADDR:
-        break;
-        default: return -1;
-    }*/
-    //tprint("    do_io_s finished\n");
+            break;
+        // case PRINTADDR:
+        //     break;
+        // case NETADDR:
+        //     break;
+        // case TAPEADDR:
+        //     break;
+        // case DISKADDR:
+        //     break;
+        default:
+            // tprint("SSI: IO ERROR\n");
+            PANIC();
+    }
 }
