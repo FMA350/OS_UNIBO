@@ -14,14 +14,13 @@
 
 struct tcb_t *soft_blocked_thread[5];
 
-
 struct list_head t_wait4clock;
 int pseudoclock;
 
 struct tcb_t *SSI , *IO_thread;
 
-
-struct tcb_t *ssi_thread_init() {
+struct tcb_t *ssi_thread_init(void)
+{
     static struct tcb_t _SSI;
 
     _SSI.t_pcb = NULL;
@@ -42,11 +41,13 @@ struct tcb_t *ssi_thread_init() {
     return(SSI = &_SSI);
 }
 
-static inline uintptr_t req_field(uintptr_t request, int i) {
+static inline uintptr_t req_field(uintptr_t request, int i)
+{
     return ((uintptr_t *) request)[i];
 }
 
-void ssi(){
+void ssi()
+{
     while (1) {
         uintptr_t msg, reply;
         int send_back;
@@ -138,5 +139,3 @@ void ssi(){
         }
     }
 }
-
-/****************************************************************************/

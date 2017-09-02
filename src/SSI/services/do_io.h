@@ -1,5 +1,5 @@
-#ifndef DO_IO_S_H
-#define DO_IO_S_H
+#ifndef DO_IO_H
+#define DO_IO_H
 
 #include <arch.h>
 
