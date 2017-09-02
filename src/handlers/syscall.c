@@ -2,17 +2,21 @@
 #include <nucleus.h>
 #include <syslib.h>
 #include <scheduler.h>
-#include <syscall.h>
+
+#include "handlers.h"
 
 extern unsigned int clockPerTimeslice;
 extern unsigned int timeSliceLeft;
 // sentinella della coda dei processi in attesa di ricevere un messaggio
 LIST_HEAD(blockedq);
 
+
 #define ST_RVAL(RVAL)   \
     (((state_t *) SYSBK_OLDAREA)->a1 = (unsigned int) (RVAL))
 
-static inline void DELIVER_MSG(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg) {
+static inline void
+DELIVER_MSG(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
+{
     // TODO: forse è da modificare con gli interrupt dei devices msgq_add
     if (msgq_add(sender, dest, msg) == 0)
     /* Se la consegna del messaggio è andata a buon fine */
@@ -30,7 +34,10 @@ static inline void DELIVER_MSG(struct tcb_t *dest, struct tcb_t *sender, uintptr
  * dest is currently blocked. It's waiting for a message from the
  * thread that calls this function (current thread) or from any thread.
  */
-static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval, uintptr_t msg) {
+static inline void
+deliver_directly(struct tcb_t *dest, struct tcb_t *recv_rval, uintptr_t msg)
+{
+    // a1 is the register where the return value of functions is stored
     dest->t_s.a1 = (unsigned int) recv_rval;
 
     // check that recv has been called with pmsg != NULL
@@ -38,14 +45,15 @@ static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval,
         *((uintptr_t *) (dest->t_s.a3)) = msg;
 }
 
-/* Resume a thread blocked while receiving delivering msg and returning recv_rval
+/*
+ * Resume a thread blocked while receiving delivering msg and returning recv_rval
  * to the thread
  * Preconditions: resuming is blocked. resuming is in his queue.
  */
-inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
-
+void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg)
+{
     // il messaggio è consegnato con priorità
-    DELIVER_DIRECTLY(resuming, recv_rval, msg);
+    deliver_directly(resuming, recv_rval, msg);
 
     resuming->t_status = T_STATUS_READY;
     resuming->t_wait4sender = NULL;
@@ -59,8 +67,8 @@ inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintp
 }
 
 
-inline void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
-
+void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
+{
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
@@ -81,17 +89,11 @@ inline void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
             break;
         case T_STATUS_NONE:
             ST_RVAL(SEND_FAILURE);
-            break;
     }
-
-    void * IO_addr = (void *) 0x00006ff0;
-    if (sender == IO_addr) //se il sender e' l'io_handler non devo caricare lo stato (che non esiste!)
-        scheduler();
-    else
-        LDST((state_t *) SYSBK_OLDAREA);
 }
 
-static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
+static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
+{
     if (msgq_get(&sender, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
     /* caso non bloccante: il messaggio cercato si trova nella coda */
         ST_RVAL(sender);
@@ -126,7 +128,6 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
 }
 
 /*******************************************************************************/
-extern void pgmtrap_h();
 
 // solleva una trap
 static inline void raise_reserved_instruction(void)
@@ -149,14 +150,16 @@ static inline void raise_reserved_instruction(void)
  * Note: these functions never return control to the caller
  */
 
-static inline void send_kernel(struct tcb_t *dest, uintptr_t msg) {
+static inline void send_kernel(struct tcb_t *dest, uintptr_t msg)
+{
     if (IS_KERNEL_MODE)
         send(dest, current_thread, msg);
     else
         raise_reserved_instruction();
 }
 
-static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg) {
+static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg)
+{
     if (IS_KERNEL_MODE)
         recv(src, pmsg);
     else
@@ -164,56 +167,58 @@ static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg) {
 }
 
 /*******************************************************************************/
-// Syscall != 0, 1, 2
 
-/* system call non 1 o 2 vengono trasformate in messaggi al thread
-definito tramite SETSYSMGR se esiste altrimenti msg SETPGMMGR se
-esiste altrimenti TERMINATE_THREAD  */
-
+/*
+ * system call non 0, 1 o 2 vengono trasformate in messaggi al thread
+ * definito tramite SETSYSMGR se esiste altrimenti msg SETPGMMGR se
+ * esiste altrimenti TERMINATE_THREAD.
+ */
 
 static inline void
 syscall_other(unsigned int sysNum, unsigned int arg1,
               unsigned int arg2, unsigned int arg3)
 {
-
     // process of the current thread
     struct pcb_t *current_process = current_thread->t_pcb;
-
-    struct {
-        unsigned int sysNum;
-        unsigned int arg1;
-        unsigned int arg2;
-        unsigned int arg3;
-    } msg = {sysNum, arg1, arg2, arg3};
 
     if (current_process->sys_mgr) {
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
 
+        struct {
+            unsigned int sysNum;
+            unsigned int arg1;
+            unsigned int arg2;
+            unsigned int arg3;
+        } msg = {sysNum, arg1, arg2, arg3};
+
         // send is used instead of msgsend for efficiency reasons
         send(current_process->sys_mgr, current_thread, (uintptr_t) &msg);
+        // FIXME:
         thread_enqueue(current_thread, &blockedq);
         scheduler();
     } else if (current_process->pgm_mgr) {
-        // TODO: Decidere la codifica dei messaggi al program manager
-        //       il program manager riceve anche messaggi dalle trap
-        //       bisogna saperli distinguere
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
         current_thread->t_s.pc -= 4;    // TODO: is it correct?
 
         // send is used instead of msgsend for efficiency reasons
-        send(current_process->pgm_mgr, current_thread, (uintptr_t) &msg);
+        send(current_process->pgm_mgr, current_thread, (uintptr_t) &current_thread->t_s);
         thread_enqueue(current_thread, &blockedq);
         scheduler();
     } else {
     // il thread chiamante deve essere terminato
         terminate_thread();
     }
+
+    tprint("syscall_other should not arrive here!\n");
+    PANIC();
 }
+
+/***************************************************************************/
 
 #define SYSCALL_ARG(N)  \
     (((state_t *) SYSBK_OLDAREA)->a ## N)
 
-void syscall_h()
+void syscall_h(void)
 {
     switch (SYSCALL_ARG(1)) {
         case SYS_ERR:
@@ -222,6 +227,13 @@ void syscall_h()
             // FIXME: not correct; should be illegal instruction or something like that
         case SYS_SEND:
             send_kernel((struct tcb_t *) SYSCALL_ARG(2), SYSCALL_ARG(3));
+            // FIXME
+            void * IO_addr = (void *) 0x00006ff0;
+            if (current_thread == IO_addr)
+            //se il sender e' l'io_handler non devo caricare lo stato (che non esiste!)
+                scheduler();
+            else
+                LDST((state_t *) SYSBK_OLDAREA);
         case SYS_RECV:
             recv_kernel((struct tcb_t *) SYSCALL_ARG(2), (uintptr_t *) SYSCALL_ARG(3));
         default:
