@@ -1,5 +1,5 @@
 
-inline void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
+void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
                             uintptr_t data2, struct tcb_t* applicant)
 {
     if (command == DEV_C_ACK) {

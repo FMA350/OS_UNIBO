@@ -11,19 +11,23 @@ extern unsigned int timeSliceLeft;
 LIST_HEAD(blockedq);
 
 
-#define ST_RVAL(RVAL)   \
-    (((state_t *) SYSBK_OLDAREA)->a1 = (unsigned int) (RVAL))
+static inline void store_return_value(unsigned int rval)
+{
+    ((state_t *) SYSBK_OLDAREA)->a1 = rval;
+}
 
-static inline void
-DELIVER_MSG(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
+static inline int
+deliver_msg(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
 {
     // TODO: forse è da modificare con gli interrupt dei devices msgq_add
+    //       mnalli - perché?
+
     if (msgq_add(sender, dest, msg) == 0)
     /* Se la consegna del messaggio è andata a buon fine */
-        ST_RVAL(SEND_SUCCESS);
+        return SEND_SUCCESS;
     else
     /* Se i messaggi disponibili sono finiti */
-        ST_RVAL(SEND_FAILURE);
+        return SEND_FAILURE;
 }
 
 /*
@@ -41,6 +45,7 @@ deliver_directly(struct tcb_t *dest, struct tcb_t *recv_rval, uintptr_t msg)
     dest->t_s.a1 = (unsigned int) recv_rval;
 
     // check that recv has been called with pmsg != NULL
+    // TODO: check
     if (((uintptr_t *) (dest->t_s.a3)) != NULL)
         *((uintptr_t *) (dest->t_s.a3)) = msg;
 }
@@ -59,56 +64,73 @@ void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t ms
     resuming->t_wait4sender = NULL;
 
     // dest è rimosso dai processi in attesa (blockedq se stava aspettando da
-    // chiunque sender->t_wait4me se stavamo aspettando da sender)
+    // chiunque sender->t_wait4me se stava aspettando da sender)
     thread_outqueue(resuming);
     // e reinserito nella coda ready
     thread_enqueue(resuming, &readyq);
-    //tprintf("%p is ready\n", resuming);
 }
 
-
-void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
+/* La send non interagisce con lo stato nel sender nè con l'oldarea */
+unsigned int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
 {
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
-            DELIVER_MSG(dest, sender, msg);
-            break;
+            return deliver_msg(dest, sender, msg);
         case T_STATUS_W4MSG:
         /* Se il thread destinazione è in attesa di un messaggio */
             if (dest->t_wait4sender == sender || dest->t_wait4sender == NULL) {
-            /* il thread di destinazione aspetta un messaggio da
-                parte del processo corrente o da qualsiasi processo (non ha messaggi) */
+            /*
+             * il thread di destinazione aspetta un messaggio da:
+             * Processo corrente
+             * Qualsiasi processo (in tal caso non ha messaggi)
+             */
+                // risvegliamo il thread
                 resume_thread(dest, sender, msg);
-                ST_RVAL(sender);
-            }
-            else {
+                // store_return_value(sender); // mnalli - Perché?
+                return SEND_SUCCESS;
+            } else {
             /* dest sta aspettando un messaggio da qualcun'altro */
-                DELIVER_MSG(dest, sender, msg);
+                return deliver_msg(dest, sender, msg);
             }
-            break;
         case T_STATUS_NONE:
-            ST_RVAL(SEND_FAILURE);
+            return SEND_FAILURE;
+            // FIXME: SEND_FAILURE == -1, send return unsigned int
     }
+}
+
+static inline void
+__msgsend(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
+{
+    store_return_value(send(dest, sender, msg));
+
+    // FIXME
+    void * IO_addr = (void *) 0x00006ff0;
+    if (sender == IO_addr)
+    //se il sender e' l'io_handler non devo caricare lo stato (che non esiste!)
+        scheduler();
+    else
+        LDST((state_t *) SYSBK_OLDAREA);
 }
 
 static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
 {
     if (msgq_get(&sender, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
     /* caso non bloccante: il messaggio cercato si trova nella coda */
-        ST_RVAL(sender);
+        store_return_value((unsigned int) sender);
         LDST((state_t *) SYSBK_OLDAREA);
     } else {
     /* caso bloccante */
     /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
-       nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
+        nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
-       timeSliceLeft = getTIMER();
-            // salvataggio stato del processore
+        timeSliceLeft = getTIMER();
+        // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
-            // changing thread status
+        // cambiamento dello stato di attesa del thread
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = sender;
+
         current_thread->run_time += timeSliceLeft; //cycles
         update_clock(timeSliceLeft);
 
@@ -121,7 +143,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         // il thread si blocca aspettando da chiunque
             // Inserimento del processo nella coda dei processi in attesa di messaggi da chiunque
             thread_enqueue(current_thread, &blockedq);
-        //    tprintf("current: %p, blockedqH: %p, ready:%p\n", current_thread, thread_qhead(&blockedq), thread_qhead(&readyq));
+            // tprintf("current: %p, blockedqH: %p, ready:%p\n", current_thread, thread_qhead(&blockedq), thread_qhead(&readyq));
         }
         scheduler();
     }
@@ -153,7 +175,7 @@ static inline void raise_reserved_instruction(void)
 static inline void send_kernel(struct tcb_t *dest, uintptr_t msg)
 {
     if (IS_KERNEL_MODE)
-        send(dest, current_thread, msg);
+        __msgsend(dest, current_thread, msg);
     else
         raise_reserved_instruction();
 }
@@ -191,16 +213,15 @@ syscall_other(unsigned int sysNum, unsigned int arg1,
             unsigned int arg3;
         } msg = {sysNum, arg1, arg2, arg3};
 
-        // send is used instead of msgsend for efficiency reasons
         send(current_process->sys_mgr, current_thread, (uintptr_t) &msg);
         // FIXME:
         thread_enqueue(current_thread, &blockedq);
         scheduler();
+
     } else if (current_process->pgm_mgr) {
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
         current_thread->t_s.pc -= 4;    // TODO: is it correct?
 
-        // send is used instead of msgsend for efficiency reasons
         send(current_process->pgm_mgr, current_thread, (uintptr_t) &current_thread->t_s);
         thread_enqueue(current_thread, &blockedq);
         scheduler();
@@ -227,13 +248,6 @@ void syscall_h(void)
             // FIXME: not correct; should be illegal instruction or something like that
         case SYS_SEND:
             send_kernel((struct tcb_t *) SYSCALL_ARG(2), SYSCALL_ARG(3));
-            // FIXME
-            void * IO_addr = (void *) 0x00006ff0;
-            if (current_thread == IO_addr)
-            //se il sender e' l'io_handler non devo caricare lo stato (che non esiste!)
-                scheduler();
-            else
-                LDST((state_t *) SYSBK_OLDAREA);
         case SYS_RECV:
             recv_kernel((struct tcb_t *) SYSCALL_ARG(2), (uintptr_t *) SYSCALL_ARG(3));
         default:

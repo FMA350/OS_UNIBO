@@ -1,5 +1,5 @@
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
-inline struct tcb_t *
+static inline struct tcb_t *
 __setmgr(struct tcb_t *new_mgr, struct tcb_t *applicant,
         struct tcb_t **mgr, int *send_back)
 {

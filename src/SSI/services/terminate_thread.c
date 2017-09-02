@@ -34,7 +34,7 @@ inline void __terminate_thread_s(struct tcb_t *thread)
 }
 
 /* terminate the thread and, if it's the last one, the process too */
-inline void terminate_thread_s(struct tcb_t *thread)
+void terminate_thread_s(struct tcb_t *thread)
 {
     //tprint("terminate_thread_s started\n");
 
