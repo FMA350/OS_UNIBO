@@ -16,4 +16,7 @@ void *memcpy(void *dest, const void *source, size_t num);
 int tprintf(const char *format, ...);
 
 
+void BREAKPOINT();
+
+
 #endif

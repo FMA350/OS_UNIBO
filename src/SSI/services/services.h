@@ -1,5 +1,5 @@
-#ifndef KERNEL_CALLS_BACKEND_H
-#define KERNEL_CALLS_BACKEND_H
+#ifndef SERVICES_H
+#define SERVICES_H
 
 inline int get_errno_s(const struct tcb_t *applicant);
 
@@ -15,12 +15,10 @@ inline struct tcb_t *setsysmgr_s(struct tcb_t *thread, struct tcb_t *applicant, 
 
 inline unsigned int getcputime_s(const struct tcb_t *applicant);
 inline unsigned int wait_for_clock_s(struct tcb_t *applicant);
-inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic);
+inline void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
+                            uintptr_t data2, struct tcb_t* applicant);
 
 inline struct pcb_t *get_processid_s(const struct tcb_t *thread);
 inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc);
-
-void update_clock(unsigned int milliseconds);
-
 
 #endif

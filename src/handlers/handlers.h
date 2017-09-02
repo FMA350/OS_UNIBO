@@ -1,6 +1,14 @@
-#ifndef SYSCALL_H
-#define SYSCALL_H
+#ifndef HANDLERS_H
+#define HANDLERS_H
 
+/* Devices and Interval Timer Interrupt handler */
+void interrupt_h();
+
+void pgmtrap_h();
+
+void tlbtrap_h();
+
+void syscall_h();
 
 #define SEND_SUCCESS    0
 
@@ -8,8 +16,7 @@
 
 #define RECV_FAILURE    NULL
 
-
-void syscall_h();
+// La receive in caso di successo ritorna l'indirizzo del sender
 
 /*
  * This function is used to resume a thread blocked while waiting for a message
@@ -25,6 +32,6 @@ void syscall_h();
  * wait4same
  */
 inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg);
-
+// usata in terminate_thread_s
 
 #endif

@@ -1,15 +1,11 @@
 #include <mikabooq.h>
 #include <listx.h>
 #include <scheduler.h>
-#include <debug_tests.h>
+// #include <debug_tests.h>
 #include <arch.h>
 #include <syslib.h>
-#include <interrupts.h>
-#include <syscall.h>
-#include <trap.h>
+#include "handlers/handlers.h"
 
-
-void BREAKPOINT(){ }
 
 static void states_init();
 
@@ -56,11 +52,6 @@ static inline void LOAD_NEW_STATE(state_t *new_area, void *handler) {
     new_area->sp = RAM_TOP;
     new_area->cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
 }
-
-extern void interrupt_h();
-extern void tlbtrap_h();
-extern void pgmtrap_h();
-extern void syscall_h();
 
 static void states_init(){
 

@@ -42,7 +42,7 @@ static inline void DELIVER_DIRECTLY(struct tcb_t *dest, struct tcb_t *recv_rval,
  * to the thread
  * Preconditions: resuming is blocked. resuming is in his queue.
  */
-extern inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
+inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval, uintptr_t msg) {
 
     // il messaggio è consegnato con priorità
     DELIVER_DIRECTLY(resuming, recv_rval, msg);
@@ -59,16 +59,12 @@ extern inline void resume_thread(struct tcb_t *resuming, struct tcb_t *recv_rval
 }
 
 
-extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
-    //tprint("send starting\n");
-//    tprintf("sender: %p, dest: %p, dest->t_wait4sender: %p, dest->status: %d\n", sender, dest, dest->t_wait4sender, dest->t_status);
+inline void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
 
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
-
             DELIVER_MSG(dest, sender, msg);
-
             break;
         case T_STATUS_W4MSG:
         /* Se il thread destinazione è in attesa di un messaggio */
@@ -80,16 +76,14 @@ extern void send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg){
             }
             else {
             /* dest sta aspettando un messaggio da qualcun'altro */
-                //tprintf("non era in attesa, lo aspetta da: %p invece che %p\n",dest->t_wait4sender, sender);
-
                 DELIVER_MSG(dest, sender, msg);
             }
             break;
         case T_STATUS_NONE:
-
             ST_RVAL(SEND_FAILURE);
             break;
     }
+
     void * IO_addr = (void *) 0x00006ff0;
     if (sender == IO_addr) //se il sender e' l'io_handler non devo caricare lo stato (che non esiste!)
         scheduler();
@@ -103,8 +97,6 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
         ST_RVAL(sender);
         LDST((state_t *) SYSBK_OLDAREA);
     } else {
-
-
     /* caso bloccante */
     /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
        nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
@@ -118,9 +110,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
         current_thread->run_time += timeSliceLeft; //cycles
         update_clock(timeSliceLeft);
 
-    //    STATUS_ALL_INT_ENABLE(current_thread->t_s.cpsr);
-
-        if (sender){
+        if (sender) {
         // il thread si blocca aspettando da sender
             // aggiunge il processo corrente alla lista dei processi che aspettano sender (di sender)
             thread_enqueue(current_thread, &sender->t_wait4me);
@@ -139,9 +129,10 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg){
 extern void pgmtrap_h();
 
 // solleva una trap
-static inline void raise_reserved_instruction(void) {
-    *((state_t *) PGMTRAP_NEWAREA) = *((state_t *) SYSBK_NEWAREA);
-    ((state_t *) PGMTRAP_NEWAREA)->CP15_Cause = EXC_RESERVEDINSTR;
+static inline void raise_reserved_instruction(void)
+{
+    *((state_t *) PGMTRAP_OLDAREA) = *((state_t *) SYSBK_OLDAREA);
+    ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause = EXC_RESERVEDINSTR;
     pgmtrap_h();
 }
 
@@ -222,9 +213,8 @@ syscall_other(unsigned int sysNum, unsigned int arg1,
 #define SYSCALL_ARG(N)  \
     (((state_t *) SYSBK_OLDAREA)->a ## N)
 
-void syscall_h(){
-
-    // BREAKPOINT();
+void syscall_h()
+{
     switch (SYSCALL_ARG(1)) {
         case SYS_ERR:
         // syscall 0 è da specifica sempre un errore

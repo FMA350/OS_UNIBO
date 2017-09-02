@@ -10,20 +10,12 @@
 #include <interrupts.h>
 
 #include "services/services.h"
+#include "services/do_io.h"
 
-#define TERM0ADDR       0x24C
-#define PRINTADDR       0x1C0
-#define NETADDR         0x140
-#define TAPEADDR        0x0C0
-#define DISKADDR        0x040
+struct tcb_t *soft_blocked_thread[5];
 
-struct io_req{
-    uintptr_t val;
-    struct tcb_t *requester;
-};
-struct io_req request[8];
 
-struct list_head *t_wait4clock;
+struct list_head t_wait4clock;
 int pseudoclock;
 
 struct tcb_t *SSI , *IO_thread;
@@ -38,12 +30,12 @@ struct tcb_t *ssi_thread_init() {
     _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(_SSI.t_s.cpsr);
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
-    INIT_LIST_HEAD(t_wait4clock);
+    INIT_LIST_HEAD(&t_wait4clock);
     pseudoclock = 0;
 
     int i;
-    for (i=0; i<8; i++)
-        request[i].requester = NULL;
+    for (i = 0; i < 5; i++)
+        soft_blocked_thread[i] = NULL;
 
     tprint("SSI initialized\n");
 
@@ -67,17 +59,21 @@ void ssi(){
 
         void * IO_addr = (void *) 0x00006ff0; //FIXME: move to a declaration.
 
-        if(applicant == IO_addr) { //interrupt_h ci sta dicendo che un device ha completato
-            int i = 0;
-            while (request[i].requester==NULL && i<8)
-                i++;
-            void * rcv_status = (void *) 0x0000248;
-            //tprintf("%p, %p, %p, recv status:%d, trs status:\n",current_thread, thread_qhead(&SSI->t_wait4me), request[i].requester,*(unsigned int*)rcv_status);
-            msgsend(request[i].requester,*(unsigned int*)rcv_status);
-            request[i].val = (uintptr_t) NULL;
-            request[i].requester = NULL;
-        }
-        else {
+        if(applicant == ((void *) CDEV_BITMAP_ADDR(IL_TERMINAL))) {
+        // Se il messaggio è stato inviato dal terminale (da interrupt_h)
+            if (soft_blocked_thread[TERMINAL_REQUESTER_INDEX]) {
+            // DEBUG: interrupt proveniente non da tprint
+                // continue;
+                // tprint("SSI: Requester is NULL\n");
+                // PANIC();
+                msgsend(soft_blocked_thread[TERMINAL_REQUESTER_INDEX],
+                    *((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_STATUS)));
+                // TODO: mnalli - l'ho aggiunto io, è giusto?
+                // tprintf("soft_block_count == %d\n", soft_block_count);
+                soft_block_count--;
+                soft_blocked_thread[TERMINAL_REQUESTER_INDEX] = NULL;
+            }
+        } else {
             //it's a request from a thread
             switch (req_field(msg, 0)) {
                 case GET_ERRNO:
@@ -117,7 +113,10 @@ void ssi(){
                     wait_for_clock_s(applicant);
                 break;
                 case DO_IO:
-                    do_io_s(msg, applicant);
+                do_io_s((devaddr) req_field(msg, 1),
+                        (uintptr_t) req_field(msg, 2),
+                        (uintptr_t) req_field(msg, 3),
+                        (uintptr_t) req_field(msg, 4), applicant);
                 break;
                 case GET_PROCESSID:
                     msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
@@ -129,6 +128,9 @@ void ssi(){
                     msgsend(applicant, (uintptr_t) get_mythreadid_s((struct pcb_t *) req_field(msg, 1)));
                 break;
                 default:
+                    tprint("SSI: Unknown request\n");
+                    tprintf("REQ_TAG == %d, applicant = %p\n", req_field(msg, 0), applicant);
+                    PANIC();
                 // TODO: se il messaggio è diverso dai codici noti
                 //       rispondere con errore e settare errno
                 break;
