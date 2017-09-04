@@ -43,77 +43,75 @@ void interrupt_h(){
 }
 
 static inline void interval_timer_h(){
-    update_clock(accountant(current_thread));
-    current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
-    thread_enqueue(current_thread, &readyq);
+    if(current_thread){
+        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+        current_thread->run_time += clockPerTimeslice; //cycles
+
+        tprintf("IT - %p\n", current_thread);
+        thread_enqueue(current_thread, &readyq);
+    }
+    update_clock(clockPerTimeslice);
     scheduler();
 }
 
-static inline void io_h(){
-//    tprint("$$$ io_h called $$$\n");
+extern int is_idle;
+extern struct tcb_t *soft_blocked_thread[5];
+#define TERMINAL_REQUESTER_INDEX    4
+#define TRANSM_COMMAND  0xC
 
-    //p points to bottom of the interrupt bitmap for external devices
-    //il primo byte che ha un interr pendente fa partire la gestione
-    // if (current_thread) {
-    //     current_thread->t_s = *((state_t *) INT_OLDAREA);
-    //     // current_thread->t_s.pc -= 4; //since it skips 4 bytes of instruction
-    //     // Inserimento del processo in coda
-    //     //thread_enqueue(current_thread, &readyq);
-    //     //list_add(&current_thread->t_sched, &readyq);
+/* Non restituisce mai il controllo */
+static inline void acknowledge(unsigned int *command_address, int requester_index)
+{
+    *command_address = DEV_C_ACK;
+
+    // assert(soft_blocked_thread[requester_index]);
+
+    if (soft_blocked_thread[requester_index]) {
+        // Sblocchiamo il processo in attesa a nome dell'SSI
+        // TODO: il payload del messaggio è lo stato del device?
+        int rval = send(soft_blocked_thread[requester_index], SSI, NULL);
+        // La send che viene fatta ad un processo in attesa non fallisce mai
+        // assert(rval == SEND_SUCCESS);
+
+        soft_blocked_thread[requester_index] = NULL;
+
+        if (is_idle) {
+        // se il messaggio è stato inviato mentre il processore era idle
+            // assert(sender == SSI);
+            is_idle = 0;
+            // chiamiamo lo scheduler per schedulare il processo svegliato
+            scheduler();
+        }
+        else
+            LDST((state_t *) INT_OLDAREA);
+    }
+    // else {
+    //     tprint("io_h sta cercando di inviare un messaggio a NULL\n");
+    //     PANIC();
     // }
+}
 
-    // tprintf("interval timer interrupt - %d\n", *((unsigned int *) CDEV_BITMAP_ADDR(IL_TIMER)));
+#define TERMINAL_DEV_FIELD(dev, field) (DEV_REG_ADDR(IL_TERMINAL, dev) + (field))
 
+static inline void io_h(void)
+{
     unsigned int *p = (unsigned int *) CDEV_BITMAP_ADDR(IL_TERMINAL);
 
-    // dovrebbe funzionare a grandi linee, ma bisognerebbe vedere anche le funzioni
-    // del coprocessore (ha un registro che indica la causa degli interrupts)
+    // tprint("io_h called\n");
 
-    int i;
+    int i, j;
     for (i = 0; i < 5; i++) {
     //ne controllo uno alla volta di device per gestire un interrupt alla volta
-        if ((*p & 1) == 1) {
-        //device n.0 has a pending interrupt
-            // tprintf(">>>>> terminal 0 raised interrupt %p\n",thread_qhead(&blockedq));
-            // tprintf("BITMAP: %d\n", *((unsigned int *)p));
-
-            // #define TERM0ADDR       0x24C
-            tprintf("- IL_TERMINAL 0 - %p\n", DEV_REG_ADDR(IL_TERMINAL, 0));
-            // tprintf("- IDEV_BITMAP_ADDR 0 - %p\n", IDEV_BITMAP_ADDR(IL_TERMINAL));
-            unsigned int *trs_cmd = (unsigned int *) 0x0000024c;
-
-            *trs_cmd = DEV_C_ACK;
-            // tprintf("BITMAP: %d\n", *((unsigned int *)p));
-            send(SSI,p,i);
-            break;
-        } else if (((*p >> 1) & 1) == 1) {
-        // device n.1 has a pending interrupt
-            send(SSI,p,i);
-            break;
-        } else if (((*p >> 2) & 1) == 1) {
-            send(SSI,p,i);
-            break;
-        } else if (((*p >> 3) & 1) == 1) {
-            send(SSI,p,i);
-            break;
-        } else if (((*p >> 4) & 1) == 1) {
-            send(SSI,p,i);
-            break;
-        } else if (((*p >> 5) & 1) == 1) {
-            send(SSI,p,i);
-            break;
-        } else if (((*p >> 6) & 1) == 1) {
-            send(SSI,p,i);
-            break;
-        } else if (((*p >> 7) & 1) == 1) {
-            send(SSI,p,i);
-            break;
+        for (j = 0; j < 8; j++) {
+            if (((*p >> j) & 1) == 1) {
+            //device n.0 has a pending interrupt
+                acknowledge((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND),
+                            TERMINAL_REQUESTER_INDEX);
+                tprint("io_h should not arrive here!\n");
+                PANIC();
+            }
         }
-
-        // FIXME: cos'è?
-        *p = (unsigned int) p + 2;
     }
-
-    // Si restituisce il controllo al chiamante
-    LDST((state_t *) INT_OLDAREA);
+    tprint("End of io_h: io_h should not arrive here!\n");
+    PANIC();
 }

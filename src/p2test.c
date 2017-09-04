@@ -98,6 +98,7 @@ uintptr_t p5send = 0;
 
 void test(void) {
 
+    tprint("start test\n");
     ttyprintstring(TERM0ADDR, "NUCLEUS1...\n");
     STST(&tmpstate);
     stackalloc = (tmpstate.sp + (QPAGE - 1)) & (~(QPAGE - 1));

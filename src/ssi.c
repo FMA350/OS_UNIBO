@@ -9,6 +9,8 @@
 #include <syscall.h>
 #include <interrupts.h>
 
+#include <arch.h>
+
 #define TERM0ADDR       0x24C
 #define PRINTADDR       0x1C0
 #define NETADDR         0x140
@@ -16,12 +18,6 @@
 #define DISKADDR        0x040
 
 #define PSEUDOCLOCK_TICK 100
-
-struct io_req{
-    uintptr_t val;
-    struct tcb_t *requester;
-};
-struct io_req request[8];
 
 struct list_head *t_wait4clock;
 int pseudoclock;
@@ -44,135 +40,113 @@ static inline struct tcb_t *setsysmgr_s(struct tcb_t *thread, struct tcb_t *appl
 
 static inline unsigned int getcputime_s(const struct tcb_t *applicant);
 static inline unsigned int wait_for_clock_s(struct tcb_t *applicant);
-static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic);
+void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
+                            uintptr_t data2, struct tcb_t* applicant);
 
 static inline struct pcb_t *get_processid_s(const struct tcb_t *thread);
 static inline struct pcb_t *get_parentprocid_s(const struct pcb_t *proc);
 
 void update_clock(unsigned int milliseconds);
 
-struct tcb_t *ssi_thread_init() {
+struct tcb_t *
+get_mythreadid_s(struct tcb_t *thread)
+{
+    return thread;
+}
+
+
+struct tcb_t *ssi_thread_init(void)
+{
     static struct tcb_t _SSI;
 
     _SSI.t_pcb = NULL;
     _SSI.t_status = T_STATUS_READY;
     _SSI.t_wait4sender = NULL;
-    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
+    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(_SSI.t_s.cpsr);
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
-    INIT_LIST_HEAD(t_wait4clock);
-    pseudoclock = 0;
-
-    int i;
-    for (i=0; i<8; i++)
-        request[i].requester = NULL;
 
     tprint("SSI initialized\n");
 
     return(SSI = &_SSI);
 }
 
-static inline uintptr_t req_field(uintptr_t request, int i) {
+static inline uintptr_t req_field(uintptr_t request, int i)
+{
     return ((uintptr_t *) request)[i];
 }
 
-void ssi(){
-    int f = 0;
+void ssi(void)
+{
     while (1) {
         uintptr_t msg, reply;
         int send_back;
-
-
-        // if (f) {
-        //     tprint("SSI: receiving message\n");
-        // }
+        
         struct tcb_t *applicant = msgrecv(NULL, &msg);
-        // if (f) {
-        //     tprintf("SSI: message received - %d\n", req_field(msg, 0));
-        // }
-        // tprintf("SSI request:%d\n", req_field(msg,0));
-        //         "   applicant == %p\n"
-        //         "   request number == %d\n"
-        //         "   headOfReadyQ == %p\n",
-        //        applicant, req_field(msg, 0), current_thread, thread_qhead(&readyq));
+        tprintf("messaggio ricevuto da %p\n", applicant);
 
-        void * IO_addr = (void *) 0x00006ff0; //FIXME: move to a declaration.
-
-        if(applicant == IO_addr) { //interrupt_h ci sta dicendo che un device ha completato
-            // if (f) {
-            //     tprint("interrupt_h ci sta dicendo che un device ha completato\n");
-            // }
-
-            int i = 0;
-            while (request[i].requester==NULL && i<8)
-                i++;
-            void * rcv_status = (void *) 0x0000248;
-            //tprintf("%p, %p, %p, recv status:%d, trs status:\n",current_thread, thread_qhead(&SSI->t_wait4me), request[i].requester,*(unsigned int*)rcv_status);
-            msgsend(request[i].requester,*(unsigned int*)rcv_status);
-            request[i].val = (uintptr_t) NULL;
-            request[i].requester = NULL;
-        }
-        else {
-            //it's a request from a thread
-            switch (req_field(msg, 0)) {
-                case GET_ERRNO:
-                    msgsend(applicant, (uintptr_t) get_errno_s(applicant));
+        switch (req_field(msg, 0)) {
+            case GET_ERRNO:
+                msgsend(applicant, (uintptr_t) get_errno_s(applicant));
                 break;
-                case CREATE_PROCESS:
-                    msgsend(applicant, (uintptr_t) create_process_s((state_t *) req_field(msg, 1), applicant));
+            case CREATE_PROCESS:
+                msgsend(applicant, (uintptr_t) create_process_s((state_t *) req_field(msg, 1), applicant));
                 break;
-                case CREATE_THREAD:
-                    msgsend(applicant, (uintptr_t) create_thread_s((state_t *) req_field(msg, 1), applicant));
+            case CREATE_THREAD:
+                msgsend(applicant, (uintptr_t) create_thread_s((state_t *) req_field(msg, 1), applicant));
                 break;
-                case TERMINATE_PROCESS:
-                    terminate_process_s(applicant);
+            case TERMINATE_PROCESS:
+                terminate_process_s(applicant);
                 break;
-                case TERMINATE_THREAD:
-                    terminate_thread_s(applicant);
+            case TERMINATE_THREAD:
+                terminate_thread_s(applicant);
                 break;
-                case SETPGMMGR:
-                    reply = (uintptr_t) setpgmmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
-                    if (send_back)
-                        msgsend(applicant, reply);
+            case SETPGMMGR:
+                reply = (uintptr_t) setpgmmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                if (send_back)
+                    msgsend(applicant, reply);
                 break;
-                case SETTLBMGR:
-                    reply = (uintptr_t) settlbmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
-                    if (send_back)
-                        msgsend(applicant, reply);
+            case SETTLBMGR:
+                reply = (uintptr_t) settlbmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                if (send_back)
+                    msgsend(applicant, reply);
                 break;
-                case SETSYSMGR:
-                    reply = (uintptr_t) setsysmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
-                    if (send_back)
-                        msgsend(applicant, reply);
+            case SETSYSMGR:
+                reply = (uintptr_t) setsysmgr_s((struct tcb_t *) req_field(msg, 1), applicant, &send_back);
+                if (send_back)
+                    msgsend(applicant, reply);
                 break;
-                case GET_CPUTIME:
-                    f = 1;
-                    msgsend(applicant, (uintptr_t) getcputime_s(applicant));
-                    // tprint("SSI: msg sent back\n");
+            case GET_CPUTIME:
+                msgsend(applicant, (uintptr_t) getcputime_s(applicant));
                 break;
-                case WAIT_FOR_CLOCK:
-                    wait_for_clock_s(applicant);
+            case WAIT_FOR_CLOCK:
+                wait_for_clock_s(applicant);
                 break;
-                case DO_IO:
-                    do_io_s(msg, applicant);
+            case DO_IO:
+                do_io_s((devaddr) req_field(msg, 1),
+                        (uintptr_t) req_field(msg, 2),
+                        (uintptr_t) req_field(msg, 3),
+                        (uintptr_t) req_field(msg, 4), applicant);
                 break;
-                case GET_PROCESSID:
-                    msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
+            case GET_PROCESSID:
+                msgsend(applicant, (uintptr_t) get_processid_s((struct tcb_t *) req_field(msg, 1)));
                 break;
-                case GET_PARENTPROCID:
-                    msgsend(applicant, (uintptr_t) get_parentprocid_s((struct pcb_t *) req_field(msg, 1)));
+            case GET_PARENTPROCID:
+                msgsend(applicant, (uintptr_t) get_parentprocid_s((struct pcb_t *) req_field(msg, 1)));
                 break;
-                case GET_MYTHREADID:
-                    msgsend(applicant, (uintptr_t) applicant);
+            case GET_MYTHREADID:
+                msgsend(applicant, (uintptr_t) get_mythreadid_s((struct tcb_t *) req_field(msg, 1)));
                 break;
-                default:
-                    HALT();
-                // TODO: se il messaggio è diverso dai codici noti
-                //       rispondere con errore e settare errno
-            }
+            default:
+                tprint("SSI: Unknown request\n");
+                tprintf("REQ_TAG == %d, applicant = %p\n", req_field(msg, 0), applicant);
+                PANIC();
+            // TODO: se il messaggio è diverso dai codici noti
+            //       rispondere con errore e settare errno
         }
     }
 }
+
 
 
 /***********SERVICES*****************/
@@ -363,62 +337,45 @@ void update_clock(unsigned int milliseconds){
 
 
 
-static inline void setdevice(unsigned int devno, uintptr_t command){
-    //tprint("setting transmitChar command\n");
-    void *p = (void *) 0x0000024c + ((0x10)*devno);
-    *((unsigned int *)p) = command;
-    //tprint("\n..........completed transmitChar command\n");
-}
+struct tcb_t *soft_blocked_thread[5] = { [0 ... 4] = NULL };
+#define TRANSM_COMMAND  0xC
+#define TERMINAL_REQUESTER_INDEX  4
+#define TERMINAL_DEV_FIELD(dev, field) (DEV_REG_ADDR(IL_TERMINAL, dev) + (field))
 
-static inline unsigned int do_io_s(uintptr_t msgg, struct tcb_t* applic)
+void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
+                            uintptr_t data2, struct tcb_t* applicant)
 {
-    //tprint("    do_io_s started\n");
-/*    switch (req_field(msgg,1)) {
-        case TERM0ADDR:   //il device e' un terminale */
-        int empty = 1;
-        int i;
+    tprint("do_io_s\n");
+    // Per ora funziona solamente il terminale 0
+    switch (device) {
+        case TERMINAL_DEV_FIELD(0, TRANSM_COMMAND):   //il device e' un terminale
+            // the thread gets soft blocked
+            soft_block_count++;
 
-        // the thread gets soft blocked
-        soft_block_count++;
+            // Setting command
+            *((uintptr_t *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND)) = command;
 
-        //TODO: possiamo fare una lista per ogni terminale invece che array statico
-        while (request[i].requester==NULL && i<8)
-            i++;
+            if (soft_blocked_thread[TERMINAL_REQUESTER_INDEX])
+            // Qualcun altro sta già facendo IO; non dovrebbe mai accadere
+                PANIC();
 
-        if (request[i].requester!=NULL)
-            empty = 0;
+            soft_blocked_thread[TERMINAL_REQUESTER_INDEX] = applicant;
 
-        if(empty){
-            setdevice(0,req_field(msgg,2));
-            request[0].val = msgg;
-            request[0].requester = applic;
-        }
-        //aggiorno -> (using device)
-        else {
-            i=0;
-            while(request[i].requester!=NULL && i<8)
-                i++; //cerco il primo buco libero per salvare il messaggio
-
-            if (i==8)
-                return -1; //se non ci sono piu spazi per salvare...
-            else {
-                request[i].val = msgg;
-                request[i].requester = applic;
-            }
-        }
-        /*break;
-        case PRINTADDR:
-        break;
-        case NETADDR:
-        break;
-        case TAPEADDR:
-        break;
-        case DISKADDR:
-        break;
-        default: return -1;
-    }*/
-    //tprint("    do_io_s finished\n");
+            break;
+        // case PRINTADDR:
+        //     break;
+        // case NETADDR:
+        //     break;
+        // case TAPEADDR:
+        //     break;
+        // case DISKADDR:
+        //     break;
+        default:
+            // tprint("SSI: IO ERROR\n");
+            PANIC();
+    }
 }
+
 
 /* *send_back è 1 se bisogna spedire una risposta al mittente, cioè il processo non è stato terminato */
 static inline struct tcb_t *__setmgr(struct tcb_t *thread, struct tcb_t *applicant,

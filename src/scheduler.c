@@ -1,13 +1,13 @@
- #include <mikabooq.h>
- #include <listx.h>
- #include <arch.h>
- #include <uARMconst.h>
- #include <uARMtypes.h>
- #include <libuarm.h>
- #include <ssi.h>
- #include <debug_tests.h>
- #include <nucleus.h>
- #include <scheduler.h>
+#include <mikabooq.h>
+#include <listx.h>
+#include <arch.h>
+#include <uARMconst.h>
+#include <uARMtypes.h>
+#include <libuarm.h>
+#include <ssi.h>
+#include <debug_tests.h>
+#include <nucleus.h>
+#include <scheduler.h>
 #include <p2test.h>
 #include <interrupts.h>
 #include <syslib.h>
@@ -130,6 +130,8 @@ void load_readyq(struct pcb_t *root) {
     tprint("load_readyq finished\n");
 }
 
+int is_idle = 0;
+
 /* This function is used to handle the case when the ready ready queue is empty
  * inside the scheduler
  * Preconditions: the ready queue is empty
@@ -147,7 +149,8 @@ static inline void empty_readyq_h() {
         PANIC();
     } else {
     /* processes in the system are waiting for I/O */
-        // tprint("=== processes waiting for IO ===\n");
+        // tprint("=== processes waiting for IO ===\n
+        is_idle = 1;
         setTIMER(clockPerTimeslice); //fma350 test
         setSTATUS(STATUS_ENABLE_INT(getSTATUS()));
         WAIT();
@@ -156,7 +159,7 @@ static inline void empty_readyq_h() {
 
 void scheduler() {
     current_thread = thread_dequeue(&readyq);
-    //tprintf("scheduler started, current is %p\n", current_thread);
+    // tprintf("scheduler started, current is %p\n", current_thread);
 
     if (current_thread == NULL){
         //tprint("in emptyrq\n");
