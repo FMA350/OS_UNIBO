@@ -24,6 +24,7 @@
 #define GET_PROCESSID 11
 #define GET_MYTHREADID 12
 #define GET_PARENTPROCID 13
+//#define PSEUDOCLOCK_OVER 14
 
 typedef uintptr_t memaddr;
 typedef uintptr_t cputime;

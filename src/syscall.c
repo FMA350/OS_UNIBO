@@ -2,11 +2,10 @@
 #include <nucleus.h>
 #include <syslib.h>
 #include <scheduler.h>
-#include <syscall.h>
 
+#include "handlers.h"
+#include "accounting.h"
 
-// sentinella della coda dei processi in attesa di ricevere un messaggio
-LIST_HEAD(blockedq);
 
 static inline void store_return_value(unsigned int rval)
 {
@@ -96,8 +95,6 @@ unsigned int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
     }
 }
 
-extern unsigned int timeSliceLeft;
-
 static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
 {
     if (msgq_get(&sender, current_thread, pmsg) == 0) {    // in src viene memorizzato il mittente
@@ -109,15 +106,15 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
     /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
         nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
-        // timeSliceLeft = getTIMER();
+        timeSliceLeft = getTIMER();
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
         // cambiamento dello stato di attesa del thread
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = sender;
 
-        // current_thread->run_time += timeSliceLeft; //cycles
-        // update_clock(timeSliceLeft);
+        current_thread->run_time += timeSliceLeft; //cycles
+        update_clock(timeSliceLeft);
 
         if (sender) {
         // il thread si blocca aspettando da sender

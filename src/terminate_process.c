@@ -1,23 +1,27 @@
+#include <mikabooq.h>
+#include <ssi.h>
+
+extern struct pcb_t *get_processid_s(const struct tcb_t *thread);
 extern inline void __terminate_thread_s(struct tcb_t *thread);
 
 /* Cleans the eventual messages sent to managers and SSI
    Preconditions: the thread is waiting
 
    sys_mgr e pgm_mgr sono gli unici thread di sistema oltre all'SSI
-   nei confronti dei quali è possibile fare la recv (syscall_other) */
-inline void clean_sys_msg(struct tcb_t *terminating)
+   nei confronti dei quali è possibile fare la recv (syscall_other)
+   */
+// FIXME: probabilmente non è corretto
+static inline void clean_sys_msg(struct tcb_t *terminating)
 {
     if (terminating->t_wait4sender == SSI) {
         // msgq_get should always succeed
         msgq_get(&terminating, SSI, NULL);
-    } else if (terminating->t_wait4sender == get_processid_s(terminating)->sys_mgr){
+    } else if (terminating->t_wait4sender == (get_processid_s(terminating)->sys_mgr)) {
          msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
-    } else if (terminating->t_wait4sender == get_processid_s(terminating)->pgm_mgr) {
+    } else if (terminating->t_wait4sender == (get_processid_s(terminating)->pgm_mgr)) {
         msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
     }
-
 }
-
 
 /*
  * Terminate the process and all his progeny
@@ -25,7 +29,7 @@ inline void clean_sys_msg(struct tcb_t *terminating)
  * Preconditions: process != NULL, applicant is the requestor of the service
  *
  */
-inline void __terminate_process_s(struct pcb_t *proc, struct tcb_t *applicant)
+static inline void __terminate_process_s(struct pcb_t *proc, struct tcb_t *applicant)
 {
     // TODO: eliminare dalla coda dei messaggi dell'SSI eventuali messaggi
     // provenienti dai thread dei processi figli che saranno terminati
@@ -52,7 +56,7 @@ inline void __terminate_process_s(struct pcb_t *proc, struct tcb_t *applicant)
     proc_delete(proc);
 }
 
-inline void terminate_process_s(struct tcb_t *applicant)
+void terminate_process_s(struct tcb_t *applicant)
 {
     __terminate_process_s(get_processid_s(applicant), applicant);
 }

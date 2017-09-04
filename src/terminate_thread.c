@@ -1,3 +1,8 @@
+#include <mikabooq.h>
+#include <scheduler.h>
+
+extern struct pcb_t *get_processid_s(const struct tcb_t *thread);
+
 /* terminate the thread. thread != NULL
    the process is also removed from the scheduling queue it's in (device queue also)*/
 inline void __terminate_thread_s(struct tcb_t *thread)
@@ -34,7 +39,7 @@ inline void __terminate_thread_s(struct tcb_t *thread)
 }
 
 /* terminate the thread and, if it's the last one, the process too */
-inline void terminate_thread_s(struct tcb_t *thread)
+void terminate_thread_s(struct tcb_t *thread)
 {
     //tprint("terminate_thread_s started\n");
 

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <mikabooq.h>
 
+// defined in scheduler.c
 extern struct tcb_t *current_thread;
 extern struct list_head readyq;
 extern struct list_head blockedq;
@@ -11,7 +12,10 @@ extern struct list_head blockedq;
 extern unsigned int thread_count;
 extern unsigned int soft_block_count;
 
-extern unsigned int clockPerTimeslice;
+extern int is_idle;
+
+
+void scheduler(void);
 
 /*
  * Preconditions:
@@ -25,28 +29,9 @@ extern unsigned int clockPerTimeslice;
  *  Global thread counter is incremented.
  */
 extern void init_and_load(struct tcb_t *to_load, void *target, unsigned int cpsr);
-
-
-void load_readyq(struct pcb_t *root);
-
-unsigned int accountant(struct tcb_t* thread);
-
 /* used also in debug */
-inline void init_and_load(struct tcb_t *to_load, void *target, unsigned int status);
 
-void scheduler();
-
-
-static inline uint64_t pack(const uint32_t RegLow, const uint32_t RegHigh) {
-    uint64_t rval = RegHigh;
-    return (rval << 32) | RegLow;
-}
-
-/* Unpacks Reg in RegLow and RegHigh*/
-static inline unpack(const uint64_t Reg, uint32_t *RegLow, uint32_t *RegHigh) {
-    *RegLow = (uint32_t) Reg;
-    *RegHigh = (uint32_t) (Reg >> 32);
-}
-
+// used in init.c during initialization
+void load_readyq(struct pcb_t *root);
 
 #endif
