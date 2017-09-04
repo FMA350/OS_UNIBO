@@ -84,10 +84,9 @@ static inline void acknowledge(unsigned int *command_address, int requester_inde
 
 static inline void io_h(void)
 {
-    int i;
+    int i, j;
     for (i = 0; i < 5; i++) {
     //ne controllo uno alla volta di device per gestire un interrupt alla volta
-        int j;
         for (j = 0; j < 8; j++) {
             if ((*p >> j) & 1) == 1) {
             //device n.0 has a pending interrupt

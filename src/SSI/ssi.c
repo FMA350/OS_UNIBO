@@ -1,4 +1,4 @@
-#include <ssi.h>
+#include "ssi.h"
 
 #include <listx.h>
 #include <uARMtypes.h>
@@ -47,7 +47,6 @@ void ssi(void)
         int send_back;
         struct tcb_t *applicant = msgrecv(NULL, &msg);
 
-        //it's a request from a thread
         switch (req_field(msg, 0)) {
             case GET_ERRNO:
                 msgsend(applicant, (uintptr_t) get_errno_s(applicant));
