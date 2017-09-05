@@ -20,7 +20,7 @@ struct tcb_t *settlbmgr_s(struct tcb_t *new_mgr, struct tcb_t *applicant, int *s
 struct tcb_t *setsysmgr_s(struct tcb_t *new_mgr, struct tcb_t *applicant, int *send_back);
 
 /*  Returns the time passed since the starting of the thread */
-unsigned int getcputime_s(const struct tcb_t *applicant);
+uint64_t getcputime_s(const struct tcb_t *applicant);
 
 /*  */
 void wait_for_clock_s(struct tcb_t *applicant);

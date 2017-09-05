@@ -121,12 +121,9 @@ void scheduler(void)
     current_thread = thread_dequeue(&readyq);
     //tprintf("scheduler started, current is %p\n", current_thread);
 
-    if (current_thread == NULL) {
+    if (current_thread == NULL)
         empty_readyq_h();
-    }
 
-    // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
-    // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
     setTIMER(TICKS_PER_TIME_SLICE);
     LDST(&current_thread->t_s);
 }
