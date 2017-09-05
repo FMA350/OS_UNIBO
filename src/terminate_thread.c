@@ -5,7 +5,7 @@ extern struct pcb_t *get_processid_s(const struct tcb_t *thread);
 
 /* terminate the thread. thread != NULL
    the process is also removed from the scheduling queue it's in (device queue also)*/
-inline void __terminate_thread_s(struct tcb_t *thread)
+void __terminate_thread_s(struct tcb_t *thread)
 {
     while (!list_empty(&thread->t_msgq))
     //cancello tutti i messaggi se ce ne sono
