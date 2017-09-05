@@ -22,7 +22,7 @@ struct tcb_t *ssi_thread_init(void)
     _SSI.t_pcb = NULL;
     _SSI.t_status = T_STATUS_READY;
     _SSI.t_wait4sender = NULL;
-    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(_SSI.t_s.cpsr);
+    _SSI.t_s.cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
 
@@ -41,6 +41,7 @@ void ssi(void)
     while (1) {
         uintptr_t msg, reply;
         int send_back;
+
         struct tcb_t *applicant = msgrecv(NULL, &msg);
 
         switch (req_field(msg, 0)) {
@@ -75,7 +76,9 @@ void ssi(void)
                     msgsend(applicant, reply);
                 break;
             case GET_CPUTIME:
-                msgsend(applicant, (uintptr_t) getcputime_s(applicant));
+                reply = (uintptr_t) getcputime_s(applicant);
+                BREAKPOINT();
+                msgsend(applicant, reply);
                 break;
             case WAIT_FOR_CLOCK:
                 wait_for_clock_s(applicant);
@@ -97,7 +100,8 @@ void ssi(void)
                 break;
             default:
                 tprint("SSI: Unknown request\n");
-                tprintf("REQ_TAG == %d, applicant = %p\n", req_field(msg, 0), applicant);
+                tprintf("REQ_TAG == %d, msg == %p, applicant = %p\n",
+                        req_field(msg, 0), msg, applicant);
                 PANIC();
             // TODO: se il messaggio è diverso dai codici noti
             //       rispondere con errore e settare errno

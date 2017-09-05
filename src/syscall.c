@@ -107,6 +107,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
         timeSliceLeft = getTIMER();
+
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
         // cambiamento dello stato di attesa del thread
@@ -188,6 +189,7 @@ syscall_other(unsigned int sysNum, unsigned int arg1,
     struct pcb_t *current_process = current_thread->t_pcb;
 
     if (current_process->sys_mgr) {
+        tprint("syscall_other sys_mgr\n");
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
 
         struct {
@@ -201,8 +203,9 @@ syscall_other(unsigned int sysNum, unsigned int arg1,
         // FIXME:
         thread_enqueue(current_thread, &blockedq);
         scheduler();
-
     } else if (current_process->pgm_mgr) {
+        tprint("syscall_other pgm_mgr\n");
+
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
         current_thread->t_s.pc -= 4;    // TODO: is it correct?
 
@@ -211,6 +214,7 @@ syscall_other(unsigned int sysNum, unsigned int arg1,
         scheduler();
     } else {
     // il thread chiamante deve essere terminato
+        tprint("syscall_other terminate_thread\n");
         terminate_thread();
     }
 
@@ -225,6 +229,9 @@ syscall_other(unsigned int sysNum, unsigned int arg1,
 
 void syscall_h(void)
 {
+    if (CAUSE_EXCCODE_GET(((state_t *) SYSBK_OLDAREA)->CP15_Cause) == EXC_BREAKPOINT)
+        LDST((state_t *) SYSBK_OLDAREA);
+
     switch (SYSCALL_ARG(1)) {
         case SYS_ERR:
         // syscall 0 è da specifica sempre un errore

@@ -51,7 +51,6 @@ void tty0out_thread(void) {
     for (;;) {
         sender = msgrecv(NULL, &payload);
         ttyprintstring(TERM0ADDR, (char*) payload);
-        BREAKPOINT();
         msgsend(sender, NULL);
     }
 }
@@ -198,8 +197,8 @@ void test(void) {
     tty0print("IT'S ALIVE! IT'S ALIVE! THE KERNEL IS ALIVE!\n");
     HALT();
 }
-#define MINLOOPTIME             5 //milliseconds
-//#define MINLOOPTIME             10000
+// #define MINLOOPTIME             5 //milliseconds
+#define MINLOOPTIME             10000
 #define LOOPNUM                 10000
 
 void p2(void) {
@@ -211,8 +210,6 @@ void p2(void) {
     tty0print("p2 started\n");
 
     /* test: GET_MYTHREADID GET_PROCESSID GET_PARENTPROCID */
-    // TODO: se facciamo stampare anche la riga seguente il test prosegue!!!
-    tty0print("p2 about to call get_mythreadid()\n");
     if (get_mythreadid() != p2t)
         panic("p2 get_mythreadid: wrong pid returned\n");
 

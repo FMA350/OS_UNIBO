@@ -12,6 +12,8 @@ inline struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_
     //tprintf("current: %p, %p, %p \n", current_thread,  thread_qhead(&readyq),  thread_qhead(&blockedq));
     thread_enqueue(new_thread, &readyq);
     thread_count++;
+
+    tprintf("new_thread --> %p, thread_count --> %d\n", new_thread, thread_count);
     return new_thread;
 }
 

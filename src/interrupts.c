@@ -14,9 +14,9 @@
 
 
 /*****INTERN******/
-int interrupt_flag = 0;
-state_t interrupt_t_s; //should it be initialized?
-int call_scheduler;
+// int interrupt_flag = 0;
+// state_t interrupt_t_s; //should it be initialized?
+// int call_scheduler;
 
 
 static inline void interval_timer_h(void);
@@ -37,8 +37,8 @@ void interrupt_h(void)
 
 static inline void interval_timer_h(void)
 {
-    if(current_thread){
-        current_thread->t_s = *((state_t *) INT_OLDAREA); //memcpy implicita
+    if(current_thread) {
+        current_thread->t_s = *((state_t *) INT_OLDAREA);
         current_thread->run_time += clockPerTimeslice; //cycles
 
         tprintf("IT - %p\n", current_thread);
@@ -62,6 +62,7 @@ static inline void acknowledge(unsigned int *command_address, int requester_inde
         // TODO: il payload del messaggio è lo stato del device?
         int rval = send(soft_blocked_thread[requester_index], SSI, DEV_S_READY);
         // TODO: DEV_S_READY è solo di prova
+        soft_block_count--;
 
         // La send che viene fatta ad un processo in attesa non fallisce mai
         assert(rval == SEND_SUCCESS);
@@ -77,7 +78,8 @@ static inline void acknowledge(unsigned int *command_address, int requester_inde
             LDST((state_t *) INT_OLDAREA);
     } else
     // se l'interrupt proviene da una tprint
-            LDST((state_t *) INT_OLDAREA);
+        // siccome non abbiamo svegliato nessuno, dobbiamo per forza caricare il vecchio stato
+        LDST((state_t *) INT_OLDAREA);
 }
 
 static inline void io_h(void)
