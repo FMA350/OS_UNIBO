@@ -7,7 +7,7 @@
 #include "syslib.h"
 #include "accounting.h"
 
-
+STOPWATCH(sys_stopwatch);
 unsigned int timeSliceLeft;
 unsigned int TICKS_PER_TIME_SLICE;
 // sentinella della coda dei processi richiedenti il servizio di attesa
@@ -15,12 +15,12 @@ LIST_HEAD(t_wait4clock);
 unsigned int pseudoclock = 0;
 
 
+//returns the time passed in microseconds.
 unsigned int accountant(struct tcb_t* thread)
 {
-    //returns the time passed in milliseconds.
-    int cycles = thread->run_time;
+    uint64_t cycles = thread->run_time;
     int milliseconds = 0;
-        cycles -= 500; // for rounding purpouses
+    cycles -= 500; // for rounding purpouses
         //how many 1000 to remove before it goes in underflow?
         while(cycles > 0) {
             milliseconds++;
