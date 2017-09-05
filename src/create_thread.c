@@ -2,7 +2,7 @@
 #include <scheduler.h>
 
 
-inline struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_t *proc)
+struct tcb_t *__create_thread_s(const state_t *initial_state, struct pcb_t *proc)
 {
     struct tcb_t *new_thread = thread_alloc(proc);
     if(!new_thread) {

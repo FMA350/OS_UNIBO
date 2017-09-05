@@ -2,7 +2,7 @@
 #include <ssi.h>
 
 extern struct pcb_t *get_processid_s(const struct tcb_t *thread);
-extern inline void __terminate_thread_s(struct tcb_t *thread);
+extern void __terminate_thread_s(struct tcb_t *thread);
 
 /* Cleans the eventual messages sent to managers and SSI
    Preconditions: the thread is waiting
@@ -29,7 +29,7 @@ static inline void clean_sys_msg(struct tcb_t *terminating)
  * Preconditions: process != NULL, applicant is the requestor of the service
  *
  */
-static inline void __terminate_process_s(struct pcb_t *proc, struct tcb_t *applicant)
+static void __terminate_process_s(struct pcb_t *proc, struct tcb_t *applicant)
 {
     // TODO: eliminare dalla coda dei messaggi dell'SSI eventuali messaggi
     // provenienti dai thread dei processi figli che saranno terminati

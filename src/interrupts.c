@@ -8,7 +8,7 @@
 #include <scheduler.h>
 #include <libuarm.h>
 #include <nucleus.h>
-
+#include <do_io.h>
 #include "handlers.h"
 #include "accounting.h"
 
@@ -48,8 +48,6 @@ static inline void interval_timer_h(void)
     scheduler();
 }
 
-#include <do_io.h>
-
 /* Non restituisce mai il controllo */
 static inline void acknowledge(unsigned int *command_address, int requester_index)
 {
@@ -59,9 +57,8 @@ static inline void acknowledge(unsigned int *command_address, int requester_inde
 
     if (soft_blocked_thread[requester_index]) {
         // Sblocchiamo il processo in attesa a nome dell'SSI
-        // TODO: il payload del messaggio è lo stato del device?
-        int rval = send(soft_blocked_thread[requester_index], SSI, DEV_S_READY);
-        // TODO: DEV_S_READY è solo di prova
+        void * trs_status = (void *) 0x0000248;
+        int rval = send(soft_blocked_thread[requester_index], SSI, *(unsigned int*)trs_status);
         soft_block_count--;
 
         // La send che viene fatta ad un processo in attesa non fallisce mai
