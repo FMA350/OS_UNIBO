@@ -38,8 +38,8 @@ int main(void)
 
 static void time_init(void)
 {
-    clockPerTimeslice = (*((unsigned int *) BUS_REG_TIME_SCALE) * (unsigned int) 5000);
-    // tprintf("clockPerTimeslice = %d\n",clockPerTimeslice);
+    // tprintf("Un usec equivale a %d ticks\n", *((unsigned int *) BUS_REG_TIME_SCALE));
+    TICKS_PER_TIME_SLICE = *((unsigned int *) (BUS_REG_TIME_SCALE)) * 5000;
 }
 
 /*

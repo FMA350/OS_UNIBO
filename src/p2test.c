@@ -241,8 +241,8 @@ void p2(void) {
     panic("p2 survived TERMINATE_THREAD\n");
 }
 
-
-
+// precondition: 1 us == 1 ciclo di clock (tick)
+// 100 ms == 100.000 us == 100.000 ticks
 #define PSEUDOCLOCK 100000
 #define NWAIT 10
 
@@ -252,14 +252,16 @@ void p3(void) {
     cputime time1, time2;
     int i;
     time1 = getTODLO();
+    // l'attesa totale dovrebbe essere di circa 1 secondo (NWAIT == 10)
     for (i = 0; i < NWAIT; i++) {
         tty0print("waitforclock\n");
         waitforclock();
     }
     time2 = getTODLO();
-
+                            // < 0.9 s
     if ((time2 - time1) < (PSEUDOCLOCK * (NWAIT - 1))) {
         panic("WAITCLOCK too small\n");
+                            // > 1.1 s
     } else if ((time2 - time1) > (PSEUDOCLOCK * (NWAIT + 1))) {
         panic("WAITCLOCK too big\n");
     } else {

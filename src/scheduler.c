@@ -109,7 +109,7 @@ static inline void empty_readyq_h(void) {
         // tprint("=== processes waiting for IO ===\n");
         assert(!is_idle);
         is_idle = 1;
-        setTIMER(clockPerTimeslice); //fma350 test
+        setTIMER(TICKS_PER_TIME_SLICE); //fma350 test
         setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
         //setSTATUS(STATUS_ENABLE_INT(getSTATUS()));
         WAIT();
@@ -127,6 +127,6 @@ void scheduler(void)
 
     // BUS_REG_TIME_SCALE = Register that contains the number of clock ticks per microsecond
     // I SECONDI REALI NON CORRISPONDONO AD I SECONDI DEL PROCESSORE EMULATO
-    setTIMER(clockPerTimeslice);
+    setTIMER(TICKS_PER_TIME_SLICE);
     LDST(&current_thread->t_s);
 }

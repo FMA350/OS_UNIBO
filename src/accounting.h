@@ -5,7 +5,7 @@
 
 // defined in accounting.c
 extern unsigned int timeSliceLeft;
-extern unsigned int clockPerTimeslice;
+extern unsigned int TICKS_PER_TIME_SLICE;   // initialized in init.c
 extern unsigned int pseudoclock;
 extern struct list_head t_wait4clock;
 

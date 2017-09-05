@@ -23,7 +23,7 @@ struct tcb_t *setsysmgr_s(struct tcb_t *new_mgr, struct tcb_t *applicant, int *s
 unsigned int getcputime_s(const struct tcb_t *applicant);
 
 /*  */
-unsigned int wait_for_clock_s(struct tcb_t *applicant);
+void wait_for_clock_s(struct tcb_t *applicant);
 
 /*  */
 void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,

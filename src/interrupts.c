@@ -28,7 +28,7 @@ void interrupt_h(void)
     timeSliceLeft = getTIMER();
 
     //dispatching
-    if((timeSliceLeft > 0) && (timeSliceLeft < clockPerTimeslice)){
+    if((timeSliceLeft > 0) && (timeSliceLeft < TICKS_PER_TIME_SLICE)){
         io_h();       //for interrupts
     } else {
         interval_timer_h(); //for fast-interrupts
@@ -39,12 +39,12 @@ static inline void interval_timer_h(void)
 {
     if(current_thread) {
         current_thread->t_s = *((state_t *) INT_OLDAREA);
-        current_thread->run_time += clockPerTimeslice; //cycles
+        current_thread->run_time += TICKS_PER_TIME_SLICE; //cycles
 
         // tprintf("IT - %p\n", current_thread);
         thread_enqueue(current_thread, &readyq);
     }
-    update_clock(clockPerTimeslice);
+    update_clock(TICKS_PER_TIME_SLICE);
     scheduler();
 }
 
