@@ -229,8 +229,10 @@ syscall_other(unsigned int sysNum, unsigned int arg1,
 
 void syscall_h(void)
 {
-    if (CAUSE_EXCCODE_GET(((state_t *) SYSBK_OLDAREA)->CP15_Cause) == EXC_BREAKPOINT)
+    if (CAUSE_EXCCODE_GET(((state_t *) SYSBK_OLDAREA)->CP15_Cause) == EXC_BREAKPOINT) {
+        // tprint("\nA breakpoint occurred\n");
         LDST((state_t *) SYSBK_OLDAREA);
+    }
 
     switch (SYSCALL_ARG(1)) {
         case SYS_ERR:

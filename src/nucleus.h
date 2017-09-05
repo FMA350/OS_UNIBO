@@ -124,11 +124,8 @@ static inline cputime getcputime(void) {
     struct {
         uintptr_t reqtag;
     } req = {GET_CPUTIME};
-    // tty0print("before msgsend\n");
     msgsend(SSI, &req);
-    // tty0print("after msgsend\n");
     msgrecv(SSI, &retval);
-    // tty0print("after msgrecv\n");
     return retval;
 }
 

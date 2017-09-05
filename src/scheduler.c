@@ -68,7 +68,7 @@ inline void init_and_load(struct tcb_t *to_load, void *target, unsigned int cpsr
 
 /* Loads the ready queue with threads needed by the system */
 void load_readyq(struct pcb_t *root) {
-    tprint("load_readyq started\n");
+    // tprint("load_readyq started\n");
 
     /* Points the thread we want to load */
     struct tcb_t *to_load;
@@ -76,13 +76,13 @@ void load_readyq(struct pcb_t *root) {
     to_load = ssi_thread_init();
     init_and_load(to_load, ssi, STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
 
-    tprintf("SSI thread == %p\n", to_load);
+    // tprintf("SSI thread == %p\n", to_load);
 
     //triangle_init(root);
     p2test_init(root);
 
-    tprintf("Number of threads in the sistem == %d\n", thread_count);
-    tprint("load_readyq finished\n");
+    // tprintf("Number of threads in the sistem == %d\n", thread_count);
+    // tprint("load_readyq finished\n");
 }
 
 

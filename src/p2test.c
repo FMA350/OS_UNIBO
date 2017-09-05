@@ -123,9 +123,7 @@ void test(void) {
     p2t = create_process(&tmpstate);
 
     msgsend(p2t, SYNCCODE);
-    tty0print("p2 message sent\n");
     msgrecv(p2t, NULL);
-
 
     tty0print("p2 completed\n");
 
@@ -268,7 +266,7 @@ void p3(void) {
         tty0print("WAITCLOCK OK\n");
     }
 
-    msgsend(testt, "NULL");
+    msgsend(testt, NULL);
 
     terminate_process();
 

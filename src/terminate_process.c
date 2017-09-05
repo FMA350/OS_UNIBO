@@ -33,7 +33,6 @@ static inline void __terminate_process_s(struct pcb_t *proc, struct tcb_t *appli
 {
     // TODO: eliminare dalla coda dei messaggi dell'SSI eventuali messaggi
     // provenienti dai thread dei processi figli che saranno terminati
-    //tprint("terminate process started\n");
 
     // eliminiamo tutti i thread
     struct tcb_t *thread_term;

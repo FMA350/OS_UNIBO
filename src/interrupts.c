@@ -41,7 +41,7 @@ static inline void interval_timer_h(void)
         current_thread->t_s = *((state_t *) INT_OLDAREA);
         current_thread->run_time += clockPerTimeslice; //cycles
 
-        tprintf("IT - %p\n", current_thread);
+        // tprintf("IT - %p\n", current_thread);
         thread_enqueue(current_thread, &readyq);
     }
     update_clock(clockPerTimeslice);

@@ -28,7 +28,7 @@ int main(void)
     load_readyq(root);
 
     /* Starting normal life of the system */
-    tprint("--- Starting normal life of the system ---\n");
+    // tprint("--- Starting normal life of the system ---\n");
 
     scheduler();
 

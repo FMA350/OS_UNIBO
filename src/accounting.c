@@ -15,7 +15,8 @@ LIST_HEAD(t_wait4clock);
 unsigned int pseudoclock = 0;
 
 
-unsigned int accountant(struct tcb_t* thread){
+unsigned int accountant(struct tcb_t* thread)
+{
     //returns the time passed in milliseconds.
     int cycles = thread->run_time;
     int milliseconds = 0;
@@ -28,12 +29,15 @@ unsigned int accountant(struct tcb_t* thread){
     return milliseconds;
 }
 
-void update_clock(unsigned int milliseconds){
+
+void update_clock(unsigned int milliseconds)
+{
     pseudoclock += milliseconds;
-    if(pseudoclock >= PSEUDOCLOCK_TICK){
+    if(pseudoclock >= PSEUDOCLOCK_TICK) {
         pseudoclock -= PSEUDOCLOCK_TICK;
+
         struct tcb_t *to_resume;
-        while((to_resume = thread_dequeue(&t_wait4clock))!=NULL){
+        while((to_resume = thread_dequeue(&t_wait4clock)) != NULL){
             msgsend(to_resume,NULL);
         }
     }
