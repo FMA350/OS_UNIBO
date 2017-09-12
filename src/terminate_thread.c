@@ -13,21 +13,14 @@ void __terminate_thread_s(struct tcb_t *thread)
 
     // sbloccare i processi in attesa di messaggi del thread da terminare
     struct tcb_t *to_resume;
-
     while (to_resume = thread_qhead(&thread->t_wait4me)) {
         to_resume->errno = 1; //setto errno = 1 per dire ai processi che si aspettavano un msg che il mittente e' morto
-        resume_thread(to_resume, NULL, 0);
+        resume_thread(to_resume, 0, 0);
     }
-
-    int err = thread_free(thread);
-    // if (err == -1) {
-    //     tprint("ERROR - msgq\n");
-    //     HALT();
-    // } else if (err == -2) {
-    //     tprint("ERROR - wait4me\n");
-    //     HALT();
-    // }
-    // tprint("ending __terminate_thread_s\n");
+    to_resume = thread_qhead(&readyq); //BUG: io qua non capisco perche madonna non funzioni, prima della
+    int err = thread_free(thread);     // thread_free ho nella readyq ho i processi risvegliati, dopo la thread_free
+    if (!thread_qhead(&readyq) && to_resume) //eseguita dal terminate_process_s chiamato da trap_h sparisce il thread
+        thread_enqueue(to_resume, &readyq);  //da risvegliare. Nelle altre chiamate terminate_process_s cio non accade
 
     thread_count--;
 }

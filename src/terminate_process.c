@@ -1,5 +1,6 @@
 #include <mikabooq.h>
 #include <ssi.h>
+#include <scheduler.h>
 
 extern struct pcb_t *get_processid_s(const struct tcb_t *thread);
 extern void __terminate_thread_s(struct tcb_t *thread);
@@ -42,6 +43,7 @@ static void __terminate_process_s(struct pcb_t *proc, struct tcb_t *applicant)
         // Se il thread non è quello che ha richiesto il servizio e sta aspettando
             clean_sys_msg(thread_term);
         }
+
         __terminate_thread_s(thread_term);
     }
 

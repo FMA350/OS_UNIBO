@@ -98,7 +98,7 @@ uintptr_t p5send = 0;
 
 void test(void) {
 
-    ttyprintstring(TERM0ADDR, "NUCLEUS1...\n");
+    ttyprintstring(TERM0ADDR, "NUCLEUS1\n");
     STST(&tmpstate);
     stackalloc = (tmpstate.sp + (QPAGE - 1)) & (~(QPAGE - 1));
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -127,14 +127,14 @@ void test(void) {
 
     tty0print("p2 completed\n");
 
-    CSIN();
-    tmpstate.sp = (stackalloc -= QPAGE);
-    CSOUT;
-    tmpstate.pc = (memaddr) p3;
-    p3t = create_process(&tmpstate);
-    msgrecv(p3t, NULL);
-
-    tty0print("p3 completed\n");
+    // CSIN();
+    // tmpstate.sp = (stackalloc -= QPAGE);
+    // CSOUT;
+    // tmpstate.pc = (memaddr) p3;
+    // p3t = create_process(&tmpstate);
+    // msgrecv(p3t, NULL);
+    //
+    // tty0print("p3 completed\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -162,7 +162,8 @@ void test(void) {
     msgrecv(p5t, NULL);
 
     if (p5sys == 1) tty0print("p5a usermode sys passup ok\n");
-    else panic("p5a usermode passup error\n");
+    else //panic("p5a usermode passup error\n");
+        tprintf("%d\n", p5sys);
 
     if (p5send != 2) tty0print("p5a usermode msg priv kill is ok\n");
     else panic("p5a usermode msg priv kill error\n");
@@ -254,7 +255,7 @@ void p3(void) {
     time1 = getTODLO();
     // l'attesa totale dovrebbe essere di circa 1 secondo (NWAIT == 10)
     for (i = 0; i < NWAIT; i++) {
-        tty0print("waitforclock\n");
+        //tty0print("waitforclock\n");
         waitforclock();
     }
     time2 = getTODLO();
@@ -284,10 +285,10 @@ void p4(void) {
 
     switch (p4inc) {
         case 1:
-            tty0print("first incarnation of p4 starts\n");
+            //tty0print("first incarnation of p4 starts\n");
             break;
         case 2:
-            tty0print("second incarnation of p4 starts\n");
+            //tty0print("second incarnation of p4 starts\n");
             break;
     }
     p4inc++;
@@ -341,12 +342,14 @@ void p5m(void) {
     state_t* state;
     for (;;) {
         sender = msgrecv(NULL, &state);
+        //tprintf("%p received from %p\n", current_thread, sender);
         switch (CAUSE_EXCCODE_GET(state->CP15_Cause)) {
             default:
                 tty0print("p5 mem error passup okay\n");
                 sender->t_s.pc = (memaddr) p5a;
                 break;
         }
+        //tprintf("sender %p, dest = %p, %p\n", current_thread, sender, sender->t_s.a3);
         msgsend(sender, NULL);
     }
 }
@@ -393,22 +396,19 @@ void p5(void) {
     CSOUT;
     mgrstate.pc = (memaddr) p5m;
     settlbmgr(create_thread(&mgrstate));
-
     CSIN();
     mgrstate.sp = (stackalloc -= QPAGE);
     CSOUT;
     mgrstate.pc = (memaddr) p5s;
-
     setsysmgr(create_thread(&mgrstate));
-
     /* this should me handled by p5s */
-    tprintf("BREAKPOINT\n");
     retval = SYSCALL(42, 42, 42, 42);
     if (retval == 42)
         tty0print("p5 syscall passup okay\n");
     else
         panic("p5 syscall passup error\n");
 
+    //tty0print("gonna do a BADADDR\n");
     *((memaddr*) BADADDR) = 0;
 
     panic("p5 survived mem error");
@@ -418,7 +418,6 @@ void p5a(void) {
     uintptr_t retval = 200;
     /* switch to user mode */
     setSTATUS((getSTATUS() & STATUS_CLEAR_MODE) | STATUS_USER_MODE);
-
     p5sys = 0;
 
     retval = SYSCALL(3, 2, 1, 0);

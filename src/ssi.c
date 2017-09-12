@@ -26,7 +26,7 @@ struct tcb_t *ssi_thread_init(void)
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
 
-    // tprint("SSI initialized\n");
+    //tprintf("SSI initialized: %p\n", _SSI);
 
     return(SSI = &_SSI);
 }
@@ -103,6 +103,7 @@ void ssi(void)
                 tprintf("REQ_TAG == %d, msg == %p, applicant = %p\n",
                         req_field(msg, 0), msg, applicant);
                 PANIC();
+                break;
             // TODO: se il messaggio è diverso dai codici noti
             //       rispondere con errore e settare errno
         }
