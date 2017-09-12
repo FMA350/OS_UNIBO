@@ -24,7 +24,7 @@
 #include "nucleus.h"
 
 #define QPAGE FRAME_SIZE
-#define TERM0ADDR               0x24C
+#define TERM0ADDR               0x2bC
 
 static struct tcb_t* printid;
 

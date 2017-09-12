@@ -49,44 +49,65 @@ static inline void interval_timer_h(void)
 }
 
 /* Non restituisce mai il controllo */
-static inline void acknowledge(unsigned int *command_address, int requester_index)
+static inline void acknowledge(unsigned int line, unsigned int device)
 {
-    *command_address = DEV_C_ACK;
+    switch (device) {
+        case EXT_IL_INDEX(IL_TERMINAL):
+            assert(soft_blocked_thread[device] != NULL);
+            unsigned int *command_address = (unsigned int *) TERMINAL_DEV_FIELD(line, TRANSM_COMMAND);
+            *command_address = DEV_C_ACK;
+            //tprintf("linea = %d",line);
+            if (soft_blocked_thread[device]) {
+                // Sblocchiamo il processo in attesa a nome dell'SSI
+                void * trs_status = TERMINAL_DEV_FIELD(line, TRANSM_STATUS);
+                int rval = send(soft_blocked_thread[device][line], SSI, *(unsigned int*)trs_status);
+                soft_block_count--;
 
-    // assert(soft_blocked_thread[requester_index] != NULL);
+                // La send che viene fatta ad un processo in attesa non fallisce mai
+                assert(rval == SEND_SUCCESS);
 
-    if (soft_blocked_thread[requester_index]) {
-        // Sblocchiamo il processo in attesa a nome dell'SSI
-        void * trs_status = (void *) 0x0000248;
-        int rval = send(soft_blocked_thread[requester_index], SSI, *(unsigned int*)trs_status);
-        soft_block_count--;
+                soft_blocked_thread[device][line] = NULL;
 
-        // La send che viene fatta ad un processo in attesa non fallisce mai
-        assert(rval == SEND_SUCCESS);
+                if (is_idle) {
+                // se il messaggio è stato inviato mentre il processore era idle
+                    is_idle = 0;
+                    // chiamiamo lo scheduler per schedulare il processo svegliato
+                    scheduler();
+                } else
+                    LDST((state_t *) INT_OLDAREA);
+            } else
+            // se l'interrupt proviene da una tprint
+                // siccome non abbiamo svegliato nessuno, dobbiamo per forza caricare il vecchio stato
+                LDST((state_t *) INT_OLDAREA);
+            break;
 
-        soft_blocked_thread[requester_index] = NULL;
-
-        if (is_idle) {
-        // se il messaggio è stato inviato mentre il processore era idle
-            is_idle = 0;
-            // chiamiamo lo scheduler per schedulare il processo svegliato
-            scheduler();
-        } else
-            LDST((state_t *) INT_OLDAREA);
-    } else
-    // se l'interrupt proviene da una tprint
-        // siccome non abbiamo svegliato nessuno, dobbiamo per forza caricare il vecchio stato
-        LDST((state_t *) INT_OLDAREA);
+        default:
+            // tprint("SSI: IO ERROR\n");
+            PANIC();
+    }
 }
 
 static inline void io_h(void)
 {
-    unsigned int *p = (unsigned int *) CDEV_BITMAP_ADDR(IL_TERMINAL);
+    int device = IL_TERMINAL;
+    unsigned int *p;
+    while (!(p = (unsigned int *) CDEV_BITMAP_ADDR(IL_TERMINAL)))
+        device--; //scorro nelle bitmap e mi fermo al primo device con interrupt
 
-    assert((*p & 1) == 1);
-    //device n.0 has a pending interrupt
-    acknowledge((unsigned int *) TERMINAL_DEV_FIELD(0, TRANSM_COMMAND),
-                TERMINAL_REQUESTER_INDEX);
+    int line = 1;
+    int a = 1;
+    for (int i = 1; i < 9; i++){ //mi restituisce il n. di terminale che ha generato l'interrupt
+        a = a*2;
+        if (a > *p){
+            line=i-1;
+            break;
+        }
+    }
+    //tprintf("linea = %d, %d\n", line, *p);
+
+    //assert((*p & 1) == 1);
+    //device n.LINE has a pending interrupt
+    acknowledge(line, EXT_IL_INDEX(device));
 
     tprint("io_h should not arrive here!\n");
     PANIC();

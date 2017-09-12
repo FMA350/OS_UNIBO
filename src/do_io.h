@@ -12,7 +12,7 @@
 #define TERMINAL_DEV_FIELD(dev, field) (DEV_REG_ADDR(IL_TERMINAL, dev) + (field))
 
 // la dichiarazione per ora è in do_io.c
-extern struct tcb_t *soft_blocked_thread[5];
+extern struct tcb_t *soft_blocked_thread[N_EXT_IL][N_DEV_PER_IL];
 // FIXME: per ora c'è un solo device per ogni interrupt line, in realtà ce ne sono 8
 
 #define TERMINAL_REQUESTER_INDEX    4
