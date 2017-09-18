@@ -108,9 +108,10 @@ static inline void empty_readyq_h(void) {
         // tprint("=== processes waiting for IO ===\n");
         assert(!is_idle);
         is_idle = 1;
-        setTIMER(clockPerTimeslice); //fma350 test
+        setTIMER(clockPerTimeslice); //since we still need to account for the time
+                                     //that passes, we will set the pseudoclock
+                                     //to 5000 cycles.
         setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
-        //setSTATUS(STATUS_ENABLE_INT(getSTATUS()));
         WAIT();
     }
 }

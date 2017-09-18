@@ -13,7 +13,7 @@ extern unsigned int thread_count;
 extern unsigned int soft_block_count;
 
 extern int is_idle;
-
+extern int clockPerTimeslice;
 
 void scheduler(void);
 
