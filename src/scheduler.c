@@ -107,7 +107,9 @@ static inline void empty_readyq_h(void) {
     } else {
     /* processes in the system are waiting for I/O */
         // tprint("=== processes waiting for IO ===\n");
-        assert(!is_idle);
+        //assert(!is_idle); //FIXME: fma350 says: questo assert
+        //si invalida quando wait_for_clock e' chiamata.
+        
         is_idle = 1;
         setTIMER(TICKS_PER_TIME_SLICE); //fma350 test
         setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
