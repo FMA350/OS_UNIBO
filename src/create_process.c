@@ -18,6 +18,5 @@ struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *appli
         return NULL;
     }
 
-    //thread_enqueue(first_thread, &readyq); BUG FIXED = due volte nella readyq!
     return first_thread;
 }
