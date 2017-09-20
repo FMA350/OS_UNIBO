@@ -107,13 +107,18 @@ static inline void empty_readyq_h(void) {
     } else {
     /* processes in the system are waiting for I/O */
         // tprint("=== processes waiting for IO ===\n");
-        //assert(!is_idle); //FIXME: fma350 says: questo assert
+        //assert(!is_idle); //fma350 says: questo assert
         //si invalida quando wait_for_clock e' chiamata.
-        
+        //questo perche' nessun processo e' presente nella coda
+        //ma il valore is_idle = 1. Questo perche' nessun processo
+        //e' presente nella readyq per 100 millisecondi, ma lo scheduler
+        //verra' chiamato dal interval_timer_h dopo 5 millisecondi.
+        //tornera' quindi in questo punto con is_idle = 1;
+
+
         is_idle = 1;
         setTIMER(TICKS_PER_TIME_SLICE); //fma350 test
         setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
-        //setSTATUS(STATUS_ENABLE_INT(getSTATUS()));
         WAIT();
     }
 }
@@ -121,11 +126,9 @@ static inline void empty_readyq_h(void) {
 void scheduler(void)
 {
     current_thread = thread_dequeue(&readyq);
-    //tprintf("scheduler started, current is %p\n", current_thread);
-
     if (current_thread == NULL)
         empty_readyq_h();
-
+    is_idle = 0;
     setTIMER(TICKS_PER_TIME_SLICE);
     LDST(&current_thread->t_s);
 }

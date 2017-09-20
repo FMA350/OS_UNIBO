@@ -408,7 +408,6 @@ void p5(void) {
     else
         panic("p5 syscall passup error\n");
 
-    //tty0print("gonna do a BADADDR\n");
     *((memaddr*) BADADDR) = 0;
 
     panic("p5 survived mem error");

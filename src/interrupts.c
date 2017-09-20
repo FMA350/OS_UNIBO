@@ -26,10 +26,9 @@ void interrupt_h(void)
 {
     //TODO: Enhance control using CPSR (fma350)
     timeSliceLeft = getTIMER();
-
     //dispatching
     if((timeSliceLeft > 0) && (timeSliceLeft < TICKS_PER_TIME_SLICE)){
-        io_h();       //for interrupts
+        io_h();             //for interrupts
     } else {
         interval_timer_h(); //for fast-interrupts
     }
@@ -41,14 +40,18 @@ static inline void interval_timer_h(void)
         current_thread->t_s = *((state_t *) INT_OLDAREA);
         current_thread->run_time += TICKS_PER_TIME_SLICE; //cycles
 
-        // tprintf("IT - %p\n", current_thread);
         thread_enqueue(current_thread, &readyq);
     }
     update_clock(TICKS_PER_TIME_SLICE);
     scheduler();
 }
 
-/* Non restituisce mai il controllo */
+/* Non restituisce mai il controllo
+ * risveglia i
+ *
+ *
+ *
+ */
 static inline void acknowledge(unsigned int line, unsigned int device)
 {
     switch (device) {
@@ -68,7 +71,7 @@ static inline void acknowledge(unsigned int line, unsigned int device)
 
                 soft_blocked_thread[device][line] = NULL;
 
-                if (is_idle) {
+                if (is_idle){
                 // se il messaggio è stato inviato mentre il processore era idle
                     is_idle = 0;
                     // chiamiamo lo scheduler per schedulare il processo svegliato
@@ -82,7 +85,6 @@ static inline void acknowledge(unsigned int line, unsigned int device)
             break;
 
         default:
-            // tprint("SSI: IO ERROR\n");
             PANIC();
     }
 }
@@ -96,17 +98,13 @@ static inline void io_h(void)
 
     int line = 1;
     int a = 1;
-    for (int i = 1; i < 9; i++){ //mi restituisce il n. di terminale che ha generato l'interrupt
+    for (int i = 1; i < 9; i++){ //restituisce il n. di terminale che ha generato l'interrupt
         a = a*2;
         if (a > *p){
             line=i-1;
             break;
         }
     }
-    //tprintf("linea = %d, %d\n", line, *p);
-
-    //assert((*p & 1) == 1);
-    //device n.LINE has a pending interrupt
     acknowledge(line, EXT_IL_INDEX(device));
 
     tprint("io_h should not arrive here!\n");
