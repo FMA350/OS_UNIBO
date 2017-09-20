@@ -3,12 +3,14 @@
 #include <arch.h>
 #include <scheduler.h>
 #include <handlers.h>
+#include <math.h>
 
 #include "syslib.h"
 #include "accounting.h"
 
 STOPWATCH(sys_stopwatch);
 unsigned int timeSliceLeft;
+unsigned int cyclesUsed;
 unsigned int TICKS_PER_TIME_SLICE;
 // sentinella della coda dei processi richiedenti il servizio di attesa
 LIST_HEAD(t_wait4clock);
@@ -21,6 +23,7 @@ unsigned int accountant(struct tcb_t* thread)
     uint64_t cycles = thread->run_time;
     int milliseconds = 0;
     cycles -= 500; // for rounding purpouses
+    cycles /= 1;
         //how many 1000 to remove before it goes in underflow?
         while(cycles > 0) {
             milliseconds++;

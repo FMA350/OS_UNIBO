@@ -198,6 +198,7 @@ void test(void) {
 }
 // #define MINLOOPTIME             5 //milliseconds
 #define MINLOOPTIME             10000
+#define MAXLOOPTIME             40000
 #define LOOPNUM                 10000
 
 void p2(void) {
@@ -228,9 +229,14 @@ void p2(void) {
     for (i = 1; i < LOOPNUM; i++);
 
     cpu_t2 = getcputime();
+    //tprintf("cpu1 = %d, cpu2 = %d\n",cpu_t1, cpu_t2);
 
     //tprintf("cpu1 = %d\n",cpu_t1);
     if ((cpu_t2 - cpu_t1) >= MINLOOPTIME)
+        tty0print("p2 GET_CPUTIME sounds okay\n");
+    else
+        panic("p2 GETCPUTIME sounds faulty\n");
+    if ((cpu_t2 - cpu_t1) <= MAXLOOPTIME)
         tty0print("p2 GET_CPUTIME sounds okay\n");
     else
         panic("p2 GETCPUTIME sounds faulty\n");

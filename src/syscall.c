@@ -6,6 +6,8 @@
 #include "handlers.h"
 #include "accounting.h"
 
+extern unsigned int cyclesUsed;
+
 
 static inline void store_return_value(unsigned int rval)
 {
@@ -110,6 +112,13 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
         timeSliceLeft = getTIMER();
+        if((timeSliceLeft > 0) && (timeSliceLeft < TICKS_PER_TIME_SLICE)){
+            cyclesUsed = TICKS_PER_TIME_SLICE - timeSliceLeft;
+        }
+        else{
+            cyclesUsed = TICKS_PER_TIME_SLICE;
+        }
+
 
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
@@ -117,8 +126,8 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = sender;
 
-        current_thread->run_time += timeSliceLeft; //cycles
-        update_clock(timeSliceLeft);
+        current_thread->run_time += cyclesUsed; //cycles
+        update_clock(cyclesUsed);
 
         if (sender) {
         // il thread si blocca aspettando da sender
