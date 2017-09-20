@@ -54,6 +54,7 @@ void update_clock(unsigned int cycles)
                 // La send fallisce nel caso in cui finiscono i messaggi
                 assert(rval == SEND_SUCCESS);
             }
+        soft_block_count--;
         }
     }
 }
