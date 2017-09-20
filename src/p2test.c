@@ -127,14 +127,14 @@ void test(void) {
 
     tty0print("p2 completed\n");
 
-    // CSIN();
-    // tmpstate.sp = (stackalloc -= QPAGE);
-    // CSOUT;
-    // tmpstate.pc = (memaddr) p3;
-    // p3t = create_process(&tmpstate);
-    // msgrecv(p3t, NULL);
-    //
-    // tty0print("p3 completed\n");
+    CSIN();
+    tmpstate.sp = (stackalloc -= QPAGE);
+    CSOUT;
+    tmpstate.pc = (memaddr) p3;
+    p3t = create_process(&tmpstate);
+    msgrecv(p3t, NULL);
+
+    tty0print("p3 completed\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);

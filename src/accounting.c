@@ -30,11 +30,11 @@ unsigned int accountant(struct tcb_t* thread)
 }
 
 
-#define PSEUDOCLOCK_TICK 100    // ogni 100 ms lo pseudoclock fa un tick
+#define PSEUDOCLOCK_TICK 100000    // ogni 100 ms lo pseudoclock fa un tick
 
-void update_clock(unsigned int milliseconds)
+void update_clock(unsigned int cycles)
 {
-    if((pseudoclock += milliseconds) >= PSEUDOCLOCK_TICK) {
+    if((pseudoclock += cycles) >= PSEUDOCLOCK_TICK) {
         pseudoclock -= PSEUDOCLOCK_TICK;
 
         struct tcb_t *to_resume;
@@ -44,6 +44,7 @@ void update_clock(unsigned int milliseconds)
                 // La send che viene fatta ad un processo in attesa non fallisce mai
                 assert(rval == SEND_SUCCESS);
             } else {
+
             // to_resume->t_status == T_STATUS_READY
                 // rimosso dalla lista t_wait4clock
                 thread_outqueue(to_resume);
