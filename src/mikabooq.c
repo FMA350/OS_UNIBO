@@ -233,9 +233,11 @@ struct tcb_t *thread_dequeue(struct list_head *queue) {
 }
 */
 struct tcb_t *thread_dequeue(struct list_head *queue) {
-    return __dequeue(queue, struct tcb_t, t_sched);
+    struct tcb_t *thread = __dequeue(queue, struct tcb_t, t_sched);
+    (&thread->t_sched)->next = NULL;
+    (&thread->t_sched)->prev = NULL;
+    return thread;
 }
-
 /*************************** MSG QUEUE ************************/
 
 void msgq_init(void) {
