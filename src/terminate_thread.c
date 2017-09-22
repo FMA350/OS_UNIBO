@@ -17,11 +17,8 @@ void __terminate_thread_s(struct tcb_t *thread)
         to_resume->errno = 1; //setto errno = 1 per dire ai processi che si aspettavano un msg che il mittente e' morto
         resume_thread(to_resume, 0, 0);
     }
-    to_resume = thread_qhead(&readyq); //BUG: io qua non capisco perche madonna non funzioni, prima della
-    int err = thread_free(thread);     // thread_free ho nella readyq ho i processi risvegliati, dopo la thread_free
-    if (!thread_qhead(&readyq) && to_resume) //eseguita dal terminate_process_s chiamato da trap_h sparisce il thread
-        thread_enqueue(to_resume, &readyq);  //da risvegliare. Nelle altre chiamate terminate_process_s cio non accade
-
+    int err = thread_free(thread);     
+    
     thread_count--;
 }
 
