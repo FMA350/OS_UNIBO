@@ -14,9 +14,11 @@ void __terminate_thread_s(struct tcb_t *thread)
     // sbloccare i processi in attesa di messaggi del thread da terminare
     struct tcb_t *to_resume;
     while (to_resume = thread_qhead(&thread->t_wait4me)) {
-        to_resume->errno = 1; //setto errno = 1 per dire ai processi che si aspettavano un msg che il mittente e' morto
-        resume_thread(to_resume, 0, 0);
+        //setto errno = 1 per dire ai processi che si aspettavano un msg che il mittente e' morto
+        to_resume->errno = 1;
+        resume_thread(to_resume, (unsigned int) NULL, (uintptr_t) 0);
     }
+
     to_resume = thread_qhead(&readyq); //BUG: io qua non capisco perche madonna non funzioni, prima della
     int err = thread_free(thread);     // thread_free ho nella readyq ho i processi risvegliati, dopo la thread_free
     if (!thread_qhead(&readyq) && to_resume) //eseguita dal terminate_process_s chiamato da trap_h sparisce il thread
@@ -24,6 +26,9 @@ void __terminate_thread_s(struct tcb_t *thread)
 
     thread_count--;
 }
+
+
+extern void terminate_process_s(struct tcb_t *applicant);
 
 /* terminate the thread and, if it's the last one, the process too */
 void terminate_thread_s(struct tcb_t *thread)
@@ -33,7 +38,7 @@ void terminate_thread_s(struct tcb_t *thread)
         // terminiamo l'intero processo
         terminate_process_s(thread);
     } else {
-    // Se il ha fratelli
+    // Se il thread non è l'unico del processo
         // terminiamo unicamente questo thread
         __terminate_thread_s(thread);
     }

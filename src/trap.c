@@ -29,7 +29,6 @@ static inline void __trap_h(struct tcb_t *mgr, state_t *oldarea)
         scheduler();
     } else {
     // il processo deve essere terminato
-        //tprintf("tlb\n");
         terminate_thread_s(current_thread);
         scheduler();
     }
@@ -40,7 +39,6 @@ static inline void __trap_h(struct tcb_t *mgr, state_t *oldarea)
 
 void pgmtrap_h(void)
 {
-    ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause = EXC_RESERVEDINSTR;
     __trap_h(current_thread->t_pcb->pgm_mgr, (state_t *) PGMTRAP_OLDAREA);
 }
 

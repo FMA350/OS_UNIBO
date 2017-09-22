@@ -15,12 +15,17 @@ extern void __terminate_thread_s(struct tcb_t *thread);
 static inline void clean_sys_msg(struct tcb_t *terminating)
 {
     if (terminating->t_wait4sender == SSI) {
-        // msgq_get should always succeed
+    // msgq_get should always succeed
         msgq_get(&terminating, SSI, NULL);
     } else if (terminating->t_wait4sender == (get_processid_s(terminating)->sys_mgr)) {
+    //
          msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
     } else if (terminating->t_wait4sender == (get_processid_s(terminating)->pgm_mgr)) {
+    //
         msgq_get(&terminating, get_processid_s(terminating)->sys_mgr, NULL);
+    } else if (terminating->t_wait4sender == (get_processid_s(terminating)->tlb_mgr)) {
+    //
+        msgq_get(&terminating, get_processid_s(terminating)->tlb_mgr, NULL);
     }
 }
 
@@ -43,17 +48,15 @@ static void __terminate_process_s(struct pcb_t *proc, struct tcb_t *applicant)
         // Se il thread non è quello che ha richiesto il servizio e sta aspettando
             clean_sys_msg(thread_term);
         }
-
         __terminate_thread_s(thread_term);
     }
 
     // eliminiamo i figli del processo ricorsivamente
     struct pcb_t *proc_term;
-    while (proc_term = proc_firstchild(proc)) {
+    while (proc_term = proc_firstchild(proc))
         __terminate_process_s(proc_term, NULL);
-    }
-    // eliminiamo il processo
 
+    // eliminiamo il processo
     proc_delete(proc);
 }
 

@@ -161,9 +161,12 @@ void test(void) {
     msgsend(p5t, NULL);
     msgrecv(p5t, NULL);
 
-    if (p5sys == 1) tty0print("p5a usermode sys passup ok\n");
-    else //panic("p5a usermode passup error\n");
+    if (p5sys == 1)
+        tty0print("p5a usermode sys passup ok\n");
+    else {
         tprintf("%d\n", p5sys);
+        panic("p5a usermode passup error\n");
+    }
 
     if (p5send != 2) tty0print("p5a usermode msg priv kill is ok\n");
     else panic("p5a usermode msg priv kill error\n");
@@ -214,7 +217,6 @@ void p2(void) {
         panic("p2 get_mythreadid: wrong pid returned\n");
 
     p1t = msgrecv(NULL, &value);
-    tty0print("p2 message received\n"); // mnalli
 
     if (value != SYNCCODE)
         panic("p2 recv: got the wrong value\n");
@@ -291,10 +293,10 @@ void p4(void) {
 
     switch (p4inc) {
         case 1:
-            //tty0print("first incarnation of p4 starts\n");
+            tty0print("first incarnation of p4 starts\n");
             break;
         case 2:
-            //tty0print("second incarnation of p4 starts\n");
+            tty0print("second incarnation of p4 starts\n");
             break;
     }
     p4inc++;
@@ -333,6 +335,9 @@ void p5p(void) {
                 should_terminate = 1;
                 break;
             default:
+                tprintf("p5p: ERROR\n"
+                        "CAUSE_EXCCODE == %d\n"
+                        "17 == EXC_ADDRINVSTORE\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
                 PANIC();
         }
         if (should_terminate) {
@@ -353,9 +358,7 @@ void p5m(void) {
             default:
                 tty0print("p5 mem error passup okay\n");
                 sender->t_s.pc = (memaddr) p5a;
-                break;
         }
-        //tprintf("sender %p, dest = %p, %p\n", current_thread, sender, sender->t_s.a3);
         msgsend(sender, NULL);
     }
 }
@@ -420,12 +423,18 @@ void p5(void) {
 }
 
 void p5a(void) {
+    tty0print("p5a started\n");
     uintptr_t retval = 200;
+    tty0print("p5a: setSTATUS\n");
     /* switch to user mode */
     setSTATUS((getSTATUS() & STATUS_CLEAR_MODE) | STATUS_USER_MODE);
+    tty0print("p5a: switching to usermode\n");
     p5sys = 0;
 
+    tty0print("p5a: pre SYSCALL\n");
     retval = SYSCALL(3, 2, 1, 0);
+    tty0print("p5a: post SYSCALL\n");
+
     if (retval == 0) {
         p5sys = 1;
     } else {

@@ -18,9 +18,11 @@ void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
             soft_block_count++;
             // Setting command
             *((uintptr_t *) TERMINAL_DEV_FIELD(line, TRANSM_COMMAND)) = command;
-            if (soft_blocked_thread[dev][line])
+            if (soft_blocked_thread[dev][line]) {
             // Qualcun altro sta già facendo IO; non dovrebbe mai accadere
+                tprint("SSI - do_io_s: device busy");
                 PANIC();
+            }
 
             soft_blocked_thread[dev][line] = applicant;
             break;
@@ -31,7 +33,7 @@ void do_io_s(devaddr device, uintptr_t command, uintptr_t data1,
         case EXT_IL_INDEX(IL_ETHERNET):
 
         default:
-            // tprint("SSI: IO ERROR\n");
+            tprint("SSI - do_io_s: IO ERROR\n");
             PANIC();
     }
 }

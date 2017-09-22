@@ -87,7 +87,7 @@ unsigned int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
              * Processo corrente
              * Qualsiasi processo (in tal caso non ha messaggi)
              */
-                resume_thread(dest, sender, msg);
+                resume_thread(dest, (unsigned int) sender, msg);
                 return SEND_SUCCESS;
 
             } else {
@@ -151,6 +151,7 @@ static inline void raise_reserved_instruction(void)
 {
     //tprint("raise_reserved_instruction\n");
     *((state_t *) PGMTRAP_OLDAREA) = *((state_t *) SYSBK_OLDAREA);
+    ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause = EXC_RESERVEDINSTR;
     pgmtrap_h();
 }
 
@@ -173,10 +174,8 @@ static inline void send_kernel(struct tcb_t *dest, uintptr_t msg)
         store_return_value(send(dest, current_thread, msg));
         LDST((state_t *) SYSBK_OLDAREA);
     }
-    else{
+    else
         raise_reserved_instruction();
-    }
-
 }
 
 static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg)
@@ -195,16 +194,14 @@ static inline void recv_kernel(struct tcb_t *src, uintptr_t *pmsg)
  * esiste altrimenti TERMINATE_THREAD.
  */
 
-static inline void
-syscall_other(unsigned int sysNum, unsigned int arg1,
-              unsigned int arg2, unsigned int arg3)
+static inline void syscall_other(void)
 {
     // process of the current thread
     struct pcb_t *current_process = current_thread->t_pcb;
     if (current_process->sys_mgr) {
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
         send(current_process->sys_mgr, current_thread, (uintptr_t) &current_thread->t_s);
-        ((state_t *) SYSBK_OLDAREA)->a3 = NULL; //la recv dal sysmgr non deve restituire alcun messaggio!
+        ((state_t *) SYSBK_OLDAREA)->a3 = (unsigned int) NULL; //la recv dal sysmgr non deve restituire alcun messaggio!
         recv(current_process->sys_mgr, NULL); //mi metto in attesa del manager
 
     } else if (current_process->pgm_mgr) {
@@ -243,13 +240,12 @@ void syscall_h(void)
         case SYS_ERR:
         // syscall 0 è da specifica sempre un errore
             raise_reserved_instruction();
-            break;
             // FIXME: not correct; should be illegal instruction or something like that
         case SYS_SEND:
             send_kernel((struct tcb_t *) SYSCALL_ARG(2), SYSCALL_ARG(3));
         case SYS_RECV:
             recv_kernel((struct tcb_t *) SYSCALL_ARG(2), (uintptr_t *) SYSCALL_ARG(3));
         default:
-            syscall_other(SYSCALL_ARG(1), SYSCALL_ARG(2), SYSCALL_ARG(3), SYSCALL_ARG(4));
+            syscall_other();
     }
 }

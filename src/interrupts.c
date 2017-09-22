@@ -56,14 +56,16 @@ static inline void acknowledge(unsigned int line, unsigned int device)
 {
     switch (device) {
         case EXT_IL_INDEX(IL_TERMINAL):
-            assert(soft_blocked_thread[device] != NULL);
+            // se si accettano interrupt dalle tprint questo non va bene
+            // assert(soft_blocked_thread[device] != NULL);
+            ;
             unsigned int *command_address = (unsigned int *) TERMINAL_DEV_FIELD(line, TRANSM_COMMAND);
             *command_address = DEV_C_ACK;
             //tprintf("linea = %d",line);
-            if (soft_blocked_thread[device]) {
+            if (soft_blocked_thread[device][line]) {
                 // Sblocchiamo il processo in attesa a nome dell'SSI
-                void * trs_status = TERMINAL_DEV_FIELD(line, TRANSM_STATUS);
-                int rval = send(soft_blocked_thread[device][line], SSI, *(unsigned int*)trs_status);
+                unsigned int *trs_status = (unsigned int *) TERMINAL_DEV_FIELD(line, TRANSM_STATUS);
+                int rval = send(soft_blocked_thread[device][line], SSI, *trs_status);
                 soft_block_count--;
 
                 // La send che viene fatta ad un processo in attesa non fallisce mai
@@ -85,6 +87,7 @@ static inline void acknowledge(unsigned int line, unsigned int device)
             break;
 
         default:
+            tprint("io_h - acknowledge: wrong device");
             PANIC();
     }
 }
@@ -96,9 +99,8 @@ static inline void io_h(void)
     while (!(p = (unsigned int *) CDEV_BITMAP_ADDR(IL_TERMINAL)))
         device--; //scorro nelle bitmap e mi fermo al primo device con interrupt
 
-    int line = 1;
-    int a = 1;
-    for (int i = 1; i < 9; i++){ //restituisce il n. di terminale che ha generato l'interrupt
+    int line = 1, a = 1, i;
+    for (i = 1; i < 9; i++){ //restituisce il n. di terminale che ha generato l'interrupt
         a = a*2;
         if (a > *p){
             line=i-1;

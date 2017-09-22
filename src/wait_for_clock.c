@@ -2,7 +2,6 @@
 #include "accounting.h"
 #include <scheduler.h>
 
-extern unsigned int thread_count;
 /*
  * In questa funzione dobbiamo distinguere due casi di possibile esecuzione:
  * 1 - Il thread richiedente invia il messaggio all'SSI e si blocca facendo
@@ -22,6 +21,7 @@ void wait_for_clock_s(struct tcb_t *applicant)
 {
     // rimosso dalla lista di scheduling in cui si trovava
     thread_outqueue(applicant);
+    // il processo si blocca in attesa di un device (lo pseudoclock)
     soft_block_count++;
     // inserito nella lista di processi in attesa
     thread_enqueue(applicant, &t_wait4clock);
