@@ -71,10 +71,18 @@ void resume_thread(struct tcb_t *resuming, unsigned int recv_rval, uintptr_t msg
 
 }
 
+extern int trap_flag;
+
 /* La send non interagisce con lo stato nel sender nè con l'oldarea */
 unsigned int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
 {
+    // if (trap_flag) {
+    //     state_t *sent_status = (state_t *) msg;
+    //     tprintf("cause sent == %d", CAUSE_EXCCODE_GET(sent_status->CP15_Cause));
+    //     PANIC();
+    // }
     //tprintf("%p sends to %p\n", sender, dest);
+    // tprintf("sent cause == %d");
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
@@ -149,9 +157,10 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
 // solleva una trap
 static inline void raise_reserved_instruction(void)
 {
-    //tprint("raise_reserved_instruction\n");
+    // tprint("> raise_reserved_instruction\n");
     *((state_t *) PGMTRAP_OLDAREA) = *((state_t *) SYSBK_OLDAREA);
-    ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause = EXC_RESERVEDINSTR;
+    // ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause = EXC_RESERVEDINSTR;
+    ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause = CAUSE_EXCCODE_SET(((state_t *) PGMTRAP_OLDAREA)->CP15_Cause, EXC_RESERVEDINSTR);
     pgmtrap_h();
 }
 

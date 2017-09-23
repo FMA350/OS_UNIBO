@@ -26,7 +26,7 @@ struct tcb_t *ssi_thread_init(void)
     INIT_LIST_HEAD(&_SSI.t_msgq);
     INIT_LIST_HEAD(&_SSI.t_wait4me);
 
-    //tprintf("SSI initialized: %p\n", _SSI);
+    // tprintf("SSI initialized: %p\n", &_SSI);
 
     return(SSI = &_SSI);
 }

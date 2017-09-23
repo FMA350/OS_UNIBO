@@ -17,6 +17,9 @@ void *memcpy(void *dest, const void *source, size_t num);
  */
 int tprintf(const char *format, ...);
 
+int tty0printf(const char *format, ...);
+
+
 void BREAKPOINT();
 
 
@@ -25,7 +28,7 @@ void BREAKPOINT();
 static inline void assert(int assertion)
 {
     #if DEBUG
-    if (!(assertion)) {
+    if (!assertion) {
         tprintf("Assertion failed\n"
                 "current_thread == %p\n",
                 current_thread);

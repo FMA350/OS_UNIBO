@@ -33,7 +33,7 @@ static void ttyprintstring(devaddr device, char* s) {
 
     for (; *s; s++) {
         status = do_terminal_io(device, DEV_TTRS_C_TRSMCHAR | (*s << 8));
-        //tprintf("STATUS: %d\n",status);
+        //tty0printf("STATUS: %d\n",status);
         switch (status & 0xff) {
             case DEV_S_READY:
             case DEV_TTRS_S_CHARTRSM:
@@ -115,43 +115,43 @@ void test(void) {
 
     tty0print("NUCLEUS3\n");
 
-    CSIN();
-    tmpstate.sp = (stackalloc -= QPAGE);
-    CSOUT;
-    tmpstate.pc = (memaddr) p2;
-
-    p2t = create_process(&tmpstate);
-
-    msgsend(p2t, SYNCCODE);
-    msgrecv(p2t, NULL);
-
-    tty0print("p2 completed\n");
-
-    CSIN();
-    tmpstate.sp = (stackalloc -= QPAGE);
-    CSOUT;
-    tmpstate.pc = (memaddr) p3;
-    p3t = create_process(&tmpstate);
-    msgrecv(p3t, NULL);
-
-    tty0print("p3 completed\n");
-
-    CSIN();
-    tmpstate.sp = (stackalloc -= QPAGE);
-    CSOUT;
-    tmpstate.pc = (memaddr) p4;
-    p4t = create_process(&tmpstate);
-    msgsend(p4t, NULL);
-    msgrecv(p4t, NULL);
-    msgsend(p4t, tmpstate.sp);
-    msgrecv(p4t, NULL);
-
-    if (geterrno() == 0)
-        panic("p1 wrong errno: recv from p4 should abort, p4 terminated\n");
-    else {
-        tty0print("p4 errno ok\n");
-    }
-    tty0print("p4 completed\n");
+    // CSIN();
+    // tmpstate.sp = (stackalloc -= QPAGE);
+    // CSOUT;
+    // tmpstate.pc = (memaddr) p2;
+    //
+    // p2t = create_process(&tmpstate);
+    //
+    // msgsend(p2t, SYNCCODE);
+    // msgrecv(p2t, NULL);
+    //
+    // tty0print("p2 completed\n");
+    //
+    // CSIN();
+    // tmpstate.sp = (stackalloc -= QPAGE);
+    // CSOUT;
+    // tmpstate.pc = (memaddr) p3;
+    // p3t = create_process(&tmpstate);
+    // msgrecv(p3t, NULL);
+    //
+    // tty0print("p3 completed\n");
+    //
+    // CSIN();
+    // tmpstate.sp = (stackalloc -= QPAGE);
+    // CSOUT;
+    // tmpstate.pc = (memaddr) p4;
+    // p4t = create_process(&tmpstate);
+    // msgsend(p4t, NULL);
+    // msgrecv(p4t, NULL);
+    // msgsend(p4t, tmpstate.sp);
+    // msgrecv(p4t, NULL);
+    //
+    // if (geterrno() == 0)
+    //     panic("p1 wrong errno: recv from p4 should abort, p4 terminated\n");
+    // else {
+    //     tty0print("p4 errno ok\n");
+    // }
+    // tty0print("p4 completed\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
@@ -164,7 +164,7 @@ void test(void) {
     if (p5sys == 1)
         tty0print("p5a usermode sys passup ok\n");
     else {
-        tprintf("%d\n", p5sys);
+        tty0printf("%d\n", p5sys);
         panic("p5a usermode passup error\n");
     }
 
@@ -176,7 +176,9 @@ void test(void) {
     CSOUT;
     tmpstate.pc = (memaddr) p6;
     p6t = create_process(&tmpstate);
-    msgrecv(p6t, NULL);
+    struct tcb_t *rval = msgrecv(p6t, NULL);
+    if (rval)   // added by mnalli
+        panic("msgrecv should fail here!\n");
     tty0print("p6 completed\n");
 
     CSIN();
@@ -231,9 +233,9 @@ void p2(void) {
     for (i = 1; i < LOOPNUM; i++);
 
     cpu_t2 = getcputime();
-    //tprintf("cpu1 = %d, cpu2 = %d\n",cpu_t1, cpu_t2);
+    //tty0printf("cpu1 = %d, cpu2 = %d\n",cpu_t1, cpu_t2);
 
-    //tprintf("cpu1 = %d\n",cpu_t1);
+    //tty0printf("cpu1 = %d\n",cpu_t1);
     if ((cpu_t2 - cpu_t1) >= MINLOOPTIME)
         tty0print("p2 GET_CPUTIME sounds okay\n");
     else
@@ -326,18 +328,21 @@ void p5a();
 void p5p(void) {
     struct tcb_t* sender;
     state_t* state;
-    short int should_terminate = 0;
+    int should_terminate = 0;
     for (;;) {
         sender = msgrecv(NULL, &state);
         switch (CAUSE_EXCCODE_GET(state->CP15_Cause)) {
             case EXC_RESERVEDINSTR:
                 tty0print("p5a got RESERVEDINSTR\n");
                 should_terminate = 1;
+                tprint("EXC_RESERVEDINSTR\n");
+                PANIC();
                 break;
             default:
-                tprintf("p5p: ERROR\n"
-                        "CAUSE_EXCCODE == %d\n"
-                        "17 == EXC_ADDRINVSTORE\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
+                tprint("p5p: ERROR\n");
+                // tty0printf("CAUSE_EXCCODE == %d\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
+                tprintf("CAUSE_EXCCODE == %d\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
+                tprint("17 == EXC_ADDRINVSTORE\n");
                 PANIC();
         }
         if (should_terminate) {
@@ -353,9 +358,11 @@ void p5m(void) {
     state_t* state;
     for (;;) {
         sender = msgrecv(NULL, &state);
-        //tprintf("%p received from %p\n", current_thread, sender);
+        //tty0printf("%p received from %p\n", current_thread, sender);
         switch (CAUSE_EXCCODE_GET(state->CP15_Cause)) {
             default:
+                // tty0printf("tlb trap cause == %d\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
+                tprintf("p5m: tlb trap cause == %d\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
                 tty0print("p5 mem error passup okay\n");
                 sender->t_s.pc = (memaddr) p5a;
         }

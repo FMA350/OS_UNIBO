@@ -140,10 +140,11 @@ static inline clean_thread_data(struct tcb_t *thread);
 void thread_init(void) {
     size_t i;
     for (i = 0; i < MAXTHREAD; i++) {
-        clean_thread_data(thread + i);
+        clean_thread_data(&thread[i]);
 
         list_add_tail(&thread[i].t_next, &thread_h); //collego i vari elementi della lista libera
-        // INIT_LIST_HEAD(&thread[i].t_sched);
+
+        INIT_LIST_HEAD(&thread[i].t_sched);
         INIT_LIST_HEAD(&thread[i].t_msgq);
         INIT_LIST_HEAD(&thread[i].t_wait4me);
     }
@@ -157,12 +158,16 @@ struct tcb_t *thread_alloc(struct pcb_t *process) {
            or the free list is empty */
         return NULL;
 
-    struct tcb_t *new_thread = container_of(new_head, struct tcb_t, t_next);
+    // removes the thread from the free list
+    list_del(new_head);
 
-    list_del(new_head); 							/* removes the thread from the free list */
+    struct tcb_t *new_thread = container_of(new_head, struct tcb_t, t_next);
+    // setting process as the thread's process
     new_thread->t_pcb = process;
-    list_add_tail(new_head, &process->p_threads);   /*adds the thread to the control thread list of the process*/
-    new_thread->t_status = T_STATUS_READY; 			//ready to be scheduled
+    // adds the thread to the control thread list of the process
+    list_add_tail(new_head, &process->p_threads);
+    // ready to be scheduled
+    new_thread->t_status = T_STATUS_READY;
     return new_thread;
 }
 
@@ -177,8 +182,9 @@ int thread_free(struct tcb_t *oldthread) {
 
     clean_thread_data(oldthread);
 
-    //remove the thread from the process queue
+    // remove the thread from the process queue
     list_del(&oldthread->t_next);
+    // and from the scheduling queue
     list_del(&oldthread->t_sched);
     //t_msgq and t_wait4me are already empty.
 
@@ -197,10 +203,28 @@ static inline clean_thread_data(struct tcb_t *thread) {
 
 /*************************** THREAD QUEUE ************************/
 
+extern int trap_flag;
 
 /* add a tcb to the scheduling queue */
-void thread_enqueue(struct tcb_t *new, struct list_head *queue) { //chopperEdit
+void thread_enqueue(struct tcb_t *new, struct list_head *queue) {
+    if (queue == (struct list_head *) 0x0000b77c) {
+        tprint("::::::::::::::::::::::::::::::::::::::\n"
+                "Modifying program manager wait 4 me queue\n"
+                "::::::::::::::::::::::::::::::::::::::\n");
+    }
+    if (trap_flag) {
+        tprint("?????? thread_enqueue\n");
+        struct list_head *p;
+        // tprintf("list >>> ");
+        // list_for_each(p, queue)
+        //     tprintf("%p ", p);
+        // tprint("\n");
+        tprintf("????? queue == %p, queue->prev == %p, queue->next == %p\n", queue, queue->prev, queue->next);
+        tprint("????? about to list_add_tail\n");
+    }
     list_add_tail(&new->t_sched, queue);
+    if (trap_flag)
+        tprint("?????? thread_enqueue end\n");
 }
 
 /* return the head element of a scheduling queue.
@@ -233,7 +257,10 @@ struct tcb_t *thread_dequeue(struct list_head *queue) {
 }
 */
 struct tcb_t *thread_dequeue(struct list_head *queue) {
-    return __dequeue(queue, struct tcb_t, t_sched);
+    struct tcb_t *thread = __dequeue(queue, struct tcb_t, t_sched);
+    (&thread->t_sched)->next = NULL;
+    (&thread->t_sched)->prev = NULL;
+    return thread;
 }
 
 /*************************** MSG QUEUE ************************/

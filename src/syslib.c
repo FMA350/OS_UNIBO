@@ -160,3 +160,131 @@ int tprintf(const char *format, ...) {
     va_end(ap);
     return rval;
 }
+
+/******************************************************************************/
+static int vrprintf(const char *format, va_list ap);
+
+inline void tty0print(char* s);
+
+static inline int tty0putchar(int c) {
+    char s[2];
+    s[0] = c; s[1] = 0;
+    tty0print(s);
+    return c;
+}
+
+//writes the given character (as int) to the standard output it the character is not 0
+static int tty0putcx(int c) {
+    if (c!=0) {
+        tty0putchar(c);
+        return 1;
+    } else
+        return 0;
+}
+
+static int tty0put_backslash(char escapeChar) {
+    //write the backslash
+    //the and-bitwise is for switch off the last bit (ASCII compatibility)
+    return tty0putcx(backchar[escapeChar & 0x7f]);
+}
+
+/* val >= 0 */
+static int tty0rvrp_int(int val) {
+    if (val == 0)
+        return 0;
+    else  //recurvise call on the more significant digit and print the less significant
+        return tty0rvrp_int(val / 10) + tty0putcx('0' + val % 10);
+}
+
+static int tty0vrp_int(int val) {
+    if (val != 0) {
+        if (val < 0)
+            return tty0putcx('-') + tty0rvrp_int(-val);
+        else
+            return tty0rvrp_int(val);
+    } else
+        return tty0putcx('0');
+}
+
+static int tty0vrp_string(char *s) {
+    switch (*s) {
+        case 0:
+            return 0;
+        case '\\':
+            //if after a \ the string not ends recursive call on next character otherwise return 0
+            return tty0put_backslash(*(s+1)) ? tty0vrp_string(s + 2) + 1 : 0;
+        default:
+            return tty0putcx(*s) + tty0vrp_string(s + 1);
+    }
+}
+
+static int tty0rvrp_pointer(uintptr_t p, int dept) {
+    if (p == 0) {
+        int i;
+        for (i = dept; i < 8; i++)
+            tty0putcx('0');
+        return 8 - dept;
+    }
+    else  //recurvise call on the more significant digit and print the less significant
+        return tty0rvrp_pointer(p / 16, dept + 1) + tty0putcx(hex_cx(((uintptr_t) p) % 16));
+}
+
+
+
+static inline int tty0vrp_pointer(void *p) {
+            // p != NULL        p == NULL
+    return p ? tty0printf("0x") + tty0rvrp_pointer((uintptr_t) p, 0) : tty0printf("(null)");
+}
+
+static int tty0vrp_percent(const char *format, va_list ap) {
+    switch (*format) {
+        case 0:
+            return 0;
+        case '%':
+            //case when a % is followed by a % so print a % and advance
+            return tty0putcx(*format) + vrprintf(format + 1, ap);
+        case 'd':
+            //call tty0vrp_int with the next argument of the list with type int
+            return tty0vrp_int(va_arg(ap, int)) + vrprintf(format + 1, ap);
+        case 's':
+            //call tty0vrp_int with the next argument of the list with type pointer to char
+            return tty0vrp_string(va_arg(ap, char *)) + vrprintf(format + 1, ap);
+        case 'p':
+            //call tty0vrp_pointer with the next argument of the list with type pointer to void
+            return tty0vrp_pointer(va_arg(ap, void *)) + vrprintf(format + 1, ap);
+        default:
+            //if the format is not recognized
+            tty0print("ERROR\n");
+            return 0;
+    }
+}
+
+static int tty0vrprintf(const char *format, va_list ap) {
+    //parse the format
+    switch (*format) {
+        //case format null
+        case 0:
+            return 0;
+            //case format %: call tty0vrp_percent and advance 1 position
+        case '%':
+            return tty0vrp_percent(format + 1, ap);
+        case '\\':
+            //if after a \ the string not ends recursive call on next character otherwise return 0
+            return tty0put_backslash(*(format+1)) ? tty0vrprintf(format + 2, ap) + 1 : 0;
+        default:
+            //print the character and recursive call on next character
+            return tty0putcx(*format) + tty0vrprintf(format + 1, ap);
+    }
+}
+
+int tty0printf(const char *format, ...) {
+    int rval;
+    //declare a list of arguments
+    va_list ap;
+    //initialize the list
+    va_start(ap, format);
+    rval = tty0vrprintf(format, ap);
+    //clean up the list
+    va_end(ap);
+    return rval;
+}

@@ -32,10 +32,10 @@ struct tcb_t {
 	int errno; /* error status of the thread */
 
 	struct tcb_t *t_wait4sender; /* expected sender (if t_status == T_STATUS_W4MSG), NULL means accept msg from anybody */
+
 	struct list_head t_next; /* link the other elements of the list of threads in the same process */
 	struct list_head t_sched; /* link the other elements on the same scheduling list */
 	struct list_head t_msgq; /* list of pending messages for the current thread */
-
 	struct list_head t_wait4me; /* list of threads waiting for a message from the current thread (linked with )*/
 };
 
