@@ -21,10 +21,7 @@ void __terminate_thread_s(struct tcb_t *thread)
         resume_thread(to_resume);
     }
 
-    // to_resume = thread_qhead(&readyq); //BUG: io qua non capisco perche madonna non funzioni, prima della
-    thread_free(thread);     // thread_free ho nella readyq ho i processi risvegliati, dopo la thread_free
-    // if (!thread_qhead(&readyq) && to_resume) //eseguita dal terminate_process_s chiamato da trap_h sparisce il thread
-    //     thread_enqueue(to_resume, &readyq);  //da risvegliare. Nelle altre chiamate terminate_process_s cio non accade
+    thread_free(thread);
 
     thread_count--;
 }
