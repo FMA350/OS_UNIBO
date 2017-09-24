@@ -16,7 +16,18 @@ void syscall_h();
 
 #define RECV_FAILURE    NULL
 
-// La receive in caso di successo ritorna l'indirizzo del sender
+
+int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg);
+
+/*
+ * This function deliver the message directly, without passing from the message
+ * queue of thread dest
+ *
+ * Preconditions:
+ * dest is currently blocked. It's waiting for a message from the
+ * thread that calls this function (current thread) or from any thread.
+ */
+void deliver_directly(struct tcb_t *dest, unsigned int recv_rval, uintptr_t msg);
 
 /*
  * This function is used to resume a thread blocked while waiting for a message
@@ -31,10 +42,7 @@ void syscall_h();
  * recv_rval as return value. resuming will not be outqueued on his field
  * wait4same
  */
-void resume_thread(struct tcb_t *resuming, unsigned int recv_rval, uintptr_t msg);
-// usata in terminate_thread_s
+void resume_thread(struct tcb_t *resuming);
 
-//
-int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg);
 
 #endif

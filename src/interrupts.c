@@ -16,12 +16,9 @@
 static inline void interval_timer_h(void);
 static inline void io_h(void);
 
-/* Returns 1 if the interrupt int_no is pending */
-// #define CAUSE_IP_GET(cause, int_no) ((cause) & (1 << ((int_no) + 24)))
-
+// dispatch
 void interrupt_h(void)
 {
-    //dispatching
     if (CAUSE_IP_GET(((state_t *) INT_OLDAREA)->CP15_Cause, INT_TIMER))
         interval_timer_h();
     else
@@ -34,19 +31,13 @@ static inline void interval_timer_h(void)
         current_thread->t_s = *((state_t *) INT_OLDAREA);
         current_thread->run_time += TICKS_PER_TIME_SLICE; //cycles
 
-        thread_enqueue(current_thread, &readyq);
+        move_thread(current_thread, &readyq);
     }
     update_clock(TICKS_PER_TIME_SLICE);
 
     scheduler();
 }
 
-/* Non restituisce mai il controllo
- * risveglia i
- *
- *
- *
- */
 static inline void acknowledge(unsigned int line, unsigned int device)
 {
     switch (device) {
@@ -66,12 +57,11 @@ static inline void acknowledge(unsigned int line, unsigned int device)
 
                 soft_blocked_thread[device][line] = NULL;
 
-                if (is_idle){
+                if (current_thread == NULL)
                 // se il messaggio è stato inviato mentre il processore era idle
-                    is_idle = 0;
                     // chiamiamo lo scheduler per schedulare il processo svegliato
                     scheduler();
-                } else
+                else
                     LDST((state_t *) INT_OLDAREA);
             } else
             // se l'interrupt proviene da una tprint

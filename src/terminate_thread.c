@@ -17,7 +17,8 @@ void __terminate_thread_s(struct tcb_t *thread)
     while (to_resume = thread_qhead(&thread->t_wait4me)) {
         //setto errno = 1 per dire ai processi che si aspettavano un msg che il mittente e' morto
         to_resume->errno = 1;
-        resume_thread(to_resume, (unsigned int) NULL, (uintptr_t) 0);
+        deliver_directly(to_resume, (unsigned int) NULL, (uintptr_t) 0);
+        resume_thread(to_resume);
     }
 
     // to_resume = thread_qhead(&readyq); //BUG: io qua non capisco perche madonna non funzioni, prima della

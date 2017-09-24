@@ -12,8 +12,6 @@ extern struct list_head blockedq;
 extern unsigned int thread_count;
 extern unsigned int soft_block_count;
 
-extern int is_idle;
-
 
 void scheduler(void);
 
@@ -33,5 +31,11 @@ extern void init_and_load(struct tcb_t *to_load, void *target, unsigned int cpsr
 
 // used in init.c during initialization
 void load_readyq(struct pcb_t *root);
+
+// if fro_queue == readyq the thread dequeued is the current_thread
+static inline void move_thread(struct tcb_t *thread, struct list_head *to_queue) {
+    thread_outqueue(thread);
+    thread_enqueue(thread, to_queue);
+}
 
 #endif

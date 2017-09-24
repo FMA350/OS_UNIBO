@@ -8,17 +8,15 @@
 
 extern unsigned int cyclesUsed;
 
+#define SYSCALL_ARG(STATUS, N)  (((state_t *) STATUS)->a ## N)
 
 static inline void store_return_value(unsigned int rval) {
-    ((state_t *) SYSBK_OLDAREA)->a1 = rval;
+    SYSCALL_ARG(SYSBK_OLDAREA, 1) = rval;
 }
 
 static inline int
 deliver_msg(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
 {
-    // TODO: forse è da modificare con gli interrupt dei devices msgq_add
-    //       mnalli - perché?
-
     if (msgq_add(sender, dest, msg) == 0)
     /* Se la consegna del messaggio è andata a buon fine */
         return SEND_SUCCESS;
@@ -27,47 +25,22 @@ deliver_msg(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
         return SEND_FAILURE;
 }
 
-/*
- * This function deliver the message directly, without passing from the message
- * queue of thread dest
- *
- * Preconditions:
- * dest is currently blocked. It's waiting for a message from the
- * thread that calls this function (current thread) or from any thread.
- */
-static inline void
-deliver_directly(struct tcb_t *dest, unsigned int recv_rval, uintptr_t msg)
+void deliver_directly(struct tcb_t *dest, unsigned int recv_rval, uintptr_t msg)
 {
     // a1 is the register where the return value of functions is stored
-        if (current_thread != dest->t_pcb->sys_mgr) //TODO: non mi viene in mente niente di meglio...
-            dest->t_s.a1 = recv_rval;
-        else
-            dest->t_s.a1 = dest->t_s.a4;
-
+    SYSCALL_ARG(&dest->t_s, 1) = recv_rval;
     // check that recv has been called with pmsg != NULL
-    if (((uintptr_t *) (dest->t_s.a3)) != NULL){
-        *((uintptr_t *) (dest->t_s.a3)) = msg;
-    }
+    if (((uintptr_t *) SYSCALL_ARG(&dest->t_s, 3)) != NULL)
+        *((uintptr_t *) SYSCALL_ARG(&dest->t_s, 3)) = msg;
 }
 
-/*
- * Resume a thread blocked while receiving delivering msg and returning recv_rval
- * to the thread
- * Preconditions: resuming is blocked. resuming is in his queue.
- */
-void resume_thread(struct tcb_t *resuming, unsigned int recv_rval, uintptr_t msg)
+void resume_thread(struct tcb_t *resuming)
 {
-    // il messaggio è consegnato con priorità
-    deliver_directly(resuming, recv_rval, msg);
-
     resuming->t_status = T_STATUS_READY;
     resuming->t_wait4sender = NULL;
-    // dest è rimosso dai processi in attesa (blockedq se stava aspettando da
+    // resuming è rimosso dai processi in attesa (blockedq se stava aspettando da
     // chiunque sender->t_wait4me se stava aspettando da sender)
-    thread_outqueue(resuming);
-    // e reinserito nella coda ready
-    thread_enqueue(resuming, &readyq);
-
+    move_thread(resuming, &readyq);
 }
 
 /* La send non interagisce con lo stato nel sender nè con l'oldarea */
@@ -85,9 +58,13 @@ int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
              * Processo corrente
              * Qualsiasi processo (in tal caso non ha messaggi)
              */
-                resume_thread(dest, (unsigned int) sender, msg);
-                return SEND_SUCCESS;
+                if (current_thread != dest->t_pcb->sys_mgr)
+                // se il current_thread non è il sys_mgr della destinazione
+                    deliver_directly(dest, (unsigned int) sender, msg);
+                // se lo è non facciamo nulla per non sovrascrivere il valore di ritornodelle system call
 
+                resume_thread(dest);
+                return SEND_SUCCESS;
             } else {
             /* dest sta aspettando un messaggio da qualcun'altro */
                 return deliver_msg(dest, sender, msg);
@@ -109,13 +86,10 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
         timeSliceLeft = getTIMER();
-        if((timeSliceLeft > 0) && (timeSliceLeft < TICKS_PER_TIME_SLICE)){
-            cyclesUsed = TICKS_PER_TIME_SLICE - timeSliceLeft;
-        }
-        else {
+        if (CAUSE_IP_GET(getCAUSE(), INT_TIMER))
             cyclesUsed = TICKS_PER_TIME_SLICE;
-        }
-
+        else
+            cyclesUsed = TICKS_PER_TIME_SLICE - timeSliceLeft;
 
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
@@ -126,15 +100,15 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         current_thread->run_time += cyclesUsed; //cycles
         update_clock(cyclesUsed);
 
-        if (sender) {
+        if (sender)
         // il thread si blocca aspettando da sender
             // aggiunge il processo corrente alla lista dei processi che aspettano sender (di sender)
-            thread_enqueue(current_thread, &sender->t_wait4me);
-        } else {
+            move_thread(current_thread, &sender->t_wait4me);
+        else
         // il thread si blocca aspettando da chiunque
             // Inserimento del processo nella coda dei processi in attesa di messaggi da chiunque
-            thread_enqueue(current_thread, &blockedq);
-        }
+            move_thread(current_thread, &blockedq);
+
         scheduler();
     }
 }
@@ -194,27 +168,24 @@ static inline void syscall_other(void)
     // process of the current thread
     struct pcb_t *current_process = current_thread->t_pcb;
     if (current_process->sys_mgr) {
-        current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
+        // HACK: possiamo non salvare lo stato del processore in quanto esso sarà
+        //       salvato dalla recv
+
         send(current_process->sys_mgr, current_thread, (uintptr_t) &current_thread->t_s);
-        ((state_t *) SYSBK_OLDAREA)->a3 = (unsigned int) NULL; //la recv dal sysmgr non deve restituire alcun messaggio!
-        recv(current_process->sys_mgr, NULL); //mi metto in attesa del manager
+        //mi metto in attesa del manager
+        recv(current_process->sys_mgr, NULL);
 
     } else if (current_process->pgm_mgr) {
-        tprint("syscall_other pgm_mgr\n");
-
-        current_thread->t_s = *((state_t *) SYSBK_OLDAREA); // salvataggio stato del processore
+        // salvataggio stato del processore
+        current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
         //current_thread->t_s.pc -= 4;    //non serve se c'e il mgr ci deve pensare lui...
-
         send(current_process->pgm_mgr, current_thread, (uintptr_t) &current_thread->t_s);
-        thread_enqueue(current_thread, &blockedq);
+
+        move_thread(current_thread, &blockedq);
         scheduler();
     } else {
     // il thread chiamante deve essere terminato
-        // per usare la terminate_thread_s il thread deve essere in una coda di scheduling
-        thread_enqueue(current_thread, &blockedq);
-        tprint("syscall_other: terminate_thread\n");
         terminate_thread_s(current_thread);
-        tprint("syscall_other: about to call scheduler\n");
         scheduler();
     }
 
@@ -224,9 +195,6 @@ static inline void syscall_other(void)
 
 /***************************************************************************/
 
-#define SYSCALL_ARG(N)  \
-    (((state_t *) SYSBK_OLDAREA)->a ## N)
-
 void syscall_h(void)
 {
     if (CAUSE_EXCCODE_GET(((state_t *) SYSBK_OLDAREA)->CP15_Cause) == EXC_BREAKPOINT) {
@@ -234,15 +202,15 @@ void syscall_h(void)
         LDST((state_t *) SYSBK_OLDAREA);
     }
 
-    switch (SYSCALL_ARG(1)) {
+    switch (SYSCALL_ARG(SYSBK_OLDAREA, 1)) {
         case SYS_ERR:
         // syscall 0 è da specifica sempre un errore
             raise_reserved_instruction();
             // FIXME: not correct; should be illegal instruction or something like that
         case SYS_SEND:
-            send_kernel((struct tcb_t *) SYSCALL_ARG(2), SYSCALL_ARG(3));
+            send_kernel((struct tcb_t *) SYSCALL_ARG(SYSBK_OLDAREA, 2), SYSCALL_ARG(SYSBK_OLDAREA, 3));
         case SYS_RECV:
-            recv_kernel((struct tcb_t *) SYSCALL_ARG(2), (uintptr_t *) SYSCALL_ARG(3));
+            recv_kernel((struct tcb_t *) SYSCALL_ARG(SYSBK_OLDAREA, 2), (uintptr_t *) SYSCALL_ARG(SYSBK_OLDAREA, 3));
         default:
             syscall_other();
     }

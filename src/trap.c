@@ -10,12 +10,13 @@
 
 extern struct list_head blockedq;
 
+int trap_flag = 0;
 
 static inline void __trap_h(struct tcb_t *mgr, state_t *oldarea)
 {
     if (mgr) {
     // se il manager è stato settato (non è NULL)
-        tprint(">>> mgr\n");
+        // tprint(">>> mgr\n");
         // salvataggio stato del processore
         current_thread->t_s = *oldarea;
         // the instruction that raised the trap must be repeated
@@ -31,13 +32,13 @@ static inline void __trap_h(struct tcb_t *mgr, state_t *oldarea)
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = mgr;
         // tprint(">>> about to enqueue\n");
-        thread_enqueue(current_thread, &mgr->t_wait4me);
+        move_thread(current_thread, &mgr->t_wait4me);
         // tprint(">>> abount to call scheduler\n");
+        trap_flag = 1;
         scheduler();
     } else {
     // il processo deve essere terminato
-        tprint(">>> mgr not specified - terminate the thread\n");
-        thread_enqueue(current_thread, &blockedq);
+        // tprint(">>> mgr not specified - terminate the thread\n");
         terminate_thread_s(current_thread);
 
         // tprint(">>> abount to call scheduler\n");
@@ -50,14 +51,14 @@ static inline void __trap_h(struct tcb_t *mgr, state_t *oldarea)
 
 void pgmtrap_h(void)
 {
-    tprintf("=== pgmtrap_h started ===\n");
-    tprintf("pgmtrap_h: cause == %d\n", (int) CAUSE_EXCCODE_GET(((state_t *) PGMTRAP_OLDAREA)->CP15_Cause));
+    // tprintf("=== pgmtrap_h started ===\n");
+    // tprintf("pgmtrap_h: cause == %d\n", (int) CAUSE_EXCCODE_GET(((state_t *) PGMTRAP_OLDAREA)->CP15_Cause));
     __trap_h(current_thread->t_pcb->pgm_mgr, (state_t *) PGMTRAP_OLDAREA);
 }
 
 void tlbtrap_h(void)
 {
-    tprintf("=== tlbtrap_h started ===\n");
-    tprintf("tlbtrap_h: cause == %d\n", (int) CAUSE_EXCCODE_GET(((state_t *) TLB_OLDAREA)->CP15_Cause));
+    // tprintf("=== tlbtrap_h started ===\n");
+    // tprintf("tlbtrap_h: cause == %d\n", (int) CAUSE_EXCCODE_GET(((state_t *) TLB_OLDAREA)->CP15_Cause));
     __trap_h(current_thread->t_pcb->tlb_mgr, (state_t *) TLB_OLDAREA);
 }

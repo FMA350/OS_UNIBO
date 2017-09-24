@@ -10,8 +10,9 @@ int get_errno_s(const struct tcb_t *applicant);
 struct tcb_t *create_process_s(const state_t *initial_state, struct tcb_t *applicant);
 struct tcb_t *create_thread_s(const state_t *initial_state, struct tcb_t *process);
 
-/*  */
+//
 void terminate_process_s(struct tcb_t *applicant);
+/* The thread must be in a scheduling queue as preconditions */
 void terminate_thread_s(struct tcb_t *thread);
 
 /* Sets  */
