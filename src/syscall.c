@@ -58,7 +58,7 @@ int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
              * Processo corrente
              * Qualsiasi processo (in tal caso non ha messaggi)
              */
-                if (current_thread != dest->t_pcb->sys_mgr)
+                if (sender != dest->t_pcb->sys_mgr)
                 // se il current_thread non è il sys_mgr della destinazione
                     deliver_directly(dest, (unsigned int) sender, msg);
                 // se lo è non facciamo nulla per non sovrascrivere il valore di ritornodelle system call
