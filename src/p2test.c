@@ -234,9 +234,8 @@ void p2(void) {
     for (i = 1; i < LOOPNUM; i++);
 
     cpu_t2 = getcputime();
-    //tty0printf("cpu1 = %d, cpu2 = %d\n",cpu_t1, cpu_t2);
+    tty0printf("cpu1 = %d, cpu2 = %d\n",cpu_t1, cpu_t2);
 
-    //tty0printf("cpu1 = %d\n",cpu_t1);
     if ((cpu_t2 - cpu_t1) >= MINLOOPTIME)
         tty0print("p2 GET_CPUTIME sounds okay\n");
     else

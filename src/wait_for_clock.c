@@ -19,10 +19,7 @@
 
 void wait_for_clock_s(struct tcb_t *applicant)
 {
-    // rimosso dalla lista di scheduling in cui si trovava
-    thread_outqueue(applicant);
     // il processo si blocca in attesa di un device (lo pseudoclock)
     soft_block_count++;
-    // inserito nella lista di processi in attesa
-    thread_enqueue(applicant, &t_wait4clock);
+    move_thread(applicant, &t_wait4clock);
 }

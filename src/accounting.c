@@ -23,7 +23,6 @@ unsigned int accountant(struct tcb_t* thread)
     uint64_t cycles = thread->run_time;
     int milliseconds = 0;
     cycles -= 500; // for rounding purpouses
-    cycles /= 1;
         //how many 1000 to remove before it goes in underflow?
         while(cycles > 0) {
             milliseconds++;
@@ -47,12 +46,9 @@ void update_clock(unsigned int cycles)
                 // La send che viene fatta ad un processo in attesa non fallisce mai
                 assert(rval == SEND_SUCCESS);
             } else {
-
             // to_resume->t_status == T_STATUS_READY
                 // rimosso dalla lista t_wait4clock
-                thread_outqueue(to_resume);
-                // inserito nella lista di processi da schedulare
-                thread_enqueue(to_resume, &readyq);
+                move_thread(to_resume, &readyq);
                 int rval = send(to_resume, SSI, (uintptr_t) NULL);
                 // La send fallisce nel caso in cui finiscono i messaggi
                 assert(rval == SEND_SUCCESS);
