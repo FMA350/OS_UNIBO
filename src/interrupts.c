@@ -13,25 +13,19 @@
 #include "accounting.h"
 
 
-/*****INTERN******/
-// int interrupt_flag = 0;
-// state_t interrupt_t_s; //should it be initialized?
-// int call_scheduler;
-
-
 static inline void interval_timer_h(void);
 static inline void io_h(void);
 
+/* Returns 1 if the interrupt int_no is pending */
+// #define CAUSE_IP_GET(cause, int_no) ((cause) & (1 << ((int_no) + 24)))
+
 void interrupt_h(void)
 {
-    //TODO: Enhance control using CPSR (fma350)
-    timeSliceLeft = getTIMER();
     //dispatching
-    if((timeSliceLeft > 0) && (timeSliceLeft < TICKS_PER_TIME_SLICE)){
-        io_h();             //for interrupts
-    } else {
-        interval_timer_h(); //for fast-interrupts
-    }
+    if (CAUSE_IP_GET(((state_t *) INT_OLDAREA)->CP15_Cause, INT_TIMER))
+        interval_timer_h();
+    else
+        io_h();
 }
 
 static inline void interval_timer_h(void)
@@ -43,6 +37,7 @@ static inline void interval_timer_h(void)
         thread_enqueue(current_thread, &readyq);
     }
     update_clock(TICKS_PER_TIME_SLICE);
+
     scheduler();
 }
 
@@ -58,10 +53,8 @@ static inline void acknowledge(unsigned int line, unsigned int device)
         case EXT_IL_INDEX(IL_TERMINAL):
             // se si accettano interrupt dalle tprint questo non va bene
             // assert(soft_blocked_thread[device] != NULL);
-            ;
-            unsigned int *command_address = (unsigned int *) TERMINAL_DEV_FIELD(line, TRANSM_COMMAND);
-            *command_address = DEV_C_ACK;
-            //tprintf("linea = %d",line);
+            *((unsigned int *) TERMINAL_DEV_FIELD(line, TRANSM_COMMAND)) = DEV_C_ACK;
+
             if (soft_blocked_thread[device][line]) {
                 // Sblocchiamo il processo in attesa a nome dell'SSI
                 unsigned int *trs_status = (unsigned int *) TERMINAL_DEV_FIELD(line, TRANSM_STATUS);

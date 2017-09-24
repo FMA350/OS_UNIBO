@@ -28,31 +28,11 @@ static inline void INIT_LIST_HEAD(struct list_head *list){
 	list->prev = list;
 }
 
-// mnalli
-#include <libuarm.h>
-// #include <syslib.h>
-extern int trap_flag;
-int tprintf(const char *format, ...);
-// mnalli
-
 static inline void __list_add(struct list_head *new, struct list_head *prev, struct list_head *next){
-	if (trap_flag) {
-        tprint("***** __list_add\n");
-		tprintf("***** new == %p, prev == %p next == %p\n", new, prev, next);
-    }
 	next->prev = new;
 	new->next = next;
 	new->prev = prev;
-	if (trap_flag) {
-        tprint("***** 3\n");
-		struct list_head t = *prev;
-		tprint("***** 4\n");
-    }
 	prev->next = new;
-
-	if (trap_flag) {
-        tprint("***** __list_add end\n");
-    }
 }
 
 static inline void list_add(struct list_head *new, struct list_head *head){
@@ -60,13 +40,7 @@ static inline void list_add(struct list_head *new, struct list_head *head){
 }
 
 static inline void list_add_tail(struct list_head *new, struct list_head *head){
-	if (trap_flag) {
-        tprint("^^^^^^ list_add_tail\n");
-    }
 	__list_add(new, head->prev, head);
-	if (trap_flag) {
-        tprint("^^^^^^ list_add_tail end\n");
-    }
 }
 
 static inline void __list_del(struct list_head * prev, struct list_head * next)

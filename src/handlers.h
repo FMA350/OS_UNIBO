@@ -35,6 +35,6 @@ void resume_thread(struct tcb_t *resuming, unsigned int recv_rval, uintptr_t msg
 // usata in terminate_thread_s
 
 //
-unsigned int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg);
+int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg);
 
 #endif

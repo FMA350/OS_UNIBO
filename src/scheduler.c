@@ -126,8 +126,10 @@ static inline void empty_readyq_h(void) {
 void scheduler(void)
 {
     current_thread = thread_dequeue(&readyq);
+
     if (current_thread == NULL)
         empty_readyq_h();
+        
     is_idle = 0;
     setTIMER(TICKS_PER_TIME_SLICE);
     LDST(&current_thread->t_s);

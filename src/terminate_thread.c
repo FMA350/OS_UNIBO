@@ -7,6 +7,7 @@ extern struct pcb_t *get_processid_s(const struct tcb_t *thread);
    the process is also removed from the scheduling queue it's in (device queue also)*/
 void __terminate_thread_s(struct tcb_t *thread)
 {
+    // TODO: ottimizzare
     while (!list_empty(&thread->t_msgq))
     //cancello tutti i messaggi se ce ne sono
         msg_free(msg_qhead(&thread->t_msgq));
@@ -19,10 +20,10 @@ void __terminate_thread_s(struct tcb_t *thread)
         resume_thread(to_resume, (unsigned int) NULL, (uintptr_t) 0);
     }
 
-    to_resume = thread_qhead(&readyq); //BUG: io qua non capisco perche madonna non funzioni, prima della
-    int err = thread_free(thread);     // thread_free ho nella readyq ho i processi risvegliati, dopo la thread_free
-    if (!thread_qhead(&readyq) && to_resume) //eseguita dal terminate_process_s chiamato da trap_h sparisce il thread
-        thread_enqueue(to_resume, &readyq);  //da risvegliare. Nelle altre chiamate terminate_process_s cio non accade
+    // to_resume = thread_qhead(&readyq); //BUG: io qua non capisco perche madonna non funzioni, prima della
+    thread_free(thread);     // thread_free ho nella readyq ho i processi risvegliati, dopo la thread_free
+    // if (!thread_qhead(&readyq) && to_resume) //eseguita dal terminate_process_s chiamato da trap_h sparisce il thread
+    //     thread_enqueue(to_resume, &readyq);  //da risvegliare. Nelle altre chiamate terminate_process_s cio non accade
 
     thread_count--;
 }

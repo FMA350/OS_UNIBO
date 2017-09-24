@@ -9,8 +9,7 @@
 extern unsigned int cyclesUsed;
 
 
-static inline void store_return_value(unsigned int rval)
-{
+static inline void store_return_value(unsigned int rval) {
     ((state_t *) SYSBK_OLDAREA)->a1 = rval;
 }
 
@@ -71,18 +70,9 @@ void resume_thread(struct tcb_t *resuming, unsigned int recv_rval, uintptr_t msg
 
 }
 
-extern int trap_flag;
-
 /* La send non interagisce con lo stato nel sender nè con l'oldarea */
-unsigned int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
+int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
 {
-    // if (trap_flag) {
-    //     state_t *sent_status = (state_t *) msg;
-    //     tprintf("cause sent == %d", CAUSE_EXCCODE_GET(sent_status->CP15_Cause));
-    //     PANIC();
-    // }
-    //tprintf("%p sends to %p\n", sender, dest);
-    // tprintf("sent cause == %d");
     switch (dest->t_status) {
         case T_STATUS_READY:
         /* Se il thread destinazione non è in attesa di un messaggio */
@@ -104,7 +94,6 @@ unsigned int send(struct tcb_t *dest, struct tcb_t *sender, uintptr_t msg)
             }
         case T_STATUS_NONE:
             return SEND_FAILURE;
-            // FIXME: SEND_FAILURE == -1, send return unsigned int
     }
 }
 
@@ -123,7 +112,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         if((timeSliceLeft > 0) && (timeSliceLeft < TICKS_PER_TIME_SLICE)){
             cyclesUsed = TICKS_PER_TIME_SLICE - timeSliceLeft;
         }
-        else{
+        else {
             cyclesUsed = TICKS_PER_TIME_SLICE;
         }
 
@@ -141,12 +130,10 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         // il thread si blocca aspettando da sender
             // aggiunge il processo corrente alla lista dei processi che aspettano sender (di sender)
             thread_enqueue(current_thread, &sender->t_wait4me);
-            //tprintf("%p t_wait4me head = %p\n",sender, thread_qhead(&sender->t_wait4me));
         } else {
         // il thread si blocca aspettando da chiunque
             // Inserimento del processo nella coda dei processi in attesa di messaggi da chiunque
             thread_enqueue(current_thread, &blockedq);
-            // tprintf("current: %p, blockedqH: %p, ready:%p\n", current_thread, thread_qhead(&blockedq), thread_qhead(&readyq));
         }
         scheduler();
     }
@@ -157,10 +144,9 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
 // solleva una trap
 static inline void raise_reserved_instruction(void)
 {
-    // tprint("> raise_reserved_instruction\n");
     *((state_t *) PGMTRAP_OLDAREA) = *((state_t *) SYSBK_OLDAREA);
-    // ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause = EXC_RESERVEDINSTR;
-    ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause = CAUSE_EXCCODE_SET(((state_t *) PGMTRAP_OLDAREA)->CP15_Cause, EXC_RESERVEDINSTR);
+    ((state_t *) PGMTRAP_OLDAREA)->CP15_Cause =
+        CAUSE_EXCCODE_SET(((state_t *) PGMTRAP_OLDAREA)->CP15_Cause, EXC_RESERVEDINSTR);
     pgmtrap_h();
 }
 
@@ -180,7 +166,7 @@ static inline void raise_reserved_instruction(void)
 static inline void send_kernel(struct tcb_t *dest, uintptr_t msg)
 {
     if (IS_KERNEL_MODE) {
-        store_return_value(send(dest, current_thread, msg));
+        store_return_value((unsigned int) send(dest, current_thread, msg));
         LDST((state_t *) SYSBK_OLDAREA);
     }
     else
@@ -224,8 +210,11 @@ static inline void syscall_other(void)
         scheduler();
     } else {
     // il thread chiamante deve essere terminato
-        //tprint("syscall_other terminate_thread\n");
+        // per usare la terminate_thread_s il thread deve essere in una coda di scheduling
+        thread_enqueue(current_thread, &blockedq);
+        tprint("syscall_other: terminate_thread\n");
         terminate_thread_s(current_thread);
+        tprint("syscall_other: about to call scheduler\n");
         scheduler();
     }
 

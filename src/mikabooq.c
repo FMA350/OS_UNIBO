@@ -13,7 +13,7 @@ static struct msg_t message[MAXMSG];
 static LIST_HEAD(message_h);
 
 
-static inline clean_mgr(struct pcb_t *proc);
+static inline clean_mgrs(struct pcb_t *proc);
 
 
 #define __qhead(queue, type, member) ({                         \
@@ -37,7 +37,7 @@ struct pcb_t *proc_init(void) {
     INIT_LIST_HEAD(&process[0].p_threads);
     INIT_LIST_HEAD(&process[0].p_children);
     INIT_LIST_HEAD(&process[0].p_siblings);
-    clean_mgr(process);
+    clean_mgrs(process);
 
     size_t i;
     for (i = 1; i < MAXPROC; i++) {
@@ -46,7 +46,7 @@ struct pcb_t *proc_init(void) {
         process[i].p_parent = NULL;
         INIT_LIST_HEAD(&process[i].p_threads);
         INIT_LIST_HEAD(&process[i].p_children);
-        clean_mgr(process + i);
+        clean_mgrs(process + i);
     }
     return process;
 }
@@ -79,7 +79,6 @@ struct pcb_t *proc_alloc(struct pcb_t *p_parent) {
 /* delete a process (properly updating the process tree links) */
 /* this function must fail if the process has threads or children. */
 /* return value: 0 in case of success, -1 otherwise */
-
 int proc_delete(struct pcb_t *oldproc){
     if (oldproc->p_parent == NULL ||                // Trying to delete root or a non-allocated process
         !list_empty(&oldproc->p_children) ||        // Trying to delete a process with children
@@ -90,46 +89,22 @@ int proc_delete(struct pcb_t *oldproc){
         oldproc->p_parent = NULL;
         list_del(&oldproc->p_siblings);
         list_add_tail(&oldproc->p_siblings, &(process[0].p_siblings));
-        clean_mgr(oldproc);
+        clean_mgrs(oldproc);
 
         return 0;
     }
 }
 
 /* return the pointer to the first child (NULL if the process has no children) */
-/*
-inline struct pcb_t *proc_firstchild(struct pcb_t *proc) {
-
-    struct list_head *first_child = list_next(&proc->p_children);
-
-    if (first_child)
-        //the process has a child
-        //children are linked with p_sibling field
-        return container_of(first_child, struct pcb_t, p_siblings);
-    else
-        //if p_parent doesn't have any child
-        return NULL;
-}
-*/
 inline struct pcb_t *proc_firstchild(struct pcb_t *proc) {
     return __qhead(&proc->p_children, struct pcb_t, p_siblings);
 }
-/*
-inline struct tcb_t *proc_firstthread(struct pcb_t *proc){
-    struct list_head *first_thread = list_next(&proc->p_threads);
-
-    if (first_thread)
-        // the process has at least one thread
-        return container_of(first_thread, struct tcb_t, t_next);
-    else
-        return NULL;
-}*/
 
 inline struct tcb_t *proc_firstthread(struct pcb_t *proc) {
     return __qhead(&proc->p_threads, struct tcb_t, t_next);
 }
 
-static inline clean_mgr(struct pcb_t *proc) {
+static inline clean_mgrs(struct pcb_t *proc) {
     proc->pgm_mgr = proc->tlb_mgr = proc->sys_mgr = NULL;
 }
 
@@ -186,7 +161,6 @@ int thread_free(struct tcb_t *oldthread) {
     list_del(&oldthread->t_next);
     // and from the scheduling queue
     list_del(&oldthread->t_sched);
-    //t_msgq and t_wait4me are already empty.
 
     /*adding oldthread to the free list*/
     list_add_tail(&oldthread->t_next, &thread_h);
@@ -207,60 +181,20 @@ extern int trap_flag;
 
 /* add a tcb to the scheduling queue */
 void thread_enqueue(struct tcb_t *new, struct list_head *queue) {
-    if (queue == (struct list_head *) 0x0000b77c) {
-        tprint("::::::::::::::::::::::::::::::::::::::\n"
-                "Modifying program manager wait 4 me queue\n"
-                "::::::::::::::::::::::::::::::::::::::\n");
-    }
-    if (trap_flag) {
-        tprint("?????? thread_enqueue\n");
-        struct list_head *p;
-        // tprintf("list >>> ");
-        // list_for_each(p, queue)
-        //     tprintf("%p ", p);
-        // tprint("\n");
-        tprintf("????? queue == %p, queue->prev == %p, queue->next == %p\n", queue, queue->prev, queue->next);
-        tprint("????? about to list_add_tail\n");
-    }
     list_add_tail(&new->t_sched, queue);
-    if (trap_flag)
-        tprint("?????? thread_enqueue end\n");
 }
 
 /* return the head element of a scheduling queue.
 	 (this function does not dequeues the element)
 	 return NULL if the list is empty */
-// struct tcb_t *thread_qhead(struct list_head *queue) { //chopperEdit
-//     struct list_head *new_head = list_next(queue);
-//     if(new_head == NULL)
-//         return NULL;
-//     else
-//         /* t_next ---> t_sched */
-//         return container_of(new_head, struct tcb_t, t_sched);
-// }
-
 struct tcb_t *thread_qhead(struct list_head *queue) {
     return __qhead(queue, struct tcb_t, t_sched);
 }
 
 /* get the first element of a scheduling queue.
 	 return NULL if the list is empty */
-/*
 struct tcb_t *thread_dequeue(struct list_head *queue) {
-    struct list_head *new_head = list_next(queue);
-    if(new_head == NULL)
-        return NULL;
-    else {
-        list_del(new_head);
-        return container_of(new_head, struct tcb_t, t_sched);
-    }
-}
-*/
-struct tcb_t *thread_dequeue(struct list_head *queue) {
-    struct tcb_t *thread = __dequeue(queue, struct tcb_t, t_sched);
-    (&thread->t_sched)->next = NULL;
-    (&thread->t_sched)->prev = NULL;
-    return thread;
+    return __dequeue(queue, struct tcb_t, t_sched);
 }
 
 /*************************** MSG QUEUE ************************/
@@ -378,12 +312,3 @@ int msg_free(struct msg_t *oldmsg) {
 struct msg_t *msg_qhead(struct list_head *queue) {
     return __qhead(queue, struct msg_t, m_next);
 }
- /*
-struct msg_t *msg_qhead(struct list_head *queue) {
-    struct list_head *new_head = list_next(queue);
-    if(new_head == NULL)
-        return NULL;
-    else
-        return container_of(new_head, struct msg_t, m_next);
-}
-*/
