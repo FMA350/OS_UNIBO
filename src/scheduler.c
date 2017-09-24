@@ -109,8 +109,6 @@ static inline void empty_readyq_h(void) {
     }
 }
 
-extern int trap_flag;
-
 void scheduler(void)
 {
     current_thread = thread_qhead(&readyq);
@@ -119,14 +117,5 @@ void scheduler(void)
         empty_readyq_h();
 
     setTIMER(TICKS_PER_TIME_SLICE);
-
-    // if (trap_flag) {
-    //     BREAKPOINT();
-    // }
-
     LDST(&current_thread->t_s);
-
-    // if (trap_flag) {
-    //     BREAKPOINT();
-    // }
 }

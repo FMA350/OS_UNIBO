@@ -355,11 +355,8 @@ void p5m(void) {
     state_t* state;
     for (;;) {
         sender = msgrecv(NULL, &state);
-        //tty0printf("%p received from %p\n", current_thread, sender);
         switch (CAUSE_EXCCODE_GET(state->CP15_Cause)) {
             default:
-                // tty0printf("tlb trap cause == %d\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
-                tprintf("p5m: tlb trap cause == %d\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
                 tty0print("p5 mem error passup okay\n");
                 sender->t_s.pc = (memaddr) p5a;
         }

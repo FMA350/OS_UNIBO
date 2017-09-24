@@ -10,8 +10,6 @@
 
 extern struct list_head blockedq;
 
-int trap_flag = 0;
-
 static inline void __trap_h(struct tcb_t *mgr, state_t *oldarea)
 {
     if (mgr) {
@@ -34,7 +32,6 @@ static inline void __trap_h(struct tcb_t *mgr, state_t *oldarea)
         // tprint(">>> about to enqueue\n");
         move_thread(current_thread, &mgr->t_wait4me);
         // tprint(">>> abount to call scheduler\n");
-        trap_flag = 1;
         scheduler();
     } else {
     // il processo deve essere terminato
