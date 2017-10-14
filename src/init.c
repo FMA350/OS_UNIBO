@@ -6,11 +6,11 @@
 #include <syslib.h>
 
 #include "handlers.h"
-#include "accounting.h"
+#include "time.h"
+
+#include <pseudoclock.h>
 
 static void states_init(void);
-
-static void time_init(void);
 
 int main(void)
 {
@@ -23,6 +23,7 @@ int main(void)
     states_init();
 
     time_init();
+    pseudoclock_init();
 
     /* Loading ready queue with system processes */
     load_readyq(root);
@@ -36,11 +37,6 @@ int main(void)
     PANIC();
 }
 
-static void time_init(void)
-{
-    // tprintf("Un usec equivale a %d ticks\n", *((unsigned int *) BUS_REG_TIME_SCALE));
-    TICKS_PER_TIME_SLICE = *((unsigned int *) (BUS_REG_TIME_SCALE)) * 5000;
-}
 
 /*
  * This function is used to populate exception states vector

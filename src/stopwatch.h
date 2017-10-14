@@ -20,11 +20,6 @@ typedef struct {
     cputime total;
 } stopwatch_t;
 
-
-#define STOPWATCH(name) \
-	stopwatch_t name = {0, 0}
-
-
 static inline void stopwatch_init(stopwatch_t *stopwatch) {
     stopwatch->starting_point = stopwatch->total = 0;
 }

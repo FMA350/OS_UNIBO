@@ -172,7 +172,8 @@ static inline clean_thread_data(struct tcb_t *thread) {
     thread->t_status = T_STATUS_NONE;
     thread->t_wait4sender = NULL;
 
-    thread->run_time = thread->errno = 0;
+    thread->run_time = 0;
+    thread->errno = 0;
 }
 
 /*************************** THREAD QUEUE ************************/

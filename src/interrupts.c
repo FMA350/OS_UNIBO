@@ -10,7 +10,9 @@
 #include <nucleus.h>
 #include <do_io.h>
 #include "handlers.h"
-#include "accounting.h"
+#include "time.h"
+
+#include <pseudoclock.h>
 
 
 static inline void interval_timer_h(void);
@@ -27,14 +29,15 @@ void interrupt_h(void)
 
 static inline void interval_timer_h(void)
 {
-    if(current_thread) {
+    if (current_thread) {
         current_thread->t_s = *((state_t *) INT_OLDAREA);
-        current_thread->run_time += TICKS_PER_TIME_SLICE; //cycles
-
+        uint64_t time_lapse = (uint64_t) stopwatch_stop(&sys_stopwatch);
+        tprintf("time_lapse == %d\n", (unsigned int) time_lapse);
+        current_thread->run_time += time_lapse;
         move_thread(current_thread, &readyq);
     }
-    update_clock(TICKS_PER_TIME_SLICE);
 
+    pseudoclock_check();
     scheduler();
 }
 

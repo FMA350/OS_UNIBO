@@ -4,9 +4,9 @@
 #include <scheduler.h>
 
 #include "handlers.h"
-#include "accounting.h"
+#include "time.h"
 
-extern unsigned int cyclesUsed;
+#include <pseudoclock.h>
 
 #define SYSCALL_ARG(STATUS, N)  (((state_t *) STATUS)->a ## N)
 
@@ -85,20 +85,15 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
     /* la msgq_get non ha trovato nessun messaggio -> sender non è stato modificato
         nemmeno nel caso in cui il chiamante abbia passato NULL come sender (chiunque) */
 
-        timeSliceLeft = getTIMER();
-        if (CAUSE_IP_GET(getCAUSE(), INT_TIMER))
-            cyclesUsed = TICKS_PER_TIME_SLICE;
-        else
-            cyclesUsed = TICKS_PER_TIME_SLICE - timeSliceLeft;
-
         // salvataggio stato del processore
         current_thread->t_s = *((state_t *) SYSBK_OLDAREA);
         // cambiamento dello stato di attesa del thread
         current_thread->t_status = T_STATUS_W4MSG;
         current_thread->t_wait4sender = sender;
 
-        current_thread->run_time += cyclesUsed; //cycles
-        update_clock(cyclesUsed);
+        current_thread->run_time += (uint64_t) stopwatch_stop(&sys_stopwatch);
+
+        pseudoclock_check();
 
         if (sender)
         // il thread si blocca aspettando da sender
@@ -197,10 +192,10 @@ static inline void syscall_other(void)
 
 void syscall_h(void)
 {
-    if (CAUSE_EXCCODE_GET(((state_t *) SYSBK_OLDAREA)->CP15_Cause) == EXC_BREAKPOINT) {
-        // tprint("\nA breakpoint occurred\n");
-        LDST((state_t *) SYSBK_OLDAREA);
-    }
+    // if (CAUSE_EXCCODE_GET(((state_t *) SYSBK_OLDAREA)->CP15_Cause) == EXC_BREAKPOINT) {
+    //     tprint("\nA breakpoint occurred\n");
+    //     LDST((state_t *) SYSBK_OLDAREA);
+    // }
 
     switch (SYSCALL_ARG(SYSBK_OLDAREA, 1)) {
         case SYS_ERR:

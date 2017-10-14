@@ -13,7 +13,9 @@
 #include "ssi.h"
 #include "debug_tests.h"
 #include "handlers.h"
-#include "accounting.h"
+
+#include <time.h>
+#include <stopwatch.h>
 
 // Thread that has currently the control of the CPU
 struct tcb_t *current_thread = NULL;
@@ -103,7 +105,7 @@ static inline void empty_readyq_h(void) {
         PANIC();
     } else {
     /* processes in the system are waiting for I/O */
-        setTIMER(TICKS_PER_TIME_SLICE); //fma350 test
+        setTIMER(TICKS_PER_TIME_SLICE);
         setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
         WAIT();
     }
@@ -117,5 +119,6 @@ void scheduler(void)
         empty_readyq_h();
 
     setTIMER(TICKS_PER_TIME_SLICE);
+    stopwatch_start(&sys_stopwatch);
     LDST(&current_thread->t_s);
 }
