@@ -92,6 +92,7 @@ static inline void recv(struct tcb_t *sender, uintptr_t *pmsg)
         current_thread->t_wait4sender = sender;
 
         current_thread->run_time += (uint64_t) stopwatch_stop(&sys_stopwatch);
+        stopwatch_reset(&sys_stopwatch);
 
         pseudoclock_check();
 

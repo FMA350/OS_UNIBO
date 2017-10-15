@@ -19,12 +19,11 @@
 #include <uARMconst.h>
 #include <uARMtypes.h>
 #include <libuarm.h>
-#include <scheduler.h>
 
 #include "nucleus.h"
 
 #define QPAGE FRAME_SIZE
-#define TERM0ADDR               0x24C
+#define TERM0ADDR               0x248
 
 static struct tcb_t* printid;
 
@@ -33,7 +32,6 @@ static void ttyprintstring(devaddr device, char* s) {
 
     for (; *s; s++) {
         status = do_terminal_io(device, DEV_TTRS_C_TRSMCHAR | (*s << 8));
-        //tty0printf("STATUS: %d\n",status);
         switch (status & 0xff) {
             case DEV_S_READY:
             case DEV_TTRS_S_CHARTRSM:
@@ -55,7 +53,7 @@ void tty0out_thread(void) {
     }
 }
 
-inline void tty0print(char* s) {
+static inline void tty0print(char* s) {
     msgsend(printid, s);
     msgrecv(printid, NULL);
 }
@@ -97,31 +95,26 @@ uintptr_t p5sys = 0;
 uintptr_t p5send = 0;
 
 void test(void) {
-
-    ttyprintstring(TERM0ADDR, "NUCLEUS1\n");
+    ttyprintstring(TERM0ADDR, "NUCLEUS TEST: starting...\n");
     STST(&tmpstate);
     stackalloc = (tmpstate.sp + (QPAGE - 1)) & (~(QPAGE - 1));
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) tty0out_thread;
     tmpstate.cpsr = STATUS_ALL_INT_ENABLE(tmpstate.cpsr);
     printid = create_thread(&tmpstate);
-    tty0print("NUCLEUS2\n");
-
+    tty0print("NUCLEUS: first msg printed by tty0out_thread\n");
     testt = get_mythreadid();
 
     tmpstate.sp = (stackalloc -= QPAGE);
     tmpstate.pc = (memaddr) cs_thread;
     csid = create_process(&tmpstate);
-
-    tty0print("NUCLEUS3\n");
+    tty0print("NUCLEUS: critical section thread started\n");
 
     CSIN();
     tmpstate.sp = (stackalloc -= QPAGE);
     CSOUT;
     tmpstate.pc = (memaddr) p2;
-
     p2t = create_process(&tmpstate);
-
     msgsend(p2t, SYNCCODE);
     msgrecv(p2t, NULL);
 
@@ -161,12 +154,8 @@ void test(void) {
     msgsend(p5t, NULL);
     msgrecv(p5t, NULL);
 
-    if (p5sys == 1)
-        tty0print("p5a usermode sys passup ok\n");
-    else {
-        tty0printf("%d\n", p5sys);
-        panic("p5a usermode passup error\n");
-    }
+    if (p5sys == 1) tty0print("p5a usermode sys passup ok\n");
+    else panic("p5a usermode passup error\n");
 
     if (p5send != 2) tty0print("p5a usermode msg priv kill is ok\n");
     else panic("p5a usermode msg priv kill error\n");
@@ -176,10 +165,7 @@ void test(void) {
     CSOUT;
     tmpstate.pc = (memaddr) p6;
     p6t = create_process(&tmpstate);
-    struct tcb_t *rval = msgrecv(p6t, NULL);
-    if (rval)   // added by mnalli
-        panic("msgrecv should fail here!\n");
-
+    msgrecv(p6t, NULL);
     tty0print("p6 completed\n");
 
     CSIN();
@@ -202,9 +188,8 @@ void test(void) {
     tty0print("IT'S ALIVE! IT'S ALIVE! THE KERNEL IS ALIVE!\n");
     HALT();
 }
-// #define MINLOOPTIME             5 //milliseconds
+
 #define MINLOOPTIME             10000
-#define MAXLOOPTIME             40000
 #define LOOPNUM                 10000
 
 void p2(void) {
@@ -220,40 +205,34 @@ void p2(void) {
         panic("p2 get_mythreadid: wrong pid returned\n");
 
     p1t = msgrecv(NULL, &value);
-
     if (value != SYNCCODE)
         panic("p2 recv: got the wrong value\n");
     if (p1t != testt)
         panic("p2 recv: got the wrong sender\n");
     if (get_processid(p1t) != get_parentprocid(get_processid(get_mythreadid())))
         panic("p2 get_parentprocid get_processid error\n");
-    /* test: GET_CPUTIME */
-    cpu_t1 = getcputime();
 
+    /* test: GET_CPUTIME */
+
+    cpu_t1 = getcputime();
     /* delay for several milliseconds */
     for (i = 1; i < LOOPNUM; i++);
 
     cpu_t2 = getcputime();
-    tty0printf("cpu1 = %d, cpu2 = %d\n",cpu_t1, cpu_t2);
 
     if ((cpu_t2 - cpu_t1) >= MINLOOPTIME)
-        tty0print("p2 GET_CPUTIME sounds okay\n");
-    else
-        panic("p2 GETCPUTIME sounds faulty\n");
-    if ((cpu_t2 - cpu_t1) <= MAXLOOPTIME)
         tty0print("p2 GET_CPUTIME sounds okay\n");
     else
         panic("p2 GETCPUTIME sounds faulty\n");
 
     msgsend(p1t, NULL);
     msgrecv(p1t, NULL);
+
     terminate_thread();
 
     panic("p2 survived TERMINATE_THREAD\n");
 }
 
-// precondition: 1 us == 1 ciclo di clock (tick)
-// 100 ms == 100.000 us == 100.000 ticks
 #define PSEUDOCLOCK 100000
 #define NWAIT 10
 
@@ -263,29 +242,25 @@ void p3(void) {
     cputime time1, time2;
     int i;
     time1 = getTODLO();
-    // l'attesa totale dovrebbe essere di circa 1 secondo (NWAIT == 10)
     for (i = 0; i < NWAIT; i++) {
-        //tty0print("waitforclock\n");
         waitforclock();
     }
     time2 = getTODLO();
-                            // < 0.9 s
+
     if ((time2 - time1) < (PSEUDOCLOCK * (NWAIT - 1))) {
         panic("WAITCLOCK too small\n");
-                            // > 1.1 s
     } else if ((time2 - time1) > (PSEUDOCLOCK * (NWAIT + 1))) {
         panic("WAITCLOCK too big\n");
     } else {
         tty0print("WAITCLOCK OK\n");
     }
 
-    msgsend(testt, NULL);
+    msgsend(testt, "NULL");
 
     terminate_process();
 
     panic("p3 survived TERMINATE_PROCESS\n");
 }
-
 
 void p4(void) {
     static int p4inc = 1;
@@ -304,6 +279,7 @@ void p4(void) {
     p4inc++;
     parent = msgrecv(NULL, NULL);
     msgsend(parent, NULL);
+
     msgrecv(NULL, NULL);
     /* only the first incarnation reaches this point */
 
@@ -314,7 +290,6 @@ void p4(void) {
     p4childstate.pc = (memaddr) p4;
 
     child = create_process(&p4childstate);
-
     msgsend(child, NULL);
     msgrecv(child, NULL);
 
@@ -328,7 +303,7 @@ void p5a();
 void p5p(void) {
     struct tcb_t* sender;
     state_t* state;
-    int should_terminate = 0;
+    short int should_terminate = 0;
     for (;;) {
         sender = msgrecv(NULL, &state);
         switch (CAUSE_EXCCODE_GET(state->CP15_Cause)) {
@@ -337,8 +312,6 @@ void p5p(void) {
                 should_terminate = 1;
                 break;
             default:
-                tprint("p5p: ERROR\n");
-                tprintf("CAUSE_EXCCODE == %d\n", CAUSE_EXCCODE_GET(state->CP15_Cause));
                 PANIC();
         }
         if (should_terminate) {
@@ -358,6 +331,7 @@ void p5m(void) {
             default:
                 tty0print("p5 mem error passup okay\n");
                 sender->t_s.pc = (memaddr) p5a;
+                break;
         }
         msgsend(sender, NULL);
     }
@@ -400,17 +374,22 @@ void p5(void) {
     CSOUT;
     mgrstate.pc = (memaddr) p5p;
     setpgmmgr(create_thread(&mgrstate));
+
     CSIN();
     mgrstate.sp = (stackalloc -= QPAGE);
     CSOUT;
     mgrstate.pc = (memaddr) p5m;
     settlbmgr(create_thread(&mgrstate));
+
     CSIN();
     mgrstate.sp = (stackalloc -= QPAGE);
     CSOUT;
     mgrstate.pc = (memaddr) p5s;
+
     setsysmgr(create_thread(&mgrstate));
+
     /* this should me handled by p5s */
+
     retval = SYSCALL(42, 42, 42, 42);
     if (retval == 42)
         tty0print("p5 syscall passup okay\n");
@@ -423,14 +402,13 @@ void p5(void) {
 }
 
 void p5a(void) {
-    tty0print("p5a started\n");
     uintptr_t retval = 200;
     /* switch to user mode */
     setSTATUS((getSTATUS() & STATUS_CLEAR_MODE) | STATUS_USER_MODE);
+
     p5sys = 0;
 
     retval = SYSCALL(3, 2, 1, 0);
-
     if (retval == 0) {
         p5sys = 1;
     } else {

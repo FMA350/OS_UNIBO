@@ -137,24 +137,24 @@ static inline void waitforclock(void) {
     msgrecv(SSI, NULL);
 }
 
-static inline unsigned int do_io(devaddr device, uintptr_t command, uintptr_t data1, uintptr_t data2) {
+static inline unsigned int do_io(devaddr device, uintptr_t command, uintptr_t data0, uintptr_t data1) {
     uintptr_t retval;
     struct {
         uintptr_t reqtag;
         devaddr device;
         uintptr_t command;
+        uintptr_t data0;
         uintptr_t data1;
-        uintptr_t data2;
-    } req = {DO_IO, device, command, data1, data2};
+    } req = {DO_IO, device, command, data0, data1};
     msgsend(SSI, &req);
     msgrecv(SSI, &retval);
     return retval;
 }
 
-#define do_disk_io(dev, cmd, d1) do_io((dev),(cmd),(d1),0)
-#define do_tape_io(dev, cmd, d1) do_io((dev),(cmd),(d1),0)
-#define do_net_io(dev, cmd, d1, d2) do_io((dev),(cmd),(d1),(d2))
-#define do_printer_io(dev, cmd, d1) do_io((dev),(cmd),(d1),0)
+#define do_disk_io(dev, cmd, d0) do_io((dev),(cmd),(d0),0)
+#define do_tape_io(dev, cmd, d0) do_io((dev),(cmd),(d0),0)
+#define do_net_io(dev, cmd, d0, d1) do_io((dev),(cmd),(d0),(d1))
+#define do_printer_io(dev, cmd, d0) do_io((dev),(cmd),(d0),0)
 #define do_terminal_io(dev, cmd) do_io((dev),(cmd),0,0)
 
 static inline struct pcb_t* get_processid(struct tcb_t* s) {

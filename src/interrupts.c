@@ -31,9 +31,8 @@ static inline void interval_timer_h(void)
 {
     if (current_thread) {
         current_thread->t_s = *((state_t *) INT_OLDAREA);
-        uint64_t time_lapse = (uint64_t) stopwatch_stop(&sys_stopwatch);
-        tprintf("time_lapse == %d\n", (unsigned int) time_lapse);
-        current_thread->run_time += time_lapse;
+        current_thread->run_time += (uint64_t) stopwatch_stop(&sys_stopwatch);
+        stopwatch_reset(&sys_stopwatch);
         move_thread(current_thread, &readyq);
     }
 
@@ -41,60 +40,88 @@ static inline void interval_timer_h(void)
     scheduler();
 }
 
+
+static inline void acknowledge(unsigned int line, unsigned int device);
+
+// Precondition: there is a device interrupt pending
+static inline void io_h(void)
+{
+    // The lower interrupt lines have the higher priority
+    unsigned int current_interrupt_line = DEV_IL_START;
+
+    while (!CAUSE_IP_GET(((state_t *) INT_OLDAREA)->CP15_Cause, current_interrupt_line))
+        current_interrupt_line++;
+
+    unsigned int p = *((unsigned int *) CDEV_BITMAP_ADDR(current_interrupt_line));
+
+    //restituisce il n. di terminale che ha generato l'interrupt
+    int device_no = 0;
+    while (device_no < 8 && !(p & 1)) {
+        device_no++;
+        p <<= 1;
+    }
+
+    assert(device_no < 8);
+
+    acknowledge(EXT_IL_INDEX(current_interrupt_line), device_no);
+
+    tprint("io_h should not arrive here!\n");
+    PANIC();
+}
+
+void acknowledge_dtpe(uintptr_t line, uintptr_t device);
+void acknowledge_terminal(uintptr_t line, uintptr_t device);
+
 static inline void acknowledge(unsigned int line, unsigned int device)
 {
-    switch (device) {
+    assert(soft_blocked_thread[line][device] != NULL);
+
+    switch (line) {
         case EXT_IL_INDEX(IL_TERMINAL):
-            // se si accettano interrupt dalle tprint questo non va bene
-            // assert(soft_blocked_thread[device] != NULL);
-            *((unsigned int *) TERMINAL_DEV_FIELD(line, TRANSM_COMMAND)) = DEV_C_ACK;
-
-            if (soft_blocked_thread[device][line]) {
-                // Sblocchiamo il processo in attesa a nome dell'SSI
-                unsigned int *trs_status = (unsigned int *) TERMINAL_DEV_FIELD(line, TRANSM_STATUS);
-                int rval = send(soft_blocked_thread[device][line], SSI, *trs_status);
-                soft_block_count--;
-
-                // La send che viene fatta ad un processo in attesa non fallisce mai
-                assert(rval == SEND_SUCCESS);
-
-                soft_blocked_thread[device][line] = NULL;
-
-                if (current_thread == NULL)
-                // se il messaggio è stato inviato mentre il processore era idle
-                    // chiamiamo lo scheduler per schedulare il processo svegliato
-                    scheduler();
-                else
-                    LDST((state_t *) INT_OLDAREA);
-            } else
-            // se l'interrupt proviene da una tprint
-                // siccome non abbiamo svegliato nessuno, dobbiamo per forza caricare il vecchio stato
-                LDST((state_t *) INT_OLDAREA);
+            acknowledge_terminal(line, device);
             break;
-
+        case EXT_IL_INDEX(IL_DISK):
+        case EXT_IL_INDEX(IL_TAPE):
+        case EXT_IL_INDEX(IL_PRINTER):
+        case EXT_IL_INDEX(IL_ETHERNET):
+            acknowledge_dtpe(line, device);
+            break;
         default:
             tprint("io_h - acknowledge: wrong device");
             PANIC();
     }
+
+    soft_blocked_thread[line][device] = NULL;
+    soft_block_count--;
+
+    if (current_thread == NULL)
+    // se il messaggio è stato inviato mentre il processore era idle
+        // chiamiamo lo scheduler per schedulare il processo svegliato
+        scheduler();
+    else
+        LDST((state_t *) INT_OLDAREA);
 }
 
-static inline void io_h(void)
+void acknowledge_dtpe(uintptr_t line, uintptr_t device)
 {
-    int device = IL_TERMINAL;
-    unsigned int *p;
-    while (!(p = (unsigned int *) CDEV_BITMAP_ADDR(IL_TERMINAL)))
-        device--; //scorro nelle bitmap e mi fermo al primo device con interrupt
+    unsigned int device_status = *((unsigned int *) DEV_REG_ADDR(line, device) + 0x0);
+    *((unsigned int *) DEV_REG_ADDR(line, device) + 0x4) = DEV_C_ACK;
 
-    int line = 1, a = 1, i;
-    for (i = 1; i < 9; i++){ //restituisce il n. di terminale che ha generato l'interrupt
-        a = a*2;
-        if (a > *p){
-            line=i-1;
-            break;
-        }
+    // Sblocchiamo il processo in attesa a nome dell'SSI
+    send(soft_blocked_thread[line][device], SSI, device_status);
+}
+
+// TODO: completare con i due casi
+void acknowledge_terminal(uintptr_t line, uintptr_t device)
+{
+    unsigned int transmission_status = *((unsigned int *) (DEV_REG_ADDR(IL_TERMINAL, device) + 0x8));
+    unsigned int receive_status      = *((unsigned int *) (DEV_REG_ADDR(IL_TERMINAL, device) + 0x0));
+
+    if (receive_status == DEV_S_READY) {
+        *((unsigned int *) (DEV_REG_ADDR(IL_TERMINAL, device) + 0xC)) = DEV_C_ACK;
+        send(soft_blocked_thread[line][device], SSI, transmission_status);
+    } else if (transmission_status == DEV_S_READY) {
+        *((unsigned int *) (DEV_REG_ADDR(IL_TERMINAL, device) + 0x4)) = DEV_C_ACK;
+        send(soft_blocked_thread[line][device], SSI, receive_status);
     }
-    acknowledge(line, EXT_IL_INDEX(device));
-
-    tprint("io_h should not arrive here!\n");
-    PANIC();
 }

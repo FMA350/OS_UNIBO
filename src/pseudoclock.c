@@ -50,3 +50,11 @@ void pseudoclock_check(void)
     if (now >= next_tick_time)
         do_tick();
 }
+
+uint32_t pseudoclock_time_to_next_tick(void) {
+    uint64_t now = pack((uint32_t) getTODHI(), (uint32_t) getTODLO());
+    if (now >= next_tick_time)
+        return ((uint32_t) 0);
+    else
+        return ((uint32_t) (next_tick_time - now));
+}

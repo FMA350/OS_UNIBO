@@ -15,6 +15,7 @@
 #include "handlers.h"
 
 #include <time.h>
+#include <pseudoclock.h>
 #include <stopwatch.h>
 
 // Thread that has currently the control of the CPU
@@ -105,7 +106,7 @@ static inline void empty_readyq_h(void) {
         PANIC();
     } else {
     /* processes in the system are waiting for I/O */
-        setTIMER(TICKS_PER_TIME_SLICE);
+        setTIMER((unsigned int) pseudoclock_time_to_next_tick());
         setSTATUS(STATUS_ALL_INT_ENABLE(getSTATUS()));
         WAIT();
     }
